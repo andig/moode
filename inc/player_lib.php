@@ -45,10 +45,10 @@ function readMpdResponse($sock, $stream = false) {
 	else while(!feof($sock)) {
 		$response =  fgets($sock,1024);
 		$output .= $response;
-		if (strncmp(MPD_RESPONSE_OK,$response,strlen(MPD_RESPONSE_OK)) == 0) {
+		if (strncmp(MPD_RESPONSE_OK, $response, strlen(MPD_RESPONSE_OK)) == 0) {
 			break;
 		}
-		if (strncmp(MPD_RESPONSE_ERR,$response,strlen(MPD_RESPONSE_ERR)) == 0) {
+		if (strncmp(MPD_RESPONSE_ERR, $response, strlen(MPD_RESPONSE_ERR)) == 0) {
 			$output = "MPD error: $response";
 			break;
 		}
@@ -57,10 +57,10 @@ function readMpdResponse($sock, $stream = false) {
 }
 
 function chainMpdCommands($sock, $commands) {
-    foreach ($commands as $command) {
-        sendMpdCommand($sock, $command);
-        readMpdResponse($sock);
-    }
+	foreach ($commands as $command) {
+		sendMpdCommand($sock, $command);
+		readMpdResponse($sock);
+	}
 }
 
 function libLog($str, $overwrite = false) {
@@ -189,7 +189,7 @@ function _libAddItem(&$lib, $item) {
 		$lib[$genre][$artist] = array();
 	}
 	if (!$lib[$genre][$artist][$album]) {
-	    $lib[$genre][$artist][$album] = array();
+		$lib[$genre][$artist][$album] = array();
 	}
 
 	if (isset($albumInvalid)) {
@@ -235,10 +235,10 @@ function playAllReplace($sock, $json) {
 
 function enqueueAll($sock, $json) {
 	$commands = array();
-    foreach ($json as $song) {
+	foreach ($json as $song) {
 		$path = $song["file"];
 		array_push($commands, "add \"".html_entity_decode($path)."\"");
-    }
+	}
 	chainMpdCommands($sock, $commands);
 }
 
@@ -432,37 +432,53 @@ function _parseFileListResponse($resp) {
 	return $plistArray;
 }
 
-// format Output for "status"
-// TC (Tim Curtis) 2015-06-26: add cases 22050 and 32000
+// AG
+/**
+ * Parse MPD response into key/value pairs
+ */
+function parseMPDResponse($resp) {
+	$res = array();
+
+	foreach (explode("\n", $resp) as $line) {
+		// skip lines without :
+		if (strpos($line, ': ')) {
+			list ($key, $val) = explode(": ", $line, 2);
+			$res[$key] = $val;
+		}
+	}
+
+	return $res;
+}
+
+// AG
+/**
+ * Return formatted MPD player status
+ */
 function _parseStatusResponse($resp) {
 	if ( is_null($resp) ) {
 		return NULL;
-	} else {
-		$plistArray = array();
-		$plistLine = strtok($resp,"\n");
-		$plistFile = "";
-		$plCounter = -1;
-		while ( $plistLine ) {
-			// TC (Tim Curtis) 2014-09-17
-			// add limit 2 to explode to avoid case where string contains more than one ":" (colon)
-			list ( $element, $value ) = explode(": ",$plistLine, 2);
-			$plistArray[$element] = $value;
-			$plistLine = strtok("\n");
-		} 
-		// "elapsed time song_percent" added to output array
-		$time = explode(":", $plistArray['time']);
-		if ($time[0] != 0) {
-			$percent = round(($time[0]*100)/$time[1]);	
-		} else {
-			$percent = 0;
-		}
-		$plistArray["song_percent"] = $percent;
-		$plistArray["elapsed"] = $time[0];
-		$plistArray["time"] = $time[1];
+	}
 
-		 // "audio format" output
-	 	$audio_format = explode(":", $plistArray['audio']);
-	 	// TC (Tim Curtis) 2015-06-26: add case 384000
+	$status = array();
+	$status = parseMPDResponse($resp);
+
+	// "elapsed time song_percent" added to output array
+	$percent = 0;
+	if (isset($status['time'])) {
+		$time = explode(":", $status['time']);
+		if ($time[1] > 0) {
+			$percent = round(($time[0]*100) / $time[1]);
+		}
+		$status["elapsed"] = $time[0];
+		$status["time"] = $time[1];
+	}
+
+	$status["song_percent"] = $percent;
+
+	 // "audio format" output
+	if (isset($status['audio'])) {
+		$audio_format = explode(":", $status['audio']);
+		// TC (Tim Curtis) 2015-06-26: add case 384000
 		switch ($audio_format[0]) {
 			// integer format
 			case '32000';
@@ -470,28 +486,28 @@ function _parseStatusResponse($resp) {
 			case '96000':
 			case '192000':
 			case '384000':
-			$plistArray['audio_sample_rate'] = rtrim(rtrim(number_format($audio_format[0]),0),',');
+			$status['audio_sample_rate'] = rtrim(rtrim(number_format($audio_format[0]),0),',');
 			break;
 			// decimal format
 			case '22050':
-				$plistArray['audio_sample_rate'] = '22.05';
+				$status['audio_sample_rate'] = '22.05';
 				break;
 			case '44100':
 			case '88200':
 			case '176400':
 			case '352800':
-			$plistArray['audio_sample_rate'] = rtrim(number_format($audio_format[0],0,',','.'),0);
+			$status['audio_sample_rate'] = rtrim(number_format($audio_format[0],0,',','.'),0);
 			break;
 		}
 		// format "audio_sample_depth" string
-	 	$plistArray['audio_sample_depth'] = $audio_format[1];
-	 	// format "audio_channels" string
-	 	if ($audio_format[2] == "2") $plistArray['audio_channels'] = "Stereo";
-	 	if ($audio_format[2] == "1") $plistArray['audio_channels'] = "Mono";
-	 	if ($audio_format[2] > 2) $plistArray['audio_channels'] = "Multichannel";
-
+		$status['audio_sample_depth'] = $audio_format[1];
+		// format "audio_channels" string
+		if ($audio_format[2] == "2") $status['audio_channels'] = "Stereo";
+		if ($audio_format[2] == "1") $status['audio_channels'] = "Mono";
+		if ($audio_format[2] > 2) $status['audio_channels'] = "Multichannel";
 	}
-	return $plistArray;
+
+	return $status;
 }
 
 // get file extension
@@ -528,23 +544,18 @@ function playerSession($action,$db,$var = null, $value = null) {
 		foreach ($params as $row) {
 			$_SESSION[$row['param']] = $row['value'];
 		}
-		//debug
-		//print_r($_SESSION);
-	// close SQLite handle
-	$dbh  = null;
+		// close SQLite handle
+		$dbh  = null;
 	}
 
 	// unlock PHP SESSION file
 	if ($action == 'unlock') {
 		session_write_close();
-		// if (session_write_close()) {
-			// return true;
-		// }
 	}
 	
 	// unset and destroy current PHP SESSION
 	if ($action == 'destroy') {
-	session_unset();
+		session_unset();
 		if (session_destroy()) {
 			$dbh  = cfgdb_connect($db);
 			if (cfgdb_update('cfg_engine',$dbh,'sessionid','')) {
@@ -1050,8 +1061,8 @@ function wrk_replaceTextLine($file,$pos_start,$pos_stop,$strfind,$strrepl) {
 		if (substr($line, $pos_start, $pos_stop) == $strfind OR substr($line, $pos_start++, $pos_stop) == $strfind) {
 			// replace presentation_url with current IP address
 			$line = $strrepl."\n";
-	  	}
-	  	$newArray[] = $line;
+		}
+		$newArray[] = $line;
 	}
 	return $newArray;
 }
@@ -1676,8 +1687,8 @@ function _parseHwParams($resp) {
 		} 
 		// format sample rate, ex: "44100 (44100/1)"
 		// TC (Tim Curtis) 2015-06-26: add cases 22050, 32000, 384000
-	 	$rate = substr($tcArray['rate'], 0, strpos($tcArray['rate'], ' ('));
-	 	$_rate = (float)$rate;
+		$rate = substr($tcArray['rate'], 0, strpos($tcArray['rate'], ' ('));
+		$_rate = (float)$rate;
 		switch ($rate) {
 			// integer format
 			case '32000':
@@ -1703,9 +1714,9 @@ function _parseHwParams($resp) {
 		$_bits = (float)$tcArray['format'];
 		// format channels, ex "2"
 		$_chans = (float)$tcArray['channels'];
-	 	if ($tcArray['channels'] == "2") $tcArray['channels'] = "Stereo";
-	 	if ($tcArray['channels'] == "1") $tcArray['channels'] = "Mono";
-	 	if ($tcArray['channels'] > 2) $tcArray['channels'] = "Multichannel";
+		if ($tcArray['channels'] == "2") $tcArray['channels'] = "Stereo";
+		if ($tcArray['channels'] == "1") $tcArray['channels'] = "Mono";
+		if ($tcArray['channels'] > 2) $tcArray['channels'] = "Multichannel";
 
 		$tcArray['status'] = 'active';
 		$tcArray['calcrate'] = number_format((($_rate * $_bits * $_chans) / 1000000),3,'.','');	 
@@ -1769,8 +1780,8 @@ function _parseMpdConf($dbh) {
 	}
 		
 	// parse audio output format, ex "44100:16:2"
- 	$audio_format = explode(":", $_mpd['audio_output_format']);
- 	// TC (Tim Curtis) 2015-06-26: add sample rate 384000
+	$audio_format = explode(":", $_mpd['audio_output_format']);
+	// TC (Tim Curtis) 2015-06-26: add sample rate 384000
 	switch ($audio_format[0]) {
 		// integer format
 		case '48000':
@@ -1789,11 +1800,11 @@ function _parseMpdConf($dbh) {
 			break;
 	}
 	// add sample depth, ex "16"
- 	$_mpd['audio_sample_depth'] = $audio_format[1];
- 	// add channels, ex "2"
- 	if ($audio_format[2] == "2") $_mpd['audio_channels'] = "Stereo";
- 	if ($audio_format[2] == "1") $_mpd['audio_channels'] = "Mono";
- 	if ($audio_format[2] > 2) $_mpd['audio_channels'] = "Multichannel";
+	$_mpd['audio_sample_depth'] = $audio_format[1];
+	// add channels, ex "2"
+	if ($audio_format[2] == "2") $_mpd['audio_channels'] = "Stereo";
+	if ($audio_format[2] == "1") $_mpd['audio_channels'] = "Mono";
+	if ($audio_format[2] > 2) $_mpd['audio_channels'] = "Multichannel";
 	
 	return $_mpd;
 }
