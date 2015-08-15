@@ -506,7 +506,7 @@ function parseFileStr($strFile,$delimiter) {
 }
 
 // cfg engine and session management
-function playerSession($action,$db,$var = null, $value = null) {
+function playerSession($action, $db = null, $var = null, $value = null) {
 	$status = session_status();	
 	// open new PHP SESSION
 	if ($action == 'open') {
