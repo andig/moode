@@ -1064,18 +1064,14 @@ function waitWorker($sleeptime,$section) {
 // TC (Tim Curtis) 2014-12-23: add delay: 2000 (2 secs)
 // TC (Tim Curtis) 2015-02-25: add optional delay duration arg
 function ui_notify($notify) {
-	$output .= "<script>";
+	$output = "<script>";
 	$output .= "jQuery(document).ready(function() {";
 	$output .= "$.pnotify.defaults.history = false;";
 	$output .= "$.pnotify({";
 	$output .= "title: '".$notify['title']."',";
 	$output .= "text: '".$notify['msg']."',";
 	$output .= "icon: 'icon-ok',";
-	if (isset($notify['duration'])) {	
-		$output .= "delay: ".strval($notify['duration'] * 1000).",";
-	} else {
-		$output .= "delay: '2000',";
-	}
+	$output .= "delay: ". (isset($notify['duration']) ? strval($notify['duration'] * 1000) : 2000) . ",";
 	$output .= "opacity: .9});";
 	$output .= "});";
 	$output .= "</script>";
