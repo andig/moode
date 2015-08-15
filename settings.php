@@ -1,5 +1,5 @@
 <?php 
-/*
+/**
  *  This Program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
  *  the Free Software Foundation; either version 3, or (at your option)
@@ -18,81 +18,20 @@
  *	Tsunamp Team
  *	http://www.tsunamp.com
  *
- *	UI-design/JS code by: 	Andrea Coiutti (aka ACX)
- *	PHP/JS code by:			Simone De Gregori (aka Orion)
- * 
- *	file:					settings.php
- * 	version:				1.1
- *
- *	TCMODS Edition 
- *
- *	TC (Tim Curtis) 2014-08-23, r1.0
- *	- process theme change requests
- *	- i2s driver support for G2 Labs BerryNOS DAC
- *
- *	TC (Tim Curtis) 2014-11-30, r1.3 beta1
- *	- remove trailing ! in 1st content line causing code to be grayed out in editor 
- *
- *	TC (Tim Curtis) 2015-01-27, r1.5
- *	- changes to support i2s driver dropdown selector
- * 	- updated list of i2s drivers and associated modules
- *	- added # "dac name" comment to /etc/modules
- *	- remove syscmd case 'backup', no longer used 
- *	- prune out some kernel profiles
- *	- shovel & broom
- *
- *	TC (Tim Curtis) 2015-02-25, r1.6
- *	- add kernel select
- *	- add i2s driver select to handle dtoverlay and standard load methods 
- *	- fix blank page returned on ARMv7l (Pi-2B)
- *
- *	TC (Tim Curtis) 2015-03-21, r1.7
- *	- add IQaudIO Pi-AMP+ to I2S driver list
- *	- adjust notify message depending on selected i2s audio device
- *
- *	TC (Tim Curtis) 2015-04-29, r1.8
- *	- add timezone select list and handler
- *	- comment out theme handler session[notify] since this is now handled in notify.js
- *	- fix bug causing timezone, i2s and linux kernel form fields to not update when page echos back
- *	- add RaspyPlay4 to i2s dropdown
- *	- add Durio Sound PRO to i2s dropdown
- *	- host and network service names and name change handlers
- *	- add PCM (alsamixer) volume
- *	- update buttons for individual settings (player_wrk.php can only process one item at a time...)
- *	- streamline theme change code
- *	- add 6 new theme colors
- *	- cleanup i2s driver load if() logic
- *
- *	TC (Tim Curtis) 2015-05-30, r1.9
- *	- add system and playback history log maintenance
- *	- streamline theme change code
- *
- *	TC (Tim Curtis) 2015-06-26, r2.0
- *	- fix unique notify Title in update_kernel_version for Waitworker(1) test at end of script to allow the Notify message to appear
- *	- use getKernelVer() when checking kernel version
- *	- add $TCMODS_REL to enable running get-pcmvol cmd
- *	- for update_kernel_version change change notify message duration from 5 to 10 mins
- *	- prune out unused cases under switch ($_POST['syscmd'])
- *	- drop support for kernels 3.10.36 and 3.12.26, not in use by any users
- *	- add IQaudIO Pi-DigiAMP+  
- *
- *	TC (Tim Curtis) 2015-07-31, r2.1
- *	- update release id to r21
- *	- add sd card storage expand
- *	- add Audiophonics I-Sabre DAC ES9023 TCXO (I2S)
- *
+ * Rewrite by Tim Curtis and Andreas Goetz
  */
  
 $TCMODS_REL = "r21"; // Current release
  
-// common include
-include('inc/connection.php');
-include('/var/www/inc/player_lib.php');
+// config
+require_once dirname(__FILE__) . '/inc/connection.php';
+
+// player lib
+require_once dirname(__FILE__) . '/inc/player_lib.php';
+
 playerSession('open',$db,'',''); 
 playerSession('unlock',$db,'','');
-?>
 
-<?php 
 if (isset($_POST['syscmd'])) {
 	switch ($_POST['syscmd']) {
 		// TC (Tim Curtis) 2014-08-23: process theme change requests
@@ -1121,4 +1060,3 @@ debug($_POST);
 ?>
 
 <?php include('_footer.php'); ?>
-
