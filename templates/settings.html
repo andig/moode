@@ -1,0 +1,297 @@
+<!-- 
+/*
+ *  This Program is free software; you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation; either version 3, or (at your option)
+ *  any later version.
+ *
+ *  This Program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with TsunAMP; see the file COPYING.  If not, see
+ *  <http://www.gnu.org/licenses/>.
+ *
+ *	PlayerUI Copyright (C) 2013 Andrea Coiutti & Simone De Gregori
+ *	Tsunamp Team
+ *	http://www.tsunamp.com
+ *
+ *	UI-design/JS code by: 	Andrea Coiutti (aka ACX)
+ *	PHP/JS code by:			Simone De Gregori (aka Orion)
+ * 
+ *	file:					settings.html
+ * 	version:				1.0
+ *
+ *	TCMODS Edition 
+ *
+ *	TC (Tim Curtis) 2014-08-23, r1.0
+ *	- streamline text and control layout
+ *	- add theme changer code
+ *	- add selection for G2 Labs BerryNOS 
+ *
+ *	TC (Tim Curtis) 2014-12-23, r1.3
+ *	- fix double class defs: class="input-large" class="input-large"
+ *	- fix bad for= assignments
+ *	- shovel & broom
+ *
+ *	TC (Tim Curtis) 2015-01-27, r1.5
+ *	- replace individual i2s driver buttons with select dropdown
+ *	- remove id="selector" from input fields, not used
+ *	- shovel & broom
+ *
+ *	TC (Tim Curtis) 2015-02-25, r1.6
+ *	- add kernel select
+ *	- fix no top margin on help text under dropdowns
+ *
+ *	TC (Tim Curtis) 2015-04-29, r1.8
+ *	- add timezone dropdown
+ *	- theme changeer moved to Customize popup
+ *	- remove system commands section
+ *	- add name change fields for Host name, Browser Title, Airplay and UPnP names
+ *	- add field for PCM (alsamixer) volume
+ *	- add Set button for each field
+ *	- streamline layout
+ *
+ *	TC (Tim Curtis) 2015-05-30, r1.9
+ *  - on-demand help via info show/hide toggle (scripts-configuration.js)
+ *  - system and playback history log maintenance
+ *
+ *	TC (Tim Curtis) 2015-06-26, r2.0
+ *	- add on-demand help for ALSA volume field
+ *
+ *	TC (Tim Curtis) 2015-07-31, r2.1
+ *	- add sd card storage expand
+ *
+ */
+-->	
+<div class="container">
+	<h1>System Configuration</h1>
+
+	<legend>Settings</legend>
+
+	<!-- TC (Tim Curtis) 2015-04-29: timezone setting -->
+	<form class="form-horizontal" method="post">
+		<fieldset>
+			<div class="control-group">
+				<label class="control-label" for="timezone">Timezone</label>
+				<div class="controls">
+					<select id="timezone" class="input-large" name="timezone">		
+						$_timezone[timezone]
+					</select>
+					<button class="btn btn-primary btn-small" type="submit" name="update_time_zone" value="novalue" style="margin-left: 8px;">Set</button>
+				</div>
+			</div>		
+
+			<!-- TC (Tim Curtis) 2015-01-27: dropdown for i2s driver selection -->
+			<div class="control-group">
+				<label class="control-label" for="audio-device">I2S audio device</label>
+				<div class="controls">
+					<select id="audio-device" class="input-large" name="i2s">		
+						$_i2s[i2s]
+					</select>
+					<button class="btn btn-primary btn-small" type="submit" name="update_i2s_device" value="novalue" style="margin-left: 8px;">Set</button>
+				</div>
+			</div>	
+
+			<!-- TC (Tim Curtis) 2015-04-29: PCM (alsamixer) volume -->
+			<div class="control-group">
+				<label class="control-label" for="pcm-volume">ALSA volume (%)</label>
+				<div class="controls">
+                    <input class="input-mini" $_pcm_volume_readonly type="number" maxlength="3" min="0" max="100" id="pcm-volume" name="pcm_volume" value="$_pcm_volume" required>
+					<button class="btn btn-primary btn-small $_pcm_volume_hide" type="submit" name="update_pcm_volume" value="novalue" style="margin-left: 8px;">Set</button>
+					<a class="info-toggle" data-cmd="info-pcmvol" href="#notarget"><i class="icon-info-sign"></i></a>
+					<!-- TC (Tim Curtis) 2015-06-26: add on-demand help -->
+					<span id="info-pcmvol" class="help-block help-block-margin hide">
+						The initial value displayed in this field is captured during Player startup.
+                    </span>
+					$_pcm_volume_msg
+				</div>
+			</div>	
+			
+			<!-- TC (Tim Curtis) 2015-04-29: host (player) name -->
+			<div class="control-group" >
+                <label class="control-label" for="host-name">Host (Player) name</label>
+                <div class="controls">
+                    <input class="input-large" type="text" id="host-name" name="host_name" value="$_system_select[host_name]" required>
+					<button class="btn btn-primary btn-small" type="submit" name="update_host_name" value="novalue" style="margin-left: 8px;">Set</button>
+					<span class="help-block help-block-margin">
+						A-Z, a-z, 0-9, and hyphen (-) are allowed.
+					</span>
+                </div>
+            </div>	
+			
+			<!-- TC (Tim Curtis) 2015-04-29: browser title -->
+			<div class="control-group" >
+                <label class="control-label" for="browser-title">Browser title</label>
+                <div class="controls">
+                    <input class="input-large" type="text" id="browser-title" name="browser_title" value="$_system_select[browser_title]" required>
+					<button class="btn btn-primary btn-small" type="submit" name="update_browser_title" value="novalue" style="margin-left: 8px;">Set</button>
+                </div>
+            </div>	
+			
+			<div class="control-group">
+				<label class="control-label" for="airplay-name">Airplay receiver</label>
+				<div class="controls">
+					<div class="toggle">
+						<label class="toggle-radio" for="toggleshairport2">ON</label>
+						$_system_select[shairport1]
+						<label class="toggle-radio" for="toggleshairport1">OFF</label>
+						$_system_select[shairport0]				
+					</div>
+					<!--TC (Tim Curtis) 2015-04-29: airplay name -->
+                    <input class="input-large" type="text" id="airplay-name" name="airplay_name" value="$_system_select[airplay_name]" style="width:117px;" required>
+					<button class="btn btn-primary btn-small" type="submit" name="update_airplay_name" value="novalue" style="margin-left: 8px;">Set</button>
+					<a class="info-toggle" data-cmd="info-shairport" href="#notarget"><i class="icon-info-sign"></i></a>
+					<span id="info-shairport" class="help-block help-block-margin hide">
+						Based on Shairport by James Laird.
+                    </span>
+				</div>
+			</div>
+			<div class="control-group">
+				<label class="control-label" for="upnp-name">UPnP renderer</label>
+				<div class="controls">
+					<div class="toggle">
+						<label class="toggle-radio" for="toggleupnpmpdcli2">ON</label>
+						$_system_select[upnpmpdcli1]
+						<label class="toggle-radio" for="toggleupnpmpdcli1">OFF</label>
+						$_system_select[upnpmpdcli0]				
+					</div>
+					<!--TC (Tim Curtis) 2015-04-29: upnp name -->
+                    <input class="input-large" type="text" id="upnp-name" name="upnp_name" value="$_system_select[upnp_name]" style="width:117px;" required>
+					<button class="btn btn-primary btn-small" type="submit" name="update_upnp_name" value="novalue" style="margin-left: 8px;">Set</button>
+					<a class="info-toggle" data-cmd="info-upmpdcli" href="#notarget"><i class="icon-info-sign"></i></a>
+					<span id="info-upmpdcli" class="help-block help-block-margin hide">
+						Based on upmpdcli by Jean-Francois Dockes.<br>
+						- Supports Open Home Media (ohMedia).
+                    </span>
+				</div>
+			</div> 
+			<div class="control-group">
+				<label class="control-label">DLNA server</label>
+				<div class="controls">
+					<div class="toggle">
+						<label class="toggle-radio" for="toggledjmount2">ON</label>
+						$_system_select[djmount1]
+						<label class="toggle-radio" for="toggledjmount1">OFF</label>
+						$_system_select[djmount0]				
+					</div>
+                    <input class="input-large" type="text" id="dlna-name" name="dlna_name" value="$_system_select[dlna_name]" style="width:117px;" required>
+					<button class="btn btn-primary btn-small" type="submit" name="update_dlna_name" value="novalue" style="margin-left: 8px;">Set</button>
+					<a class="info-toggle" data-cmd="info-minidlna" href="#notarget"><i class="icon-info-sign"></i></a>
+					<span id="info-minidlna" class="help-block help-block-margin hide">
+						Based on miniDLNA by Justin Maggard.
+                    </span>
+					<span class="help-block help-block-margin">
+						View DLNA database update progress at <a href="http://$_system_select[host_name]:8200" target="_blank">http://$_system_select[host_name]:8200</a><br> 
+					</span>
+				</div>
+			</div>
+
+			<!-- System and playback history log maintenance -->
+			<div class="control-group">
+				<label class="control-label">Clear system logs</label>
+				<div class="controls">
+					<div class="toggle">
+						<label class="toggle-radio" for="toggleclearsyslogs2">YES</label>
+						$_system_select[clearsyslogs1]
+						<label class="toggle-radio" for="toggleclearsyslogs1">NO</label>
+						$_system_select[clearsyslogs0]				
+					</div>
+					<button class="btn btn-primary btn-small" type="submit" name="update_clear_syslogs" value="novalue" style="margin-left: 8px;">Set</button>
+					<a class="info-toggle" data-cmd="info-clear-syslogs" href="#notarget"><i class="icon-info-sign"></i></a>
+					<span id="info-clear-syslogs" class="help-block help-block-margin hide">
+						Select YES to have various system log files cleared when the SET button is pressed.<br>
+						- This maintenence task should be performed periodically since the log files grow over time.
+                    </span>
+				</div>
+			</div> 
+			<div class="control-group">
+				<label class="control-label">Clear playback history</label>
+				<div class="controls">
+					<div class="toggle">
+						<label class="toggle-radio" for="toggleclearplayhistory2">YES</label>
+						$_system_select[clearplayhistory1]
+						<label class="toggle-radio" for="toggleclearplayhistory1">NO</label>
+						$_system_select[clearplayhistory0]				
+					</div>
+					<button class="btn btn-primary btn-small" type="submit" name="update_clear_playhistory" value="novalue" style="margin-left: 8px;">Set</button>
+					<a class="info-toggle" data-cmd="info-clear-playhistory" href="#notarget"><i class="icon-info-sign"></i></a>
+					<span id="info-clear-playhistory" class="help-block help-block-margin hide">
+						Select YES to have the playback history log cleared when the SET button is pressed.<br>
+						- This maintenence task should be performed periodically since the log files grow over time.
+                    </span>
+				</div>
+			</div> 
+			
+			<div class="control-group">
+				<label class="control-label">Expand SD Card storage</label>
+				<div class="controls">
+					<div class="toggle">
+						<label class="toggle-radio" for="toggleexpandsdcard2">YES</label>
+						$_system_select[expandsdcard1]
+						<label class="toggle-radio" for="toggleexpandsdcard1">NO</label>
+						$_system_select[expandsdcard0]				
+					</div>
+					<button class="btn btn-primary btn-small" type="submit" name="update_expand_sdcard" value="novalue" style="margin-left: 8px;">Set</button>
+					<a class="info-toggle" data-cmd="info-expand-sdcard" href="#notarget"><i class="icon-info-sign"></i></a>
+					<span id="info-expand-sdcard" class="help-block help-block-margin hide">
+						Select YES to have SD Card storage expanded when the SET button is pressed.<br>
+						(1) This increases available space for the local MPD folder named SDCARD.<br>
+						(2) The system will REBOOT after the expansion request has been queued.<br>
+						(3) Actual file system expansion occurs during reboot and may take some time.   
+                    </span>
+				</div>
+			</div> 
+			
+			<!-- TC (Tim Curtis) 2015-02-25: dropdown for linux kernel selection -->
+			<div class="control-group">
+				<!-- TC (Tim Curtis) 2015-04-29: fix wrong selector on for= -->
+				<label class="control-label" for="kernelver">Linux kernel</label>
+				<div class="controls">
+					<select id="kernelver" class="input-large" name="kernelver">		
+						$_linux_kernel[kernelver]
+					</select>
+					<button class="btn btn-primary btn-small" type="submit" name="update_kernel_version" value="novalue" style="margin-left: 8px;">Set</button>
+					<!-- TC (Tim Curtis) 2015-02-25: add help-block-margin to fix no top margin -->
+					<span class="help-block help-block-margin">
+						(1) Kernel installation can take 5+ MINUTES to complete.<br>
+						(2) The system will POWER OFF when installation has completed.<br> 
+					</span>
+				</div>
+			</div>		
+
+			<div class="control-group">
+				<label class="control-label" for="orionprofile">Kernel latency</label>
+				<div class="controls">
+					<select id="orionprofile" class="input-large" name="orionprofile">
+						$_system_select[orionprofile]
+					</select>
+					<button class="btn btn-primary btn-small" type="submit" name="update_latency_setting" value="novalue" style="margin-left: 8px;">Set</button>
+					<a class="info-toggle" data-cmd="info-kernel-latency" href="#notarget"><i class="icon-info-sign"></i></a>
+					<span id="info-kernel-latency" class="help-block help-block-margin hide">
+						Settings that may reduce kernel scheduler latency.
+                    </span>
+				</div>
+			</div>
+	
+			<div class="control-group">
+				<label class="control-label">Cmedia CM6631A fix</label>
+				<div class="controls">
+					<div class="toggle">
+						<label class="toggle-radio" for="togglecmedia2">ON</label>
+						$_system_select[cmediafix1]
+						<label class="toggle-radio" for="togglecmedia1">OFF</label>
+						$_system_select[cmediafix0]				
+					</div>
+					<button class="btn btn-primary btn-small" type="submit" name="update_cmedia_fix" value="novalue">Set</button>
+					<a class="info-toggle" data-cmd="info-cmedia-fix" href="#notarget"><i class="icon-info-sign"></i></a>
+					<span id="info-cmedia-fix" class="help-block hide">
+						Fixes issue where noise occurs when switching between tracks with different sample rates and/or bit depths.
+                    </span>
+				</div>
+			</div>
+		</fieldset>
+	</form>
+</div>
