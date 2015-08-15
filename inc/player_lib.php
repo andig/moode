@@ -349,21 +349,32 @@ function sysCmd($syscmd) {
 
 // AG
 /**
- * Return formatted MPD player status
+ * Parse MPD response into key => value pairs
  */
-function _parseStatusResponse($resp) {
-	if ( is_null($resp) ) {
-		return NULL;
-	}
+function parseMpdKeyedResponse($resp) {
+	$res = array();
 
-	$status = array();
 	foreach (explode("\n", $resp) as $line) {
 		// skip lines without :
 		if (strpos($line, ': ')) {
 			list ($key, $val) = explode(": ", $line, 2);
-			$status[$key] = $val;
+			$res[$key] = $val;
 		}
 	}
+
+	return $res;
+}
+
+// AG
+/**
+ * Return formatted MPD player status
+ */
+function _parseStatusResponse($resp) {
+	if (is_null($resp)) {
+		return NULL;
+	}
+
+	$status = parseMpdKeyedResponse($resp);
 
 	// "elapsed time song_percent" added to output array
 	$percent = 0;
@@ -413,7 +424,10 @@ function _parseStatusResponse($resp) {
 	return $status;
 }
 
-// format Output for "playlist"
+// AG
+/**
+ * Parse MPD playlist
+ */
 function _parseFileListResponse($resp) {
 	if (is_null($resp)) {
 		return NULL;
@@ -468,6 +482,19 @@ function _parseFileListResponse($resp) {
 		$res = $dir + $res;
 	}
 
+	return $res;
+}
+
+// AG
+/**
+ * Parse MPD current song
+ */
+function _parseMpdCurrentSong($resp) {
+	if (is_null($resp)) {
+		return 'Error, _parseMpdCurrentSong response is null';
+	}
+
+	$res = parseMpdKeyedResponse($resp);
 	return $res;
 }
 
@@ -1379,116 +1406,6 @@ function wrk_sysChmod() {
 	sysCmd('chmod a+rw /etc/mpd.conf');
 }
 
-// TC (Tim Curtis) 2015-07-31: shovel & broom remove
-/*
-function wrk_sysEnvCheck($arch,$install) {
-	if ($arch == '01' OR $arch == '02' OR $arch == '03' OR $arch == '04' OR $arch == '05' OR $arch == '06') {
-		// /etc/rc.local
-		//$a = '/etc/rc.local';
-		//$b = '/var/www/_OS_SETTINGS/etc/rc.local';
-		//if (md5_file($a) != md5_file($b)) {
-		//	sysCmd('cp '.$b.' '.$a);
-		//}
-
-		// /etc/samba/smb.conf
-		//$a = '/etc/samba/smb.conf';
-		//$b = '/var/www/_OS_SETTINGS/etc/samba/smb.conf';
-		//if (md5_file($a) != md5_file($b)) {
-		//	sysCmd('cp '.$b.' '.$a.' ');
-		//}
-		// /etc/nginx.conf
-		$a = '/etc/nginx/nginx.conf';
-		$b = '/var/www/_OS_SETTINGS/etc/nginx/nginx.conf';
-		if (md5_file($a) != md5_file($b)) {
-			sysCmd('cp '.$b.' '.$a.' ');
-			// stop nginx
-			sysCmd('killall -9 nginx');
-			// start nginx
-			sysCmd('nginx');
-		}
-		// /etc/php5/cli/php.ini
-		$a = '/etc/php5/cli/php.ini';
-		$b = '/var/www/_OS_SETTINGS/etc/php5/cli/php.ini';
-		if (md5_file($a) != md5_file($b)) {
-			sysCmd('cp '.$b.' '.$a.' ');
-			$restartphp = 1;
-		}
-		// /etc/php5/fpm/php-fpm.conf
-		$a = '/etc/php5/fpm/php-fpm.conf';
-		$b = '/var/www/_OS_SETTINGS/etc/php5/fpm/php-fpm.conf';
-		if (md5_file($a) != md5_file($b)) {
-			sysCmd('cp '.$b.' '.$a.' ');
-			$restartphp = 1;
-		}
-		// /etc/php5/fpm/php.ini
-		$a = '/etc/php5/fpm/php.ini';
-		$b = '/var/www/_OS_SETTINGS/etc/php5/fpm/php.ini';
-		if (md5_file($a) != md5_file($b)) {
-			sysCmd('cp '.$b.' '.$a.' ');
-			$restartphp = 1;
-		}
-
-		if ($install == 1) {
-			// remove autoFS for NAS mount
-			sysCmd('cp /var/www/_OS_SETTINGS/etc/auto.master /etc/auto.master');
-			sysCmd('rm /etc/auto.nas');
-			sysCmd('service autofs restart');
-			// /etc/php5/mods-available/apc.ini
-			sysCmd('cp /var/www/_OS_SETTINGS/etc/php5/mods-available/apc.ini /etc/php5/mods-available/apc.ini');
-			// /etc/php5/fpm/pool.d/ erase
-			sysCmd('rm /etc/php5/fpm/pool.d/*');
-			// /etc/php5/fpm/pool.d/ copy
-			sysCmd('cp /var/www/_OS_SETTINGS/etc/php5/fpm/pool.d/* /etc/php5/fpm/pool.d/');
-			$restartphp = 1;
-		}
-
-		// /etc/php5/fpm/pool.d/command.conf
-		$a = '/etc/php5/fpm/pool.d/command.conf';
-		$b = '/var/www/_OS_SETTINGS/etc/php5/fpm/pool.d/command.conf';
-		if (md5_file($a) != md5_file($b)) {
-			sysCmd('cp '.$b.' '.$a.' ');
-			$restartphp = 1;
-		}
-		// /etc/php5/fpm/pool.d/db.conf
-		$a = '/etc/php5/fpm/pool.d/db.conf';
-		$b = '/var/www/_OS_SETTINGS/etc/php5/fpm/pool.d/db.conf';
-		if (md5_file($a) != md5_file($b)) {
-			sysCmd('cp '.$b.' '.$a.' ');
-			$restartphp = 1;
-		}
-		// /etc/php5/fpm/pool.d/display.conf
-		$a = '/etc/php5/fpm/pool.d/display.conf';
-		$b = '/var/www/_OS_SETTINGS/etc/php5/fpm/pool.d/display.conf';
-		if (md5_file($a) != md5_file($b)) {
-			sysCmd('cp '.$b.' '.$a.' ');
-			$restartphp = 1;
-		}
-		// (RaspberryPi arch)
-		//		if ($arch == '01') {
-		//		$a = '/boot/cmdline.txt';
-		//			$b = '/var/www/_OS_SETTINGS/boot/cmdline.txt';
-		//			if (md5_file($a) != md5_file($b)) {
-		//			sysCmd('cp '.$b.' '.$a.' ');
-		// /etc/fstab
-		//			$a = '/etc/fstab';
-		//			$b = '/var/www/_OS_SETTINGS/etc/fstab_raspberry';
-		//			if (md5_file($a) != md5_file($b)) {
-		//				sysCmd('cp '.$b.' '.$a.' ');
-		//				$reboot = 1;
-		//				}
-		//			}
-		//		}
-
-		if (isset($restartphp) && $restartphp == 1) {
-			sysCmd('service php5-fpm restart');
-		}
-		if (isset($reboot) && $reboot == 1) {
-			sysCmd('reboot');
-		}
-	}
-}
-*/
-
 // TC (Tim Curtis) 2014-12-23: add delay: 2000 (2 secs)
 // TC (Tim Curtis) 2015-02-25: add optional delay duration arg
 function ui_notify($notify) {
@@ -1637,27 +1554,6 @@ function _parseHwParams($resp) {
 		$tcArray['calcrate'] = '0 bps';	 
 	}
 	return $tcArray;
-}
-
-// INPUT: parse MPD currentsong
-// TC (Tim Curtis) 2015-05-30: add limit 2 to explode to avoid incorrect parsing where string contains more than one ":" (colon)
-function _parseMpdCurrentSong($mpd) {
-	sendMpdCommand($mpd, 'currentsong');
-	$resp = readMpdResponse($mpd);
-
-	if (is_null($resp) ) {
-		return 'Error, _parseMpdCurrentSong response is null';
-	} else {
-		$tcArray = array();
-		$tcLine = strtok($resp,"\n");
-
-		while ( $tcLine ) {
-			list ( $element, $value ) = explode(": ",$tcLine, 2);
-			$tcArray[$element] = $value;
-			$tcLine = strtok("\n");
-		}
-	return $tcArray;
-	}
 }
 
 // DSP: parse MPD Conf

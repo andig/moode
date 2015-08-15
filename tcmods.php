@@ -238,11 +238,14 @@ if (isset($_POST['syscmd'])) {
         $audioinfo_mpdstatus = 'Error Connecting to MPD daemon';
 	} else {
 		// mpd currentsong
-		$_mpdcurrentsong = _parseMpdCurrentSong($mpd);
+		sendMpdCommand($mpd, 'currentsong');
+		$resp = readMpdResponse($mpd);
+		$_mpdcurrentsong = _parseMpdCurrentSong($resp);
+
 		$audioinfo_mpdcurrentsong_file = $_mpdcurrentsong['file'];
 		// mpd status
 		$_mpdstatus = _parseStatusResponse(MpdStatus($mpd));
-		if ($_hwparams['status'] == 'active') { 		
+		if ($_hwparams['status'] == 'active') {
 		// source format
 		$audioinfo_mpdstatus_format = $_mpdstatus['audio_channels'];
 		$audioinfo_mpdstatus_format .= ", ";

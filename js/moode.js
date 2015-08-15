@@ -255,7 +255,7 @@ M.sendMpdCmd = function(cmd) {
  */
 M.mpdCurrentSong = function() {
 	M.log("[M.mpdCurrentSong]");
-	return $.getJSON('command/tcmods-cs.php').done(function(json) {
+	return $.getJSON('command/?cmd=currentsong').done(function(json) {
 		M.log("[M.mpdCurrentSong]", json);
 		MPDCS.json = json;
 

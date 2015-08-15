@@ -1,5 +1,5 @@
 <?php
-/*
+/**
  *  This Program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
  *  the Free Software Foundation; either version 3, or (at your option)
@@ -18,49 +18,41 @@
  *	Tsunamp Team
  *	http://www.tsunamp.com
  *
- *	UI-design/JS code by: 	Andrea Coiutti (aka ACX)
- *	PHP/JS code by:			Simone De Gregori (aka Orion)
- * 
- *	file:					command/index.php
- * 	version:				1.0
- *
- *	TCMODS Edition 
- *
- * 	TC (Tim Curtis) 2015-01-01, r1.4
- *	- testing readMpdResponse() and send status data back to caller
- *	- shovel & broom
- *
+ * Rewrite by Tim Curtis and Andreas Goetz
  */
- 
-// common include
-include('../inc/connection.php');
-error_reporting(ERRORLEVEL);
 
-if (isset($_GET['cmd']) && $_GET['cmd'] != '') {
-    if (!$mpd) {
-	    $return = 'Error: command/index.php, connection failed to MPD';
-	} else {
-		sendMpdCommand($mpd, $_GET['cmd']);
-		$return = readMpdResponse($mpd);
-		
-		// TC (Tim Curtis) 2015-01-01
-		// - to see if we can send back the error line when cmd=play and connect fails to radio station url
-		// - problem is that MPD automatically tries to play the next playlist item if play fails so the data
-		//   we get back reflects the next playlist item and not the error item...
-		/*
-		if ($return == "OK\n") {
-			$return = json_encode(_parseStatusResponse(MpdStatus($mpd)));
-		} else {
-		    $return = 'Error: command/index.php, sendMpdCommand returned >'.$return.'<';
-		}			
-		*/
-		
-		closeMpdSocket($mpd);
-    }
-} else {
-	$return = 'Error: command/index.php, command missing';
+require_once dirname(__FILE__) . '/../inc/connection.php';
+
+if (!$mpd) {
+    die('Error: connection to MPD failed');
 }
 
-echo $return;
-?>
+if (!isset($_GET['cmd'])) {
+    die('Error: missing or invalid command');
+}
+$cmd = $_GET['cmd'];
 
+sendMpdCommand($mpd, $cmd);
+$resp = readMpdResponse($mpd);
+
+// TC (Tim Curtis) 2015-01-01
+// - to see if we can send back the error line when cmd=play and connect fails to radio station url
+// - problem is that MPD automatically tries to play the next playlist item if play fails so the data
+//   we get back reflects the next playlist item and not the error item...
+/*
+if ($resp == "OK\n") {
+	$resp = json_encode(_parseStatusResponse(MpdStatus($mpd)));
+} else {
+    $resp = 'Error: command/index.php, sendMpdCommand resed >'.$resp.'<';
+}
+*/
+
+closeMpdSocket($mpd);
+
+// replace tcmods-cs
+if ('currentsong' == $cmd) {
+	$resp = _parseMpdCurrentSong($resp);
+}
+
+header('Content-type: application/json');
+echo json_encode($resp);

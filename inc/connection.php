@@ -1,5 +1,5 @@
 <?php
-/*
+/**
  *      PlayerUI Copyright (C) 2013 Andrea Coiutti & Simone De Gregori
  *		 Tsunamp Team
  *      http://www.tsunamp.com

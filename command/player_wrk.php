@@ -548,9 +548,12 @@ while (1) {
 	if ($_tcmods_conf['play_history_enabled'] == "Yes") {
 		// Get MPD currentsong data
 		$mpd = openMpdSocket('localhost', 6600);
-		$currentsong = _parseMpdCurrentSong($mpd);
+		sendMpdCommand($mpd, 'currentsong');
+		$resp = readMpdResponse($mpd);
 		closeMpdSocket($mpd);
-		
+
+		$currentsong = _parseMpdCurrentSong($resp);
+
 		// TC (Tim Curtis) 2015-07-31: updated logic
 		// Logic modeled after player_lib.js getPlaylist();
 		// RADIO STATION

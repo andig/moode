@@ -284,12 +284,12 @@ var timeKnobPaintComplete = false;
 function mpdCurrentSong() {
 	$.ajax({
 		type: 'GET',
-		url: 'command/tcmods-cs.php',
+		url: 'command/?cmd=currentsong',
 		async: false, // Ensure data is current
 		cache: false,
 		success: function(data){
 			GUI.halt = 1;
-			MPDCS.json = eval('(' + data + ')');
+			MPDCS.json = data;
 			//console.log('MPDCS.json=', MPDCS.json);
 			
 			// TC (Tim Curtis) 2015-07-31: updated logic
