@@ -158,30 +158,6 @@ function _libAddItem(&$lib, $item) {
 	$artist = $item["Artist"] ?: "Unknown";
 	$album = $item["Album"] ?: "Unknown";
 
-	// placeholder for compilation data
-	$albumInvalid = null;
-
-	// compilation?
-	if ($item['AlbumArtist'] && $item['Artist'] && 
-		$item['AlbumArtist'] !== $item['Artist'])
-	{
-		// use AlbumArtist instead of Artist
-		$artistInvalid = $artist;
-		$artist = $item['AlbumArtist'];
-		$albumInvalid = array();
-
-		// Artist/Album need be remapped to AlbumArtist/Album
-		if (isset($lib[$genre][$artistInvalid][$album])) {
-			$albumInvalid = $lib[$genre][$artistInvalid][$album];
-			unset($lib[$genre][$artistInvalid][$album]);
-
-			// no more albums for invalid Artist
-			if (0 === count($lib[$genre][$artistInvalid])) {
-				unset($lib[$genre][$artistInvalid]);
-			}
-		}
-	}
-
 	if (!$lib[$genre]) {
 		$lib[$genre] = array();
 	}
@@ -192,16 +168,11 @@ function _libAddItem(&$lib, $item) {
 		$lib[$genre][$artist][$album] = array();
 	}
 
-	if (isset($albumInvalid)) {
-		$lib[$genre][$artist][$album] = array_merge($lib[$genre][$artist][$album], $albumInvalid);
-	}
-
 	$libItem = array(
 		"file" => $item['file'], 
 		"display" => ($item['Track'] ? $item['Track']." - " : "").$item['Title'], 
 		"time" => $item['Time'],
 		"time2" => songTime($item['Time'])
-		// ,"x" => $item
 	);
 
 	array_push($lib[$genre][$artist][$album], $libItem);
@@ -244,7 +215,7 @@ function enqueueAll($sock, $json) {
 
 // v2
 function sendMpdIdle($sock) {
-	sendMpdCommand($sock,"idle"); 
+	sendMpdCommand($sock,"idle");
 	$response = readMpdResponse($sock);
 	return true;
 }
@@ -376,80 +347,6 @@ function sysCmd($syscmd) {
 	return $output;
 }
 
-// format Output for "playlist"
-function _parseFileListResponse($resp) {
-	if ( is_null($resp) ) {
-		return NULL;
-	} else {
-		$plistArray = array();
-		$plistLine = strtok($resp,"\n");
-		$plistFile = "";
-		$plCounter = -1;
-		while ( $plistLine ) {
-			// TC (Tim Curtis) 2014-09-17
-			// add limit 2 to explode to handle case where string contains more than one ":" (colon)
-			list ( $element, $value ) = explode(": ",$plistLine, 2);
-			// TC (Tim Curtis) 2014-09-17, remove OR playlist in original stmt below
-			// if ( $element == "file" OR $element == "playlist") {
-			if ( $element == "file" ) {
-				$plCounter++;
-				$plistFile = $value;
-				$plistArray[$plCounter]["file"] = $plistFile;
-				$plistArray[$plCounter]["fileext"] = parseFileStr($plistFile,'.');
-			} else if ( $element == "directory" ) {
-				$plCounter++;
-				// record directory index for further processing
-				$dirCounter++;
-				$plistFile = $value;
-				$plistArray[$plCounter]["directory"] = $plistFile;
-			// TC (Tim Curtis) 2014-09-17
-			// - differentiate saved playlists from WEBRADIO playlist files
-			} else if ( $element == "playlist" ) {
-				if ( substr($value, 0, 8 ) == "WEBRADIO") {
-					$plCounter++;
-					$plistFile = $value;
-					$plistArray[$plCounter]["file"] = $plistFile;
-					$plistArray[$plCounter]["fileext"] = parseFileStr($plistFile,'.');
-				} else {
-					$plCounter++;
-					$plistFile = $value;
-					$plistArray[$plCounter]["playlist"] = $plistFile;
-				}
-			} else {
-				$plistArray[$plCounter][$element] = $value;
-				$plistArray[$plCounter]["Time2"] = songTime($plistArray[$plCounter]["Time"]);
-			}
-
-			$plistLine = strtok("\n");
-		}
-		
-		// reverse MPD list output
-		if (isset($dirCounter) && isset($plistArray[0]["file"]) ) {
-			$dir = array_splice($plistArray, -$dirCounter);
-			$plistArray = $dir + $plistArray;
-		}
-	}
-	return $plistArray;
-}
-
-// AG
-/**
- * Parse MPD response into key/value pairs
- */
-function parseMPDResponse($resp) {
-	$res = array();
-
-	foreach (explode("\n", $resp) as $line) {
-		// skip lines without :
-		if (strpos($line, ': ')) {
-			list ($key, $val) = explode(": ", $line, 2);
-			$res[$key] = $val;
-		}
-	}
-
-	return $res;
-}
-
 // AG
 /**
  * Return formatted MPD player status
@@ -460,7 +357,13 @@ function _parseStatusResponse($resp) {
 	}
 
 	$status = array();
-	$status = parseMPDResponse($resp);
+	foreach (explode("\n", $resp) as $line) {
+		// skip lines without :
+		if (strpos($line, ': ')) {
+			list ($key, $val) = explode(": ", $line, 2);
+			$status[$key] = $val;
+		}
+	}
 
 	// "elapsed time song_percent" added to output array
 	$percent = 0;
@@ -508,6 +411,64 @@ function _parseStatusResponse($resp) {
 	}
 
 	return $status;
+}
+
+// format Output for "playlist"
+function _parseFileListResponse($resp) {
+	if (is_null($resp)) {
+		return NULL;
+	}
+
+	$res = array();
+	$plistFile = "";
+	$cnt = -1;
+
+	foreach (explode("\n", $resp) as $line) {
+		// skip lines without :
+		if (false === strpos($line, ': ')) {
+			continue;
+		}
+		list ($key, $val) = explode(": ", $line, 2);
+
+		// TC (Tim Curtis) 2014-09-17, remove OR playlist in original stmt below
+		if ("file" == $key) {
+			$cnt++;
+			$res[$cnt]["file"] = $val;
+			$res[$cnt]["fileext"] = parseFileStr($val,'.');
+		}
+		elseif ("directory" == $key) {
+			$cnt++;
+			// record directory index for further processing
+			$dirCounter++;
+			$res[$cnt]["directory"] = $val;
+		// - differentiate saved playlists from WEBRADIO playlist files
+		}
+		elseif ("playlist" == $key) {
+			if ( substr($val, 0, 8 ) == "WEBRADIO") {
+				$cnt++;
+				$res[$cnt]["file"] = $val;
+				$res[$cnt]["fileext"] = parseFileStr($val,'.');
+			}
+			else {
+				$cnt++;
+				$res[$cnt]["playlist"] = $val;
+			}
+		}
+		else {
+			$res[$cnt][$key] = $val;
+			$res[$cnt]["Time2"] = songTime($res[$cnt]["Time"]);
+		}
+
+		$plistLine = strtok("\n");
+	}
+
+	// reverse MPD list output
+	if (isset($dirCounter) && isset($res[0]["file"]) ) {
+		$dir = array_splice($res, -$dirCounter);
+		$res = $dir + $res;
+	}
+
+	return $res;
 }
 
 // get file extension
@@ -1119,27 +1080,6 @@ function wrk_mpdconf($outpath, $db, $kernelver, $i2s) {
 	$output .= "# the Player via MPD Configuration page. \n";
 	$output .= "#########################################\n";
 	$output .= "\n";
-	/*
-	// parse DB output (original)
-	foreach ($mpdcfg as $cfg) {
-		if ($cfg['param'] == 'audio_output_format' && $cfg['value_player'] == 'disabled'){
-			$output .= '';
-		} else if ($cfg['param'] == 'dsd_usb') {
-			$dsd = $cfg['value_player'];
-		} else if ($cfg['param'] == 'device') {
-			$device = $cfg['value_player'];
-			var_export($device);
-			// $output .= '';
-		} else if ($cfg['param'] == 'mixer_type' && $cfg['value_player'] == 'hardware' ) { 
-			// $hwmixer['device'] = 'hw:0';
-			$hwmixer['control'] = alsa_findHwMixerControl($device, $kernelver, $i2s);
-			// $hwmixer['index'] = '1';
-		}  else {
-			$output .= $cfg['param']." \"".$cfg['value_player']."\"\n";
-		}
-	}
-	*/
-	
 	// parse DB output
 	// TC (Tim Curtis) 2015-06-26; store volume mixer type in tcmods.conf
 	// TC (Tim Curtis) 2015-06-26; use GetMixerName() instead of alsa_findHwMixerControl()
@@ -1202,34 +1142,6 @@ function wrk_mpdconf($outpath, $db, $kernelver, $i2s) {
 	fwrite($fh, $output);
 	fclose($fh);
 }
-// TC (Tim Curtis) 2015-06-26: deprecated
-/*
-function alsa_findHwMixerControl($device, $kernelver, $i2s) {
-	// TC (Tim Curtis) 2015-06-26: replace original code with a kernel version check to determine $hwmixerdev = PCM or Digital
-	//playerSession('open',$db);
-	//if ($_SESSION['kernelver'] == '3.18.11-v7+' || $_SESSION['kernelver'] == '3.18.14-v7+' || $_SESSION['kernelver'] == '3.18.11+' || $_SESSION['kernelver'] == '3.18.14+') {
-
-	// TC (Tim Curtis) 2015-06-26: set simple mixer name based on kernel version and i2s vs USB
-	$mixername = getMixerName($kernelver, $i2s);
-
-	//if ($kernelver == '3.18.5+' || $kernelver == '3.18.11+' || $kernelver == '3.18.14+') {
-	//	if ($i2s != 'I2S Off') {
-	//		$mixername = 'Digital'; // i2s device 
-	//	} else {
-	//		$mixername = 'PCM'; // USB device 
-	//	}
-	//} else {
-	//	$mixername = 'PCM'; // i2s and USB devices
-	//}
-	
-	//$cmd = "amixer -c ".$device." |grep \"mixer control\"";
-	//$str = sysCmd($cmd);
-	//$hwmixerdev = substr(substr($str[0], 0, -(strlen($str[0]) - strrpos($str[0], "'"))), strpos($str[0], "'")+1);
-	//return $hwmixerdev;
-	
-	return $mixername;
-}
-*/
 
 function wrk_sourcemount($db,$action,$id) {
 	switch ($action) {
@@ -1477,7 +1389,7 @@ function wrk_sysEnvCheck($arch,$install) {
 		//if (md5_file($a) != md5_file($b)) {
 		//	sysCmd('cp '.$b.' '.$a);
 		//}
-		 
+
 		// /etc/samba/smb.conf
 		//$a = '/etc/samba/smb.conf';
 		//$b = '/var/www/_OS_SETTINGS/etc/samba/smb.conf';
@@ -1515,7 +1427,7 @@ function wrk_sysEnvCheck($arch,$install) {
 			sysCmd('cp '.$b.' '.$a.' ');
 			$restartphp = 1;
 		}
-	 
+
 		if ($install == 1) {
 			// remove autoFS for NAS mount
 			sysCmd('cp /var/www/_OS_SETTINGS/etc/auto.master /etc/auto.master');
@@ -1529,7 +1441,7 @@ function wrk_sysEnvCheck($arch,$install) {
 			sysCmd('cp /var/www/_OS_SETTINGS/etc/php5/fpm/pool.d/* /etc/php5/fpm/pool.d/');
 			$restartphp = 1;
 		}
-		
+
 		// /etc/php5/fpm/pool.d/command.conf
 		$a = '/etc/php5/fpm/pool.d/command.conf';
 		$b = '/var/www/_OS_SETTINGS/etc/php5/fpm/pool.d/command.conf';
@@ -1573,7 +1485,7 @@ function wrk_sysEnvCheck($arch,$install) {
 		if (isset($reboot) && $reboot == 1) {
 			sysCmd('reboot');
 		}
-	}	
+	}
 }
 */
 
