@@ -1,5 +1,5 @@
 <?php 
-/*
+/**
  *  This Program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
  *  the Free Software Foundation; either version 3, or (at your option)
@@ -18,45 +18,15 @@
  *	Tsunamp Team
  *	http://www.tsunamp.com
  *
- *	UI-design/JS code by: 	Andrea Coiutti (aka ACX)
- *	PHP/JS code by:			Simone De Gregori (aka Orion)
- * 
- *	file:					mpd-config.php
- * 	version:				1.0
- *
- *	TCMODS Edition 
- *
- *  TC (Tim Curtis) 2014-08-23, r1.0
- *  - add new sample rates
- *
- *  TC (Tim Curtis) 2014-12-23, r1.3
- *  - remove trailing ! in 1st content line causing code to be grayed out in editor 
- *	- add new sample rates 176400:16:2 and 176400:24:2
- *	- shovel & broom
- *
- *	TC (Tim Curtis) 2015-02-25 r1.6
- *	- add SoX prefixes to samplerate_converter
- *	- update SRC text for dropdown
- *
- *	TC (Tim Curtis) 2015-04-29 r1.8
- *	- add friendly names for audio output
- *	- shovel & broom
- *
- *	TC (Tim Curtis) 2015-05-30 r1.9
- *	- add friendly name check for "Interf" (Wyred4Sound DAC)
- *	- add friendly name check for "x20" (Eastern Electric Minimax Junior DAC)
- *
- *	TC (Tim Curtis) 2015-06-26 r2.0
- *	- add friendly name check for "G1V5" (Geek Pulse X-Fi DAC)
- *
- *	TC (Tim Curtis) 2015-07-31 r2.1
- *	- add friendly name check for "Audio" (CM6631A USB/SPDIF converter)
- *
+ * Rewrite by Tim Curtis and Andreas Goetz
  */
- 
-// Common include
-include('inc/connection.php');
-playerSession('open',$db,'',''); 
+
+require_once dirname(__FILE__) . '/inc/connection.php';
+require_once dirname(__FILE__) . '/inc/worker.php';
+
+// open player session
+playerSession('open',$db,'','');
+
 $dbh = cfgdb_connect($db);
 session_write_close();
 ?>

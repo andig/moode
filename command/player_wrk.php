@@ -1,6 +1,10 @@
 #!/usr/bin/php5
 <?php
-/*
+/**
+ *      PlayerUI Copyright (C) 2013 Andrea Coiutti & Simone De Gregori
+ *		 Tsunamp Team
+ *      http://www.tsunamp.com
+ *
  *  This Program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
  *  the Free Software Foundation; either version 3, or (at your option)
@@ -15,94 +19,7 @@
  *  along with TsunAMP; see the file COPYING.  If not, see
  *  <http://www.gnu.org/licenses/>.
  *
- *	PlayerUI Copyright (C) 2013 Andrea Coiutti & Simone De Gregori
- *	Tsunamp Team
- *	http://www.tsunamp.com
- *
- *	UI-design/JS code by: 	Andrea Coiutti (aka ACX)
- *	PHP/JS code by:			Simone De Gregori (aka Orion)
- * 
- *	file:					player_wrk.php
- * 	version:				1.0
- *
- *	TCMODS Edition 
- *
- *	TC (Tim Curtis) 2014-08-23, r1.0
- *	- edit shairport service name
- *	- set loop sleep to 5 from 7 secs 
- *	- process theme change requests
- *
- *	TC (Tim Curtis) 2014-09-17, r1.1
- *	- added global for release id
- *
- *	TC (Tim Curtis) 2014-10-31, r1.2
- *	- set symlink for album art lookup
- *	- added global flag for consume mode off on player start
- *	- set loop sleep to 3 from 5 secs 
- *
- *	TC (Tim Curtis) 2014-11-30, r1.3 beta1
- *	- update release id to r13 
- *  - reset WEBRADIO file permissions
- *
- *	TC (Tim Curtis) 2014-12-23
- *	- reset tcmods.conf file permissions
- *	- clock radio load/reload settings, actions 
- *	- shovel & broom
- *
- *	TC (Tim Curtis) 2015-01-01, r1.4
- *	- update release id to r14 
- *
- *	TC (Tim Curtis) 2015-01-27, r1.5
- *	- update release id to r15
- *	- set loop sleep to 5 from 3 secs
- *	- retry clock radio stop cmd to improve robustness
- *	- run unmute.sh here instead of from within orion_optimize.sh
- *	- ensure consume mode off after MPD restart
- *
- *	TC (Tim Curtis) 2015-02-25, r1.6
- *	- update release id to r16
- *	- update tcmods.conf sys_ items
- *	- add kernel select handler
- *	- add is2 driver select handler
- *	- fix page return hang in case: mpdcfg on ARMv7l (Pi-2B)
- *
- *	TC (Tim Curtis) 2015-03-21, r1.7
- *	- update release id to r17
- *	- change TCMODS Airplay to Moode Airplay
- *	- add test for audio device to determine which type of unmute to run
- *
- *	TC (Tim Curtis) 2015-04-29, r1.8
- *	- update release id to r18
- *	- process timezone select request
- *	- process host and network service name change requests
- *	- store PCM (alsamixer) volume at player start
- *	- streamline theme change code
- *	- start minidlna only if its turned on in System config page
- *	- add 6 new theme colors
- *
- *	TC (Tim Curtis) 2015-05-30, r1.9
- *	- update release id to r19
- *	- add case for reload tcmods config
- *	- reset playhistory.log file permissions
- *	- add clear system and playback history logs
- *	- update playback history log
- *	- streamline theme change code
- *
- *	TC (Tim Curtis) 2015-06-26, r2.0
- *	- update release id to r20
- *  - set simple mixer name based on kernel version for get/set alsamixer volume
- *	- using new volume control with optional logarithmic mapping of knob 0-100 range to hardware range
- *	- add IQaudIO Pi-DigiAMP+ to unmute processing
- *	- remove test for procarch in unmute section, not needed
- *	- reset file permissions on liblog.txt file
- *
- *	TC (Tim Curtis) 2015-07-31, r2.1
- *	- update release id to r21
- *	- add $level < 0 check in volume set code for clock radio to match code in player_lib.js setVolume()
- *	- add case expand sd card storage
- *	- updated logic for playback history log
- *	- shovel & broom 
- *
+ * Rewrite by Tim Curtis and Andreas Goetz
  */
 
 // Common TCMODS
@@ -112,7 +29,9 @@ $TCMODS_CONSUMEMODE_ON = "1"; // Used for run-once fix for mpd consume mode some
 $TCMODS_CLOCKRAD_RETRY = 3; // Num times to retry the stop cmd
  
 // Common include
-include('/var/www/inc/player_lib.php');
+require_once dirname(__FILE__) . '/../inc/player_lib.php';
+require_once dirname(__FILE__) . '/../inc/worker.php';
+
 ini_set('display_errors', '1');
 ini_set('error_log','/var/log/php_errors.log');
 $db = 'sqlite:/var/www/db/player.db';
@@ -620,57 +539,6 @@ while (1) {
 			$searchEngine = "http://www.google.com/search?q=";
 			$searchUrl = "<a href=\"".$searchEngine.$searchStr."\" class=\"playhistory-link\" target=\"_blank\"><i class=\"icon-external-link-sign\"></i></a>";
 		}
-		
-		/*
-		// ORIGINAL		
-		// Logic from player_lib.js mpdCurrentSong();
-		if (!isset($currentsong['Name'])) {
-			if (isset($currentsong['file'])) {
-				if (substr($currentsong['file'], 0, 4) != "http") { // song
-					$artist = $currentsong['Artist']; 
-					$title = $currentsong['Title']; 
-					$album = $currentsong['Album'];
-				} else { // file= http://
-					if (isset($currentsong['Artist'])) { // UPnP song file
-						$artist = $currentsong['Artist']; 
-						$title = $currentsong['Title']; 
-						$album = $currentsong['Album'];
-					} else { // radio station
-						$artist = "Radio Station"; 
-						$title = $currentsong['file']; 
-						$album = $currentsong['Title'];
-					}
-				}
-			} else { } // we should never get here (no file)
-		} else { // radio station
-			$artist = "Radio Station"; 
-			$title = $currentsong['Title']; 
-			$album = str_replace('"', '', $currentsong['Name']); // remove any dbl quotes from station name e.g., AddictedToRadio names
-		}
-		// Title might not be transmitted by some web radio stations, use file (streaming url) instead
-		if (!isset($currentsong['Title'])) {
-			$title = $currentsong['file']; 
-		}
-		// End - Logic from player_lib.js mpdCurrentSong();
-
-		// Logic from player_lib.js UpdateGUI();
-		if (substr($title, 0, 4) == "http") {
-			$title_log = "Streaming source"; // if $title is used directly then all http:// sources will log as "Streaming source"
-			$searchUrl = "<span class=\"playhistory-link\"><i class=\"icon-external-link\"></i></span>";
-		} else {
-			$title_log = $title;
-			if ($artist == 'Radio Station') {
-				$searchStr = str_replace('-', ' ', $title);
-				$searchStr = str_replace('&', ' ', $searchStr);
-				$searchStr = preg_replace('!\s+!', '+', $searchStr);
-			} else {
-				$searchStr = $artist."+".$album;				
-			}
-			$searchEngine = "http://www.google.com/search?q=";
-			$searchUrl = "<a href=\"".$searchEngine.$searchStr."\" class=\"playhistory-link\" target=\"_blank\"><i class=\"icon-external-link-sign\"></i></a>";
-		}
-		// End Logic from player_lib.js UpdateGUI();
-		*/
 
 		// When song changes, update playback history log
 		// TC (Tim Curtis) 2015-07-31: add $title not blank test
@@ -701,19 +569,6 @@ while (1) {
 				$cmd = 'mpc stop && poweroff';
 				sysCmd($cmd);
 				break;
-			/* TC (Tim Curtis) 2015-05-30: not used anymore, mpdcfg used instead
-			case 'mpdrestart':
-				//sysCmd('service mpd restart');
-				sysCmd('killall mpd');
-				sleep(1);
-				sysCmd('service mpd start');
-				// TC (Tim Curtis) 2015-01-27: ensure consume mode off after restart
-				sleep(1);
-				$mpd = openMpdSocket('localhost', 6600);
-				sendMpdCommand($mpd,'consume 0');
-				closeMpdSocket($mpd);
-				break;
-			*/
 			case 'phprestart':
 				$cmd = 'service php5-fpm restart';
 				sysCmd($cmd);

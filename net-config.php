@@ -21,7 +21,6 @@
  * Rewrite by Tim Curtis and Andreas Goetz
  */
 
-// common include
 require_once dirname(__FILE__) . '/inc/connection.php';
 
 // open player session

@@ -1,5 +1,5 @@
 <?php 
-/*
+/**
  *  This Program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
  *  the Free Software Foundation; either version 3, or (at your option)
@@ -18,42 +18,15 @@
  *	Tsunamp Team
  *	http://www.tsunamp.com
  *
- *	UI-design/JS code by: 	Andrea Coiutti (aka ACX)
- *	PHP/JS code by:			Simone De Gregori (aka Orion)
- * 
- *	file:					sources.php
- * 	version:				1.0
- *
- *	TCMODS Edition 
- *
- *  TC (Tim Curtis) 2014-11-30, r1.3 beta1
- *  - remove trailing ! in 1st content line causing code to be grayed out in editor 
- *
- *	TC (Tim Curtis) 2014-12-23, r1.3
- *	- remove btn-block on $_mounts so l/r margins will be present in html 
- *	- shovel & broom
- *
- *	TC (Tim Curtis) 2015-02-25, r1.6
- *	- remove cifs noatime option, not supported on kernel 3.12.26+ / MPD 0.19.1, causes mount to fail with errors
- *
- *	TC (Tim Curtis) 2015-04-29, r1.8
- *	- streamlined format for source button
- *	- updated $_title wording for source.html
- *
- *	TC (Tim Curtis) 2015-05-30, r1.9
- *	- Streamline layout
- *
- *	TC (Tim Curtis) 2015-06-26, r2.0
- *	- change width of $_mounts button from 220px to 240px
- *
+ * Rewrite by Tim Curtis and Andreas Goetz
  */
- 
-// common include
-include('inc/connection.php');
-playerSession('open',$db,'',''); 
-?>
 
-<?php
+require_once dirname(__FILE__) . '/inc/connection.php';
+require_once dirname(__FILE__) . '/inc/worker.php';
+
+// open player session
+playerSession('open',$db,'','');
+
 // handle (reset)
 if (isset($_POST['reset']) && $_POST['reset'] == 1) {
 	// tell worker to write new MPD config
