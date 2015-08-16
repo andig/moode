@@ -112,7 +112,7 @@ function loadAllLib($sock) {
 			libLog("_loadAllLib() count= ".$count);
 		}
 
-		return json_encode($lib);
+		return $lib;
 	}
 }
 
@@ -283,26 +283,23 @@ function echoTemplate($template) {
 	echo $template;
 }
 
-function searchDB($sock,$querytype,$query) {
-	switch ($querytype) {
+function searchDB($sock, $type, $query = '') {
+	if ('' !== $query) {
+		$query = ' "' . html_entity_decode($query) . '"';
+	}
+
+	switch ($type) {
 		case "filepath":
-			if (isset($query) && !empty($query)){
-				sendMpdCommand($sock,"lsinfo \"".html_entity_decode($query)."\"");
-				break;
-			} else {
-				sendMpdCommand($sock,"lsinfo");
-				break;
-			}
+			sendMpdCommand($sock, "lsinfo" . $query);
+			break;
 		case "album":
 		case "artist":
 		case "title":
 		case "file":
-			sendMpdCommand($sock,"search ".$querytype." \"".html_entity_decode($query)."\"");
-			//sendMpdCommand($sock,"search any \"".html_entity_decode($query)."\"");
-			break;	
-	}	
-	//$response =  htmlentities(readMpdResponse($sock),ENT_XML1,'UTF-8');
-	//$response = htmlspecialchars(readMpdResponse($sock));
+			sendMpdCommand($sock, "search " . $type . $query);
+			break;
+	}
+
 	$response = readMpdResponse($sock);
 	return _parseFileListResponse($response);
 }
