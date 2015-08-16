@@ -92,7 +92,6 @@
     <link href="css/bootstrap.min.css" rel="stylesheet">
     <link href="css/flat-ui.css" rel="stylesheet">
     <link href="css/bootstrap-select.css" rel="stylesheet">
-	<link href="css/bootstrap-fileupload.css" rel="stylesheet">
     <link href="css/font-awesome.min.css" rel="stylesheet">
 	<?php if ($sezione == 'index') { ?>
 		<link href="css/jquery.countdown.css" rel="stylesheet">

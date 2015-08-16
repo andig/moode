@@ -888,7 +888,7 @@ if (isset($_SESSION['notify']) && $_SESSION['notify'] != '') {
 ?>
 
 <!-- Debug footer -->
-<div id="debug" <?php if ($_SESSION['hiddendebug'] == 1 OR $_SESSION['debug'] == 0) {echo "class=\"hide\"";} ?>>
+<div id="debug">
 	<pre>
 		<?php
 		debug_footer($db);

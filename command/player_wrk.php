@@ -27,7 +27,7 @@
 $TCMODS_REL = "r21"; // Current release, used in path for theme change
 $TCMODS_CONSUMEMODE_ON = "1"; // Used for run-once fix for mpd consume mode sometimes being on after boot/reboot
 $TCMODS_CLOCKRAD_RETRY = 3; // Num times to retry the stop cmd
- 
+
 // Common include
 require_once dirname(__FILE__) . '/../inc/player_lib.php';
 require_once dirname(__FILE__) . '/../inc/worker.php';
@@ -653,28 +653,7 @@ while (1) {
 			case 'sourcecfg':
 				wrk_sourcecfg($db,$_SESSION['w_queueargs']);
 				break;
-			case 'enableapc':
-				// apc.ini
-				$file = "/etc/php5/fpm/conf.d/20-apc.ini";
-				$fileData = file($file);
-				$newArray = array();
-				foreach($fileData as $line) {
-				  // find the line that starts with 'presentation_url"
-				  if (substr($line, 0, 8) == 'apc.stat') {
-					// replace apc.stat with selected value
-					$line = "apc.stat = ".$_SESSION['w_queueargs']."\n";
-				  }
-				  $newArray[] = $line;
-				}
-				// Commit changes to /etc/php5/fpm/conf.d/20-apc.ini
-				$fp = fopen($file, 'w');
-				fwrite($fp, implode("",$newArray));
-				fclose($fp);
-				// Restart PHP service
-				sysCmd('service php5-fpm restart');
-				playerSession('write',$db,'enableapc',$_SESSION['w_queueargs']);
-				break;
-				
+
 			// TC (Tim Curtis) 2014-08-23: process theme change requests
 			// TC (Tim Curtis) 2015-04-29: streamline theme change code
 			// TC (Tim Curtis) 2015-04-29: add 6 new theme colors
