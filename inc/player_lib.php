@@ -25,63 +25,53 @@
 define("MPD_RESPONSE_ERR", "ACK");
 define("MPD_RESPONSE_OK",  "OK");
 
-// v2
 function openMpdSocket($host, $port) {
-	$sock = stream_socket_client('tcp://'.$host.':'.$port.'', $errorno, $errorstr, 30 );
+	$sock = stream_socket_client('tcp://'.$host.':'.$port.'', $errorno, $errorstr, 30);
 	$response = readMpdResponse($sock);
-	if ($response = '') {
-		sysCmd('command/shell.sh '.$response);
-		exit;
-	} else {
-		return $sock;
-	}
-} //end openMpdSocket()
+	return $sock;
+}
 
 function closeMpdSocket($sock) {
-	sendMpdCommand($sock,"close");
+	sendMpdCommand($sock, "close");
 	fclose($sock);
 }
 
-// v2
-function sendMpdCommand($sock,$cmd) {
+function sendMpdCommand($sock, $cmd) {
 	if ($cmd == 'cmediafix') {
-		$cmd = "pause\npause\n";
-		fputs($sock, $cmd);
-	} else {
-		$cmd = $cmd."\n";
-		fputs($sock, $cmd);	
+		$cmd = "pause\npause";
 	}
+
+	fputs($sock, $cmd . "\n");
 }
 
-// v3
-// AG (Andreas Goetz) 2015-08-10: add stream parameter for reading one line at a time (NOTE: doesn't allow empty lines!)
-function readMpdResponse($sock, $stream = false) {
-	$output = "";
-	// read one line at a time
-	if ($stream) {
-		if (!feof($sock)) {
-			$output = fgets($sock,1024);
+function readMpdResponse($sock) {
+	$res = '';
+
+	while (!feof($sock)) {
+		echo ">";
+		$str = fgets($sock, 1024);
+		echo "$str\n";
+		if (strncmp(MPD_RESPONSE_OK, $str, strlen(MPD_RESPONSE_OK)) == 0) {
+			return $res;
 		}
+		if (strncmp(MPD_RESPONSE_ERR, $str, strlen(MPD_RESPONSE_ERR)) == 0) {
+			return false;
+		}
+		$res .= $str;
 	}
-	else while(!feof($sock)) {
-		$response =  fgets($sock,1024);
-		$output .= $response;
-		if (strncmp(MPD_RESPONSE_OK, $response, strlen(MPD_RESPONSE_OK)) == 0) {
-			break;
-		}
-		if (strncmp(MPD_RESPONSE_ERR, $response, strlen(MPD_RESPONSE_ERR)) == 0) {
-			$output = "MPD error: $response";
-			break;
-		}
-	}
-	return $output;
+
+	return $res;
 }
 
 function chainMpdCommands($sock, $commands) {
+	$res = '';
+
 	foreach ($commands as $command) {
 		sendMpdCommand($sock, $command);
-		readMpdResponse($sock);
+		$res .= readMpdResponse($sock);
 	}
+
+	return $res;
 }
 
 function libLog($str, $overwrite = false) {
@@ -95,15 +85,7 @@ function loadAllLib($sock) {
 	// TC (Tim Curtis) 2015-06-26: debug
 	$debug_flags = str_replace("\n", '', explode(',', file_get_contents("/var/www/liblog.conf")));
 	// write out the debug flags
-	libLog("debug flags= ".$debug_flags[0].",".$debug_flags[1].",".$debug_flags[2].",".$debug_flags[3].",".$debug_flags[4], true); 
-
-// 	sendMpdCommand($sock, "find modified-since 36500"); // number of days
-// 	$response = readMpdResponse($sock);
-// 	$debug_fhand = fopen("/var/www/lib.txt",'w');
-// 	// fwrite($debug_fhand, print_r($lib, true));
-// 	fwrite($debug_fhand, $response);
-// 	fclose($debug_fhand);
-// echo($response);die;
+	libLog("debug flags= ".$debug_flags[0].",".$debug_flags[1].",".$debug_flags[2].",".$debug_flags[3].",".$debug_flags[4], true);
 
 	$lib = array();
 	if (false !== ($count = _loadDirForLib($sock, $lib, $debug_flags))) {
@@ -126,23 +108,12 @@ function _loadDirForLib($sock, &$lib, $debug_flags) {
 		sendMpdCommand($sock, "find modified-since 36500"); // default: number of days
 	}
 
-	$response = readMpdResponse($sock, true);
-	if (strncmp(MPD_RESPONSE_OK, $response, strlen(MPD_RESPONSE_OK)) == 0 ||
-		strncmp(MPD_RESPONSE_ERR, $response, strlen(MPD_RESPONSE_ERR)) == 0) 
-	{
-		if ($debug_flags[0] == "y") {
-			libLog("_loadDirForLib() mpd error= ".$response);
-		}
-		return false; // empty
-	}
-
 	$libCount = 0;
 	$item = array();
 
-	while ($line = readMpdResponse($sock, true)) {
-		// TC (Tim Curtis) 2014-09-17: add limit 2 to explode to avoid case where string contains more than one ":" (colon)
-		list($element, $value) = explode(": ", rtrim($line), 2);
-		if ($element == "file") {
+	foreach (explode("\n", readMpdResponse($sock, true)) as $line) {
+		list($key, $val) = explode(": ", $line, 2);
+		if ($key == "file") {
 			if (count($item)) {
 				_libAddItem($lib, $item);
 				$libCount++;
@@ -150,20 +121,17 @@ function _loadDirForLib($sock, &$lib, $debug_flags) {
 				$item = array();
 			}
 
-			// TC (Tim Curtis) 2015-06-26: debug, #1 file name
 			if ($debug_flags[1] == "y") {
-				libLog("_loadDirForLib() item= ".$libCount.", file= ".$value);
+				libLog("_loadDirForLib() item= ".$libCount.", file= ".$val);
 			}
 		}
 
-		// TC (Tim Curtis) 2015-06-26: debug, #2 all elements
 		if ($debug_flags[2] == "y") {
-			libLog("_loadDirForLib() item= ".$libCount.", element= ".$element.", value= ".$value);
+			libLog("_loadDirForLib() item= ".$libCount.", key= ".$key.", val= ".$val);
 		}
 
-		// TC (Tim Curtis) 2015-06-26: note, could thrift $element = Last-Modified, Date and Disc since not used in Player
-		$item[$element] = $value;
-	} 
+		$item[$key] = $val;
+	}
 
 	if (count($item)) {
 		_libAddItem($lib, $item);
@@ -175,25 +143,25 @@ function _loadDirForLib($sock, &$lib, $debug_flags) {
 }
 
 function _libAddItem(&$lib, $item) {
-	$genre = $item["Genre"] ?: "Unknown";
-	$artist = $item["Artist"] ?: "Unknown";
-	$album = $item["Album"] ?: "Unknown";
+	$genre = isset($item["Genre"]) ? $item["Genre"] : "Unknown";
+	$artist = isset($item["Artist"]) ? $item["Artist"] : "Unknown";
+	$album = isset($item["Album"]) ? $item["Album"] : "Unknown";
 
-	if (!$lib[$genre]) {
+	if (!isset($lib[$genre])) {
 		$lib[$genre] = array();
 	}
-	if (!$lib[$genre][$artist]) {
+	if (!isset($lib[$genre][$artist])) {
 		$lib[$genre][$artist] = array();
 	}
-	if (!$lib[$genre][$artist][$album]) {
+	if (!isset($lib[$genre][$artist][$album])) {
 		$lib[$genre][$artist][$album] = array();
 	}
 
 	$libItem = array(
-		"file" => $item['file'], 
-		"display" => ($item['Track'] ? $item['Track']." - " : "").$item['Title'], 
-		"time" => $item['Time'],
-		"time2" => songTime($item['Time'])
+		"file" => $item['file'],
+		"display" => (isset($item['Track']) ? $item['Track']." - " : "") . isset($item['Title']) ? $item['Title'] : '',
+		"time" => isset($item['Time']) ? $item['Time'] : 0,
+		"time2" => songTime(isset($item['Time']) ? $item['Time'] : 0)
 	);
 
 	array_push($lib[$genre][$artist][$album], $libItem);

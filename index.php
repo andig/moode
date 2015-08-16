@@ -1,5 +1,5 @@
 <?php
-/*
+/**
  *  This Program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
  *  the Free Software Foundation; either version 3, or (at your option)
@@ -18,23 +18,14 @@
  *	Tsunamp Team
  *	http://www.tsunamp.com
  *
- *	UI-design/JS code by: 	Andrea Coiutti (aka ACX)
- *	PHP/JS code by:			Simone De Gregori (aka Orion)
- *
- *	file:					index.php
- * 	version:				1.0
- *
- *	TCMODS Edition
- *
- *  TC (Tim Curtis) 2014-11-30, r1.3 beta1
- *  - remove trailing ! in 1st content line causing code to be grayed out in editor
- *
+ * Rewrite by Tim Curtis and Andreas Goetz
  */
 
-// common include
-include('inc/connection.php');
+require_once dirname(__FILE__) . '/inc/connection.php';
+
 playerSession('open',$db,'','');
 playerSession('unlock',$db,'','');
+
 
 // set template
 $tpl = "index_new.html";
