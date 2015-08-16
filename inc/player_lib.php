@@ -48,15 +48,15 @@ function readMpdResponse($sock) {
 	$res = '';
 
 	while (!feof($sock)) {
-		echo ">";
 		$str = fgets($sock, 1024);
-		echo "$str\n";
+
 		if (strncmp(MPD_RESPONSE_OK, $str, strlen(MPD_RESPONSE_OK)) == 0) {
 			return $res;
 		}
 		if (strncmp(MPD_RESPONSE_ERR, $str, strlen(MPD_RESPONSE_ERR)) == 0) {
 			return false;
 		}
+
 		$res .= $str;
 	}
 
@@ -167,38 +167,37 @@ function _libAddItem(&$lib, $item) {
 	array_push($lib[$genre][$artist][$album], $libItem);
 }
 
-// TC (Tim Curtis) 2014-09-17
-// - comment out the clear command, move to playAllReplace()
-// - comment out sending "play", its sent in the the caller (index.php)
 function playAll($sock, $json) {
 	$commands = array();
-	//array_push($commands, "clear");
+
 	foreach ($json as $song) {
 		$path = $song["file"];
 		array_push($commands, "add \"".html_entity_decode($path)."\"");
 	}
-	//array_push($commands, "play");
+
 	chainMpdCommands($sock, $commands);
 }
-// TC (Tim Curtis) 2014-09-17
-// - add/replece/playall
+
 function playAllReplace($sock, $json) {
-	$commands = array();
-	array_push($commands, "clear");
+	$commands = array("clear");
+
 	foreach ($json as $song) {
 		$path = $song["file"];
 		array_push($commands, "add \"".html_entity_decode($path)."\"");
 	}
+
 	array_push($commands, "play");
 	chainMpdCommands($sock, $commands);
 }
 
 function enqueueAll($sock, $json) {
 	$commands = array();
+
 	foreach ($json as $song) {
 		$path = $song["file"];
 		array_push($commands, "add \"".html_entity_decode($path)."\"");
 	}
+
 	chainMpdCommands($sock, $commands);
 }
 
@@ -209,34 +208,35 @@ function sendMpdIdle($sock) {
 	return true;
 }
 
+function mpdStatus($sock) {
+	sendMpdCommand($sock,"status");
+	$status = readMpdResponse($sock);
+	return $status;
+}
+
 function monitorMpdState($sock) {
 	if (sendMpdIdle($sock)) {
-		$status = _parseStatusResponse(MpdStatus($sock));
+		$status = _parseStatusResponse(mpdStatus($sock));
 		return $status;
 	}
 }
 
 function getTrackInfo($sock,$songID) {
-	// set currentsong, currentartis, currentalbum
 	sendMpdCommand($sock,"playlistinfo ".$songID);
 	$track = readMpdResponse($sock);
 	return _parseFileListResponse($track);
 }
 
 function getPlayQueue($sock) {
-	sendMpdCommand($sock,"playlistinfo");
-	$playqueue = readMpdResponse($sock);
-	return _parseFileListResponse($playqueue);
+	return getTrackInfo($sock, '');
 }
 
-// TC (Tim Curtis) 2014-09-17
-// - list contents of saved playlist
-// - remove saved playlist
 function listPlayList($sock, $plname) {
 	sendMpdCommand($sock,"listplaylist "." \"".$plname."\"");
 	$plcontents = readMpdResponse($sock);
 	return _parseFileListResponse($plcontents);
 }
+
 function removePlayList($sock, $plname) {
 	sendMpdCommand($sock,"rm "." \"".$plname."\"");
 	$response = readMpdResponse($sock);
@@ -276,7 +276,6 @@ function searchDB($sock, $type, $query = '') {
 // - modify for track range begpos:endpos
 // - return range instead of path
 function remTrackQueue($sock,$songpos) {
-	//$datapath = findPLposPath($songpos,$sock);
 	$datapath = $songpos;
 	sendMpdCommand($sock,"delete ".$songpos);
 	$response = readMpdResponse($sock);
@@ -292,12 +291,6 @@ function addQueue($sock,$path) {
 	}
 	$response = readMpdResponse($sock);
 	return $response;
-}
-
-function MpdStatus($sock) {
-	sendMpdCommand($sock,"status");
-	$status= readMpdResponse($sock);
-	return $status;
 }
 
 // create JS like Timestamp
@@ -386,8 +379,8 @@ function _parseStatusResponse($resp) {
 			case '96000':
 			case '192000':
 			case '384000':
-			$status['audio_sample_rate'] = rtrim(rtrim(number_format($audio_format[0]),0),',');
-			break;
+				$status['audio_sample_rate'] = rtrim(rtrim(number_format($audio_format[0]),0),',');
+				break;
 			// decimal format
 			case '22050':
 				$status['audio_sample_rate'] = '22.05';
@@ -396,15 +389,18 @@ function _parseStatusResponse($resp) {
 			case '88200':
 			case '176400':
 			case '352800':
-			$status['audio_sample_rate'] = rtrim(number_format($audio_format[0],0,',','.'),0);
-			break;
+				$status['audio_sample_rate'] = rtrim(number_format($audio_format[0],0,',','.'),0);
+				break;
 		}
 		// format "audio_sample_depth" string
 		$status['audio_sample_depth'] = $audio_format[1];
 		// format "audio_channels" string
-		if ($audio_format[2] == "2") $status['audio_channels'] = "Stereo";
-		if ($audio_format[2] == "1") $status['audio_channels'] = "Mono";
-		if ($audio_format[2] > 2) $status['audio_channels'] = "Multichannel";
+		if ($audio_format[2] == "2")
+			$status['audio_channels'] = "Stereo";
+		elseif ($audio_format[2] == "1")
+			$status['audio_channels'] = "Mono";
+		elseif ($audio_format[2] > 2)
+			$status['audio_channels'] = "Multichannel";
 	}
 
 	return $status;
@@ -677,20 +673,7 @@ function sdbquery($querystr,$dbh) {
 	}
 }
 
-// Ramplay functions
-function rp_checkPLid($id,$mpd) {
-	$_SESSION['DEBUG'] .= "rp_checkPLid:$id |";
-	sendMpdCommand($mpd,'playlistid '.$id);
-	$response = readMpdResponse($mpd);
-	echo "<br>debug__".$response;
-	echo "<br>debug__".stripos($response,'MPD error');
-	if (stripos($response,'OK')) {
-		return true;
-	} else {
-		return false;
-	}
-}
-
+/*
 //## unire con findPLposPath
 function rp_findPath($id,$mpd) {
 	//$_SESSION['DEBUG'] .= "rp_findPath:$id |";
@@ -709,15 +692,6 @@ function findPLposPath($songpos,$mpd) {
 	$path = $idinfo[0]['file'];
 	//$_SESSION['DEBUG'] .= "Path:$path |";
 	return $path;
-}
-
-function rp_deleteFile($id,$mpd) {
-$_SESSION['DEBUG'] .= "rp_deleteFile:$id |";
-	if (unlink(rp_findPath($id,$mpd))) {
-		return true;
-	} else {
-		return false;
-	}
 }
 
 function rp_copyFile($id,$mpd) {
@@ -752,6 +726,7 @@ function rp_clean() {
 	$_SESSION['DEBUG'] .= "rp_clean: |";
 	recursiveDelete('/dev/shm/');
 }
+*/
 
 function recursiveDelete($str){
 	if (is_file($str)) {
@@ -766,6 +741,7 @@ function recursiveDelete($str){
 	}
 }
 
+/*
 function pushFile($filepath) {
 	if (file_exists($filepath)) {
 		header('Content-Description: File Transfer');
@@ -848,6 +824,12 @@ function hashCFG($action,$db) {
 //		break;
 	} 
 	playerSession('unlock');
+	return true;
+}
+*/
+
+// check if mpd.conf or interfaces was modified outside
+function hashCFG($action,$db) {
 	return true;
 }
 
@@ -1008,7 +990,7 @@ function debug_output($clear) {
 	echo $output;
 }
 
-function waitWorker($sleeptime,$section) {
+function waitWorker($sleeptime, $section = null) {
 	if ($_SESSION['w_active'] == 1) {
 		do {
 			sleep($sleeptime);
@@ -1258,19 +1240,20 @@ function _parseTcmodsConf($resp) {
 // TC (Tim Curtis) 2014-12-23
 // parse radio station file
 function _parseStationFile($resp) {
-		if (is_null($resp) ) {
-			return 'Error, _parseStationFile response is null';
-		} else {
-			$tcArray = array();
-			$tcLine = strtok($resp,"\n");
-			$tcFile = "";
+	if (is_null($resp) ) {
+		return 'Error, _parseStationFile response is null';
+	} else {
+		$tcArray = array();
+		$tcLine = strtok($resp,"\n");
+		$tcFile = "";
 
-			while ( $tcLine ) {
-				list ( $element, $value ) = explode("=",$tcLine);
-				$tcArray[$element] = $value;
-				$tcLine = strtok("\n");
-			} 
+		while ( $tcLine ) {
+			list ( $element, $value ) = explode("=",$tcLine);
+			$tcArray[$element] = $value;
+			$tcLine = strtok("\n");
 		}
+	}
+
 	return $tcArray;
 }
 
@@ -1410,8 +1393,8 @@ function _setI2sDtoverlay($db, $device) {
 		}
 	}
 }
-	
-// TC (Tim Curtis) 2015-02-25: for pre 3.18 kernels	
+
+// TC (Tim Curtis) 2015-02-25: for pre 3.18 kernels
 function _setI2sModules($db, $device) {
 	$file = '/etc/modules';
 	if ($device == 'I2S Off') {
@@ -1512,14 +1495,16 @@ function getMixerName($kernelver, $i2s) {
 	if ($i2s != 'I2S Off') {
 		if ($i2s == 'HiFiBerry Amp(Amp+)') {
 			$mixername = 'Master'; // Hifiberry Amp(Amp+) i2s device 
-		} else {				
+		}
+		else {
 			if ($kernelver == '3.18.11+' || $kernelver == '3.18.14+') {
 				$mixername = 'Digital'; // default for these kernels
 			} else {
 				$mixername = 'PCM'; // default for 3.18.5+
 			}
 		}
-	} else {
+	}
+	else {
 		$mixername = 'PCM'; // USB devices
 	}
 
