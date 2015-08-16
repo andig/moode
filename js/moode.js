@@ -72,13 +72,13 @@ M.notify = function(cmd, msg) {
 		themechange: 'Theme color changed, select Menu/Refresh to activate'
 	};
 
-	if (typeof map.cmd === undefined) {
+	if (typeof map[cmd] === undefined) {
 		console.error('[notify] Unknown cmd ' + cmd);
 	}
 
 	var icon = (cmd == 'needplname') ? 'icon-info-sign' : 'icon-ok';
 	$.pnotify({
-		title: map.cmd,
+		title: map[cmd],
 		text: msg,
 		icon: icon,
 		delay: 2000,

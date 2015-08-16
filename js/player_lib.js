@@ -1,5 +1,5 @@
-/*
- *  This Program is free software; you can redistribute it and/or modify
+/**
+ *	This Program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
  *  the Free Software Foundation; either version 3, or (at your option)
  *  any later version.
@@ -13,163 +13,9 @@
  *  along with TsunAMP; see the file COPYING.  If not, see
  *  <http://www.gnu.org/licenses/>.
  *
- *	PlayerUI Copyright (C) 2013 Andrea Coiutti & Simone De Gregori
- *	Tsunamp Team
- *	http://www.tsunamp.com
- *
- *	UI-design/JS code by: 	Andrea Coiutti (aka ACX)
- *	PHP/JS code by:			Simone De Gregori (aka Orion)
- * 
- *	file:					player_lib.js
- * 	version:				1.1
- *
- *	TCMODS Edition 
- *
- *	TC (Tim Curtis) 2014-08-23, r1.0
- * 	- array and function for getting MPD currentsong data
- * 	- function to check if coverart image file exists
- *	- improve metadata display for Playback and Playlist panels
- *	- improve readability of column headers in Library panel 
- *	- display album cover art or default cover art
- *	- amazon lookup from coverart click
- *	- sort webradio station list
- *	- bunch of console.log debug 
- *
- *	TC (Tim Curtis) 2014-09-17, r1.1
- * 	- BROWSE: parseResponse(), getDB()
- *	- saved playlist feature (list playlist, delete saved pl, custom action menus)
- *	- LIBRARY: multiple functions() and sections of code
- *	- rollup and tag all compilation albums, create a new allAlbums array
- *	- update Library btn with animated refresh icon while long running code executes
- *	- add/replace/playall btn (GetDb(), playAllReplace() finctions)
- *	- notify messages for add, addall, playall, addallreplaceplay actions
- *	- double high, expandable songlist rows
- *	- 20/30/50% horizontal layout giving more space for album names
- *	- large songlist btn for tablets
- *	- BUGFIXES: mpdCurrentSong()
- *	- added check for Webradio url in .file to prevent unnecessary coverart lookups
- *	- replace "#" in url with "%23" escape code
- *
- *	TC (Tim Curtis) 2014-10-31, r1.2
- *	- improve MPDCS cover art lookup
- *  - new makeCoverURL() function since code used in multiple places now
- *	- display cover art and metadata on Library panel  
- *  - non-scrollable column headers on Library panel for click "ALL..." filters		
- * 	- action menu for Library song items
- *	- remove persistent row highlight on Browse panel items, only highlight row on action menu btn press
- *  - fix compilation album routine not excluding albums named "Greatest Hits"
- *	- display web radio station logo on playback panel
- *	- playlist panel: remove "Web Radio - " on 2nd line
- *	- added GUI.DBentry[3] to store GUI row posn of song item to allow highlight to be removed after context menu action (scripts-playback.js)
- *
- *	TC (Tim Curtis) 2014-12-23, r1.3
- *	- fix missing dash between album and artist in Playlist panel
- *	- remove #playlist-position and #format-bitrate lines from Playback panel to free up vertical space on small screens
- *	- add code in getDB() to handle radio station delete 
- *	- no icon on Browse button after icon-spin finished
- *	- function readTcmConf() to read contents of tcmods.conf file 
- *	- tcmods.conf settings to control various things
- *	- added id="coverart-link" to a href for Amazon lookup so links.js can see it
- *	- change yes/no to 1/0 for compilation album tag
- *	- add volume-2 updater line for 2nd voume control
- *	- add mic icon to station name line
- *	- replace music icon with mic icon for radio station lines in browse lists
- *	- clear mute state on 2nd volume control when using knob slider
- *	- use allAlbumsTmp [] in filterLib() to improve efficiency
- *	- remove i > 0 condition in renderAlbums() to fix missing artist in first album li in Library panel
- *	- update count direction indicator
- *	- set #total to 00:00 with indicator when state = stop
- *	- in filterLib() allAlbums routine, add elseif for case allAlbumsTmp.length == 1
- *	- function updateTcmCOnf() to update contents of tcmods.conf file
- *	- fix double mic icons in Playlist panel	
- *	- add code in getDB() to handle radio station add, update
- *	- change coverart-click search engine from Amazon to Google
- *	- for clock radio (server) initiated play, clear mute state
- *	- format database search tally for dedicated div on right side instead of on back btn
- *	- if no search keyword, dont post, clear search tally
- *  - fix bug causing 'undefined' error when search returns nothing
- *	- send '' instead of msg in notify()
- *	- added GUI.DBentry[4] to store num playlist items for use by delete/move item modals
- *	- debug Library addAll $_POST not matching what was sent, turned out to be php.ini max_input_vars = 1000 limit
- *	- add allFiles array to filterLib() to reduce amount of data to be passed to server in Library playlist add functions
- *	- pass allFiles instead of allSongs in Library playlist add click handlers
- *	- change to relative paths for cover and logo directories
- *	- shovel & broom
- *
- *	TC (Tim Curtis) 2015-01-01, r1.4
- *	- remove highlighting and implement play/pause toggle
- *	- convertTime() add hours, use modulus to calc mins and secs
- *	- add totalTime global and totalTrackTime() function
- *	- add total track time, genre and artist to lib metadata area
- *	- add song time to lib song item
- *	- auto highlight artist and album items if only 1 of either in list after filtering
- *	- add toLowerCase() to sortJsonArrayByProperty() to fix "case sensitive" bug
- * 	- aded colon ":" to list of stationid.replace chars
- *	- add item type text and icon for 2nd line of WEBRADIO and saved playlist items
- *	- restore db search field (from toggle to radio station search field) if browse path ''
- *  - customScroll() compensate for variable pl-entry height due to line wrap by using avg pl-entry height
- *
- *	TC (Tim Curtis) 2015-01-27, r1.5
- *	- fix pl item highlighting bug
- *	- add updCountDirInd () function
- *	- redo getPlaylist() function
- *	- redo lib albumslist highlight code, avoids regenerating the albums list
- *	- remove lib addall btns, no longer used, replaced by action menu item
- *	- action menu stay within window
- *  - refine customScroll() line wrap compensation
- *	- add element volume_warning_limit to global for tcmods.conf
- *	- updateGUI(), never programatically set volume to 100 (json['volume'] = -1 case)
- *	- fix toolbar not hiding when db-back to root
- *	- refreshTimer() combine play and pause test into single if () stmt
- *	- chg countdown format from 'MS' to 'hMS' to display hours if > 0 
- *	- add watchCountdown() as onTick callback function to check hours period and reduce font-size so hh:mm:ss fits within knob
- *	- Query db table cfg_logourl, return logo url (initially for soma fm logos)
- *	- add search_autofocus_enabled to tcmods conf 
- *	- global for indicating time knob slider paint is complete
- *	- shovel & broom
- *
- *	TC (Tim Curtis) 2015-02-25, r1.6
- *	- add sys_ items to tcmods.conf
- *
- *	TC (Tim Curtis) 2015-03-21, r1.7
- *	- add menu and button click handlers for Clockradio, TCMODS and About from scripts-playback.js so these popups launch from the Config pages
- *	- add audio device dropdown for automatically populating audio device description fields
- *	- add getSudioDevDecr() to query db table cfg_audiodev and return audio device description fields
- *
- *	TC (Tim Curtis) 2015-04-29, r1.8
- *	- add theme color setting to tcmods.conf
- *	- library performance improvement, only display tracks if album selected (globals/logic so renderSongs() can decide whether to display tracks)
- *	- add logic to handle radio stations that never xmit a name 
- *	- add support for individual toolbar for each panel
- *	- add logic to handle UPnP song files (file= http://...)
- *	- add support for playback panel with integrated playlist
- *
- *	TC (Tim Curtis) 2015-05-30: r1.9
- *	- display "Streaming source" instead of URL in Playlist when Title metadata element does not exist
- *	- add play_history_ fields to tcmods.conf
- *  - add code and click handlers for play history feature
- *	- read play history log 
- *	- get UPnP cover art URL, makeUPNPCoverURL()
- *
- *	TC (Tim Curtis) 2015-06-26: r2.0
- *	- new volume control with optional logarithmic mapping of knob 0-100 range to hardware range
- *	- add volume_ elements to tcmods.conf for logarithmic volume control and improved mute
- *	- add logarithmic-volume-enabled and albumart-lookup-method to custom select control handler
- *	- add logarithmic-volume- elements and albumart-lookup-method to custom config modal form
- *	- add logic to makeCoverUrl() handle different methods for finding album art
- *	- add work-around logic in getLogoUrl() and getPlaylist() for stationid == "unnamed" xmitted by France Inter Paris (fip)
- *	- add work-around logic in MpdCurrentSong() and getPlaylist() to handle NTS Live station that sometimes does not xmit Name and Title, only file
- *
- *	TC (Tim Curtis) 2015-07-31: r2.1
- *	- add getRadioInfo() to impliment radio station name space based on station file name and URL
- *	- remove makeWebradioLogoURL(), getLogoUrl()
- *	- fix song file w/o title tag being incorrectly labled as "Streaming source"
- *	- include playall, addallreplaceplay for Library action menu
- *	- mpdCurrentSong() updated logic throughout
- *	- getPlaylist() updated logic throughout
- *
+ * Rewrite by Tim Curtis and Andreas Goetz
  */
- 
+
 // GLOBAL DATA
 // GUI array global
 var GUI = {
@@ -195,19 +41,12 @@ filters = {
     artists: [],
     genres: [],
     albums: []
-}
+};
 // TC (Tim Curtis): 2015-04-29: Library globals so renderSongs() can decide whether to display tracks
 var totalSongs = 0;
 var albumClicked = false;
 
 // MPD currentsong globals
-// TC (Tim Curtis) 2014-08-23: initial version
-// TC (Tim Curtis) 2014-10-31: include both uppercase and lowercase first letter of folder and cover strings
-// TC (Tim Curtis) 2014-10-31: change coverroot to reflect new symlink: ln -s /var/lib/mpd/music /var/www/coverroot
-// TC (Tim Curtis) 2014-10-31: arbitrary dir structure supported for cover art
-// TC (Tim Curtis) 2014-10-31: change coverpath to coverurl for clarity
-// TC (Tim Curtis) 2014-10-31: add stnlogoroot array element for web radio station logo root
-// TC (Tim Curtis) 2014-12-23: change to relative paths for cover and logo directories
 var MPDCS = {
 	json: 0,
 	artist: '',
@@ -232,37 +71,6 @@ var MPDCS = {
 // TC (Tim Curtis) 2015-06-26: add volume_ elements and albumart_lookup_method
 var TCMCONF = {
 	json: 0
-
-	/* data elements
-	TCMCONF.json['albumart_lookup_method'];
-	TCMCONF.json['audio_device_name'];
-	TCMCONF.json['audio_device_dac'];
-	TCMCONF.json['audio_device_arch'];
-	TCMCONF.json['audio_device_iface'];
-	TCMCONF.json['audio_device_other'];
-	TCMCONF.json['clock_radio_enabled'];
-	TCMCONF.json['clock_radio_playitem'];
-	TCMCONF.json['clock_radio_playname'];
-	TCMCONF.json['clock_radio_starttime'];
-	TCMCONF.json['clock_radio_stoptime'];
-	TCMCONF.json['clock_radio_volume'];
-	TCMCONF.json['clock_radio_shutdown'];
-	TCMCONF.json['play_history_currentsong'];		
-	TCMCONF.json['play_history_enabled'];		
-	TCMCONF.json['search_autofocus_enabled'];		
-	TCMCONF.json['sys_kernel_ver'];
-	TCMCONF.json['sys_processor_arch'];
-	TCMCONF.json['sys_mpd_ver'];
-	TCMCONF.json['time_knob_countup'];		
-	TCMCONF.json['theme_color'];		
-	TCMCONF.json['volume_curve_factor'];
-	TCMCONF.json['volume_curve_logarithmic'];
-	TCMCONF.json['volume_knob_setting'];
-	TCMCONF.json['volume_max_percent'];
-	TCMCONF.json['volume_mixer_type'];
-	TCMCONF.json['volume_muted'];
-	TCMCONF.json['volume_warning_limit'];		
-	*/
 };
 
 // TC (Tim Curtis) 2014-11-30: global for total track time, used in Library meta area
@@ -347,7 +155,7 @@ function mpdCurrentSong() {
 // TC (Tim Curtis) 2015-06-26: Add logic to handle different methods for finding album art
 function makeCoverURL(filepath) {
 	var cover = '/mpodcover.php/' + encodeURIComponent(filepath);
-	return cover;			
+	return cover;
 }
 
 // Check for existance of cover art image file
@@ -893,72 +701,77 @@ function parseResponse(inputArr,respType,i,inpath) {
 	return content;
 } // end parseResponse()
 
-// Handle various MPD databse commands 
+
+
 function getDB(cmd, path, browsemode, uplevel) {
-	if (cmd == 'filepath') {
-		$.post('db/?cmd=filepath', { 'path': path }, function(data) {populateDB(data, path, uplevel);}, 'json');
+    var updateWebRadio = function() {
+        return getDB('update', 'WEBRADIO').done(function() {
+            return getDB('filepath', 'WEBRADIO');
+        });
+    };
 
-	} else if (cmd == 'listsavedpl') {
-		// TC (Tim Curtis) 2014-09-17: list contents of saved playlist
-		$.post('db/?cmd=listsavedpl', { 'path': path }, function(data) {populateDB(data, path, uplevel);}, 'json');
-
-	} else if (cmd == 'deletesavedpl') {
-		// TC (Tim Curtis) 2014-09-17: delete saved playlist then refresh list
-		$.post('db/?cmd=deletesavedpl', { 'path': path }, function(data) {}, 'json');
-		$.post('db/?cmd=filepath', { 'path': '' }, function(data) {populateDB(data, '', 0);}, 'json');
-
-	} else if (cmd == 'deleteradiostn') {
-		// TC (Tim Curtis) 2014-11-30: delete radio station file then refresh list
-		$.post('db/?cmd=deleteradiostn', { 'path': path }, function(path) {}, 'json');
-		sleep(250); // Allow a bit of time for server operations to complete
-		$.post('db/?cmd=update', { 'path': 'WEBRADIO' }, function(path) {}, 'json');
-		sleep(250);
-		$.post('db/?cmd=filepath', { 'path': 'WEBRADIO' }, function(data) {populateDB(data, 'WEBRADIO', 0);}, 'json');
-
-	} else if (cmd == 'addradiostn' || cmd == 'updateradiostn') {
-		// TC (Tim Curtis) 2014-12-23: add or update radio station file then refresh list
-		var arg = path.split("\n");
-		$.post('db/?cmd=addradiostn', { 'path': arg[0], 'url': arg[1] }, function(path) {}, 'json');
-		sleep(250); // Allow a bit of time for server operations to complete
-		$.post('db/?cmd=update', { 'path': 'WEBRADIO' }, function(path) {}, 'json');
-		sleep(250);
-		$.post('db/?cmd=filepath', { 'path': 'WEBRADIO' }, function(data) {populateDB(data, 'WEBRADIO', 0);}, 'json');
-
-	} else if (cmd == 'add') {
-		$.post('db/?cmd=add', { 'path': path }, function(path) {}, 'json');
-
-	} else if (cmd == 'addplay') {
-		$.post('db/?cmd=addplay', { 'path': path }, function(path) {}, 'json');
-
-	} else if (cmd == 'addreplaceplay') {
-		$.post('db/?cmd=addreplaceplay', { 'path': path }, function(path) {}, 'json');
-
-	} else if (cmd == 'update') {
-		$.post('db/?cmd=update', { 'path': path }, function(path) {}, 'json');
-		
-	// TC (Tim Curtis) 2014-12-23: if no search keyword, dont post, clear search tally
-	} else if (cmd == 'search') {
-		var keyword = $('#db-search-keyword').val();
-		if (keyword != '') {
-			$.post('db/?querytype=' + browsemode + '&cmd=search', { 'query': keyword }, function(data) {populateDB(data, path, uplevel, keyword);}, 'json');
-		} else {
-			$('#db-filter-results').html('');		
-		}
-
-	} else if (cmd == 'playall') {
-		$.post('db/?cmd=playall', { 'path': path }, function(data) {}, 'json');
-
-	} else if (cmd == 'addall') {
-		$.post('db/?cmd=addall', { 'path': path }, function(data) {}, 'json');
-
-	} else if (cmd == 'addallreplaceplay') {
-		// TC (Tim Curtis) 2014-09-17: add/replace/playall (Library panel)
-		// TC (Tim Curtis) 2014-12-23: debug $_POST not matching what was sent, turned out to be php.ini max_input_vars = 1000 limit
-		//console.log('getDB addallreplaceplay path.length=', path.length);
-		//console.log('getDB addallreplaceplay path=', path);
-		//$.post('db/?cmd=addallreplaceplay', { 'path': path }, function(data) {console.log('getDB addallreplaceplay data=', data);}, 'json');
-		$.post('db/?cmd=addallreplaceplay', { 'path': path }, function(data) {}, 'json');
-	}
+    switch (cmd) {
+        case 'filepath':
+        case 'listsavedpl':
+            return $.post('db/?cmd=' + cmd, {
+                'path': path
+            }, function(data) {
+                populateDB(data, path, uplevel);
+            }, 'json');
+            break;
+        case 'add':
+        case 'addplay':
+        case 'addreplaceplay':
+        case 'update':
+        case 'playall':
+        case 'addall':
+        case 'addallreplaceplay':
+            return $.post('db/?cmd=' + cmd, {
+                'path': path
+            }, null, 'json');
+            break;
+        case 'deletesavedpl':
+            return $.post('db/?cmd=' + cmd, {
+                'path': path
+            }, null, 'json').done(function() {
+                return getDB('filepath', '', null, 0)
+            });
+            break;
+        case 'deleteradiostn':
+            return $.post('db/?cmd=' + cmd, {
+                'path': path
+            }, null, 'json').done(function() {
+                return updateWebRadio();
+            });
+            break;
+        case 'addradiostn':
+        case 'updateradiostn':
+            // TODO: check cmd sent- always addradiostn ?
+            var arg = path.split("\n");
+            return $.post('db/?cmd=addradiostn', {
+                'path': arg[0],
+                'url': arg[1]
+            }, null, 'json').done(function() {
+                // TODO: check if uplevel is required populateDB(data, 'WEBRADIO', 0);
+                return updateWebRadio();
+            });
+            break;
+        // TC (Tim Curtis) 2014-12-23: if no search keyword, dont post, clear search tally
+        case 'search':
+            var keyword = $('#db-search-keyword').val();
+            if (keyword !== '') {
+                return $.post('db/?querytype=' + browsemode + '&cmd=search', {
+                    'query': keyword
+                }, function(data) {
+                    populateDB(data, path, uplevel, keyword);
+                }, 'json');
+            } else {
+                $('#db-filter-results').html('');
+            }
+            break;
+        default:
+            console.error('Unknown command: ' + cmd);
+    }
 }
 
 // Sleep (miliseconds)
@@ -1909,28 +1722,28 @@ $('#songsList').on('click', '.lib-action', function() {
 $('.context-menu-lib a').click(function(e) {
     if ($(this).data('cmd') == 'add') {
         getDB('add', allSongs[GUI.DBentry[0]].file);
-        notify('add', '');
+        M.notify('add');
     }
     if ($(this).data('cmd') == 'addplay') {
         getDB('addplay', allSongs[GUI.DBentry[0]].file);
-        notify('add', '');
+        M.notify('add');
     }
     if ($(this).data('cmd') == 'addreplaceplay') {
         getDB('addreplaceplay', allSongs[GUI.DBentry[0]].file);
-        notify('addreplaceplay', '');        
+        M.notify('addreplaceplay');
         $("#pl-saveName").val(""); // Clear saved playlist name if any
 	}
     if ($(this).data('cmd') == 'addall') {
         getDB('addall', allFiles);
-        notify('addall', '');
+        M.notify('addall');
 	}
     if ($(this).data('cmd') == 'playall') {
         getDB('playall', allFiles);
-        notify('addall', '');
+        M.notify('addall');
 	}
     if ($(this).data('cmd') == 'addallreplaceplay') {
         getDB('addallreplaceplay', allFiles);
-        notify('addallreplaceplay', '');
+        M.notify('addallreplaceplay');
 	}
 	
 	// Remove highlight
@@ -2114,7 +1927,7 @@ $('.btn-clockradio-update').click(function(){
 
 	// Reload server-side data
 	$.post('tcmods.php', {syscmd:'reloadclockradio'});
-    notify('updateclockradio', '');
+    M.notify('updateclockradio');
 });
 
 // TC (Tim Curtis) 2015-01-27: update tcmods.conf settings from tcmods editor popup
@@ -2174,11 +1987,11 @@ $('.btn-tcmodsconf-update').click(function(){
 	if (themeChange == true) {
 		// Change theme color, also reloads server-side data
 		$.post('settings.php', {syscmd:TCMCONF.json['theme_color'].toLowerCase()});
-	    notify('themechange', '');
+	    M.notify('themechange');
 	} else {
 		// Reload server-side data
 		$.post('tcmods.php', {syscmd:'reloadtcmodsconf'});
-	    notify('updatetcmodsconf', '');
+	    M.notify('updatetcmodsconf');
 	}
 });
 

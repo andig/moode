@@ -610,9 +610,9 @@ jQuery(document).ready(function($) { 'use strict';
 		var plname = $("#pl-saveName").val();
 		if (plname) {
 			sendPLCmd('savepl&plname=' + plname);
-			notify('savepl', '');
+			M.notify('savepl');
 		} else {
-			notify('needplname', '');
+			M.notify('needplname');
 		}
     });
 
@@ -802,15 +802,15 @@ jQuery(document).ready(function($) { 'use strict';
 
         if ($(this).data('cmd') == 'add') {
             getDB('add', path);
-            notify('add', '');
+            M.notify('add');
         } 
         if ($(this).data('cmd') == 'addplay') {
             getDB('addplay', path);
-            notify('add', '');
+            M.notify('add');
         }
         if ($(this).data('cmd') == 'addreplaceplay') {
             getDB('addreplaceplay', path);
-            notify('addreplaceplay', '');
+            M.notify('addreplaceplay');
             // TC (Tim Curtis) 2014-09-17: bug fix typeError in path.contains("/"), change to path.indexof
             if (path.indexOf("/") == -1) {  // Its a playlist, preload the saved playlist name
 	            $("#pl-saveName").val(path);
@@ -820,7 +820,7 @@ jQuery(document).ready(function($) { 'use strict';
         }
         if ($(this).data('cmd') == 'update') {
             getDB('update', path);
-            notify('update', path);
+            M.notify('update', path);
         }
 		// TC (Tim Curtis) 2014-09-17: action to delete saved playlist
 		// TC (Tim Curtis) 2014-11-30: modal to confirm delete actions
@@ -887,19 +887,19 @@ jQuery(document).ready(function($) { 'use strict';
 	// TC (Tim Curtis) 2014-12-23: send '' instead of GUI.DBentry[0] (path) in notify()
     $('.btn-del-savedpl').click(function(){
 		getDB('deletesavedpl', GUI.DBentry[0]);
-		notify('deletesavedpl', '');
+		M.notify('deletesavedpl');
 	});
     $('.btn-del-radiostn').click(function(){
 		getDB('deleteradiostn', GUI.DBentry[0]);
-		notify('deleteradiostn', '');
+		M.notify('deleteradiostn');
 	});
     $('.btn-add-radiostn').click(function(){
 		getDB('addradiostn', $('#add-station-name').val() + "\n" + $('#add-station-url').val() + "\n");
-		notify('addradiostn', '');
+		M.notify('addradiostn');
 	});
     $('.btn-update-radiostn').click(function(){
 		getDB('updateradiostn', $('#edit-station-name').val() + "\n" + $('#edit-station-url').val() + "\n");
-		notify('updateradiostn', '');
+		M.notify('updateradiostn');
 	});
     $('.btn-delete-plitem').click(function(){
 		var cmd = '';
@@ -907,7 +907,7 @@ jQuery(document).ready(function($) { 'use strict';
 	    var endpos = $('#delete-plitem-endpos').val() - 1;
 		// Format for single or multiple, endpos not inclusive so must be bumped for multiple
 	    begpos == endpos ? cmd = 'trackremove&songid=' + begpos : cmd = 'trackremove&songid=' + begpos + ':' + (endpos + 1);
-        notify('remove', '');
+        M.notify('remove');
         sendPLCmd(cmd);
 	});
 
@@ -929,7 +929,7 @@ jQuery(document).ready(function($) { 'use strict';
 		// Format for single or multiple, endpos not inclusive so must be bumped for multiple
 		// Move begpos newpos or move begpos:endpos newpos 
 	    begpos == endpos ? cmd = 'trackmove&songid=' + begpos + '&newpos=' + newpos : cmd = 'trackmove&songid=' + begpos + ':' + (endpos + 1) + '&newpos=' + newpos;
-        notify('move', '');
+        M.notify('move');
         sendPLCmd(cmd);
 	});
 	// TC (Tim Curtis) 2015-01-27: speed btns on move modal
