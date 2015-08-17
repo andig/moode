@@ -83,27 +83,6 @@ function monitorMpdState($sock) {
 	return _parseStatusResponse(mpdStatus($sock));
 }
 
-function playAll($sock, $json) {
-	$commands = array();
-
-	foreach ($json as $song) {
-		array_push($commands, 'add "' . html_entity_decode($song["file"]) . '"');
-	}
-
-	return chainMpdCommands($sock, $commands);
-}
-
-function playAllReplace($sock, $json) {
-	$commands = array("clear");
-
-	foreach ($json as $song) {
-		array_push($commands, 'add "' . html_entity_decode($song["file"]) . '"');
-	}
-
-	array_push($commands, "play");
-	return chainMpdCommands($sock, $commands);
-}
-
 function enqueueAll($sock, $json) {
 	$commands = array();
 

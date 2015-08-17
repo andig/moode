@@ -127,7 +127,7 @@ switch ($cmd) {
 
 	case 'update':
 		if (null !== $path) {
-			$res = execMpdCommand($mpd,"update \"" .html_entity_decode($path) . "\"");
+			$res = execMpdCommand($mpd, 'update "' . html_entity_decode($path) . '"');
 		}
 		break;
 
@@ -149,8 +149,8 @@ switch ($cmd) {
 
 	case 'savepl':
 		if (isset($_GET['plname']) && $_GET['plname'] != '') {
-			$res = execMpdCommand($mpd,"rm \"" .html_entity_decode($_GET['plname']) . "\"");
-			$res = execMpdCommand($mpd,"save \"" .html_entity_decode($_GET['plname']) . "\"");
+			$res = execMpdCommand($mpd, 'rm "' . html_entity_decode($_GET['plname']) . '"');
+			$res = execMpdCommand($mpd, 'save "' . html_entity_decode($_GET['plname']) . '"');
 		}
 		break;
 
@@ -176,12 +176,11 @@ switch ($cmd) {
 	// - added code to set the playlist song pos for play
 	case 'playall':
 		if (null !== $path) {
-			// TC just a copy/paste from addplay above
 			$status = _parseStatusResponse(mpdStatus($mpd));
 			$pos = $status['playlistlength'] ;
-			// original code, did not set play posn
-			$res = playAll($mpd, $path);
-			$res = execMpdCommand($mpd, 'play '.$pos);
+
+			$res = enqueueAll($mpd, $path);
+			execMpdCommand($mpd, 'play ' . $pos);
 		}
 		break;
 
@@ -189,7 +188,9 @@ switch ($cmd) {
 	// - library panel Add/replace/playall btn
 	case 'addallreplaceplay':
 		if (null !== $path) {
-			$res = playAllReplace($mpd, $path);
+			execMpdCommand($mpd, 'clear');
+			$res = enqueueAll($mpd, $path);
+			execMpdCommand($mpd, 'play');
 		}
 		break;
 }
