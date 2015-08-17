@@ -19,7 +19,7 @@
 
 require_once dirname(__FILE__) . '/inc/connection.php';
 
-playerSession('open',$db,'',''); 
+playerSession('open',$db,'','');
 playerSession('unlock',$db,'','');
 $dbh = cfgdb_connect($db);
 session_write_close();
@@ -28,7 +28,7 @@ session_write_close();
 if (isset($_POST['syscmd'])) {
 	switch ($_POST['syscmd']) {
 		// Power off and reboot
-		case 'poweroff':	
+		case 'poweroff':
 			if ($_SESSION['w_lock'] != 1 && $_SESSION['w_queue'] == '') {
 				// start / respawn session
 				session_start();
@@ -63,7 +63,7 @@ if (isset($_POST['syscmd'])) {
 			// Set template html
 			$tpl = "reboot.html";
 			break;
-		// TC (Tim Curtis) 2014-12-23: reload clock radio settings from conf file	
+		// TC (Tim Curtis) 2014-12-23: reload clock radio settings from conf file
 		case 'reloadclockradio':
 			if ($_SESSION['w_lock'] != 1 && $_SESSION['w_queue'] == '') {
 				// Start / respawn session
@@ -90,26 +90,26 @@ if (isset($_POST['syscmd'])) {
 			playerSession('unlock');
 			break;
 	}
+
 	// Display template if not clock radio reload or tcmods conf reload
 	if (!($_POST['syscmd'] == 'reloadclockradio' || $_POST['syscmd'] == 'reloadtcmodsconf')) {
 		$sezione = basename(__FILE__, '.php');
-		include('_header.php'); 
-		debug($_POST);
+		include('_header.php');
 		include('_footer.php');
 		// TC (Tim Curtis) 2014-08-23: waitworker(1) does not seem to be needed for pwroff/reboot actions
 		// wait for worker output if $_SESSION['w_active'] = 1
 		// waitWorker(1);
 		eval("echoTemplate(\"".getTemplate("templates/$tpl")."\");");
 	}
-	
+
 // TC (Tim Curtis) 2014-11-30: read contents of tcmods.conf
 // TC (Tim Curtis) 2014-11-30: return mpd status
 // TC (Tim Curtis) 2014-12-23: update contents of tcmods.conf
 // TC (Tim Curtis) 2014-12-23: read contents of radio station file
-// TC (Tim Curtis) 2015-01-27: query cfg_logourl for station logo url 
+// TC (Tim Curtis) 2015-01-27: query cfg_logourl for station logo url
 // TC (Tim Curtis) 2015-01-27: add search_autofocus_enabled
 // TC (Tim Curtis) 2015-02-25: move updatetcmconf code to _updTcmodsConf() function in player_lib.php
-// TC (Tim Curtis) 2015-03-21: query cfg_audiodev for audio device description 
+// TC (Tim Curtis) 2015-03-21: query cfg_audiodev for audio device description
 // TC (Tim Curtis) 2015-05-30: add play history read
 // TC (Tim Curtis) 2015-05-30: add get upnp coverart url
 // TC (Tim Curtis) 2015-07-31: add get radio station info
@@ -124,7 +124,7 @@ if (isset($_POST['syscmd'])) {
 			$result = cfgdb_read('cfg_radio', $dbh, $_POST['station']);
 			echo json_encode($result[0]);
 			break;
-			
+
 		case 'getupnpcoverurl':
 			$cmd = "upexplorer --album-art \"".$_SESSION['upnp_name']."\"";
 			$rtn = sysCmd($cmd);
@@ -136,11 +136,11 @@ if (isset($_POST['syscmd'])) {
 		case 'readtcmconf':
 			echo json_encode(_parseTcmodsConf(shell_exec('cat /var/www/tcmods.conf')));
 			break;
-			
+
 		case 'updatetcmconf':
 			echo json_encode(_updTcmodsConf($_POST));
 			break;
-						
+
 		case 'getmpdstatus':
 			echo json_encode(_parseStatusResponse(MpdStatus($mpd)));
 			break;
@@ -148,11 +148,11 @@ if (isset($_POST['syscmd'])) {
 		case 'readstationfile':
 			echo json_encode(_parseStationFile(shell_exec("cat \""."/var/lib/mpd/music/".$_POST['path']."\"")));
 			break;
-			
+
 		case 'readplayhistory':
 			echo json_encode(_parsePlayHistory(shell_exec('cat /var/www/playhistory.log')));
 			break;
-		
+
 		// TC (Tim Curtis) 2015-06-26: TESTING ALSA-Direct volume control, requires www-data user in visudo
 		case 'sendalsacmd':
 			$mixername = getMixerName(getKernelVer($_SESSION['kernelver']), $_SESSION['i2s']);
@@ -171,7 +171,7 @@ if (isset($_POST['syscmd'])) {
 } else {
 	// Show audio information
 	// Audio Info header btn href has no value= element which is how we get here
-	
+
 	// OUTPUT INFO: hw_params, actual audio output format sent to DAC
 	$_hwparams = _parseHwParams(shell_exec('cat /proc/asound/card0/pcm0p/sub0/hw_params'));
 	// TC (Tim Curtis) 2015-06-26: comment out to make room for Volume settings under DSP INFO
@@ -189,7 +189,7 @@ if (isset($_POST['syscmd'])) {
 		$audioinfo_hwparams_format = '';
 		$audioinfo_hwparams_calcrate = '0 bps';
 	}
-	
+
 	// INPUT INFO: mpd currentsong and status cmds
 	if (!$mpd) {
         $audioinfo_mpdstatus = 'Error Connecting to MPD daemon';
@@ -223,7 +223,7 @@ if (isset($_POST['syscmd'])) {
 			$audioinfo_mpdstatus_bitrate .= "0 bps";
 		}
 	}
-	
+
 	// DSP INFO: mpd.conf, configured SRC output format and converter
 	// TC (Tim Curtis) 2015-06-26: add Volume settings from tcmods.conf
 	$_tcmodsconf = _parseTcmodsConf(shell_exec('cat /var/www/tcmods.conf'));
@@ -258,7 +258,7 @@ if (isset($_POST['syscmd'])) {
 	} else if ($_tcmodsconf['volume_mixer_type'] == "software") {
 		$audioinfo_tcmodsconf_volume = "Software (MPD 32 bit float with dither)";
 	}
-	
+
 	// DEVICE INFO: tcmods.conf, audio device description (manually entered by user)
 	// TC (Tim Curtis) 2014-11-30: fix bug: change .= to =
 	// TC (Tim Curtis 2015-06-26: comment out, moved to DSP INFO section
@@ -268,7 +268,7 @@ if (isset($_POST['syscmd'])) {
 	$audioinfo_tcmodsconf_device_arch = $_tcmodsconf['audio_device_arch'];
 	$audioinfo_tcmodsconf_device_iface = $_tcmodsconf['audio_device_iface'];
 	$audioinfo_tcmodsconf_device_other = $_tcmodsconf['audio_device_other'];
-	
+
 	// SYSTEM INFO: architecture, cpu util, temp and freq
 	$_cpuload = shell_exec("top -bn 2 -d 0.5 | grep 'Cpu(s)' | tail -n 1 | awk '{print $2 + $4 + $6}'");
 	$systeminfo_cpuload = number_format($_cpuload,0,'.','');
@@ -285,7 +285,7 @@ if (isset($_POST['syscmd'])) {
 	}
 	// TC (Tim Curtis) 2015-02-25: processor architecture
 	$systeminfo_arch = trim(shell_exec('uname -m'));
-	
+
 	// unlock session file
 	playerSession('unlock');
 	// Set template html

@@ -141,7 +141,6 @@ $_mpd = array (
 	'volume_normalization' => ''
 );
 
-// debug($mpdconf);
 // Parse output for template $_mpdconf
 foreach ($mpdconf as $key => $value) {
 	foreach ($_mpd as $key2 => $value2) {
@@ -302,9 +301,5 @@ waitWorker(1);
 eval("echoTemplate(\"".getTemplate("templates/$tpl")."\");");
 ?>
 <!-- CONTENT -->
-
-<?php 
-// debug($_POST);
-?>
 
 <?php include('_footer.php'); ?>

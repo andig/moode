@@ -47,8 +47,4 @@ eval("echoTemplate(\"".getTemplate("templates/$tpl")."\");");
 ?>
 <!-- content -->
 
-<?php
-// debug($_POST);
-?>
-
 <?php include('_footer.php'); ?>

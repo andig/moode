@@ -193,7 +193,7 @@ if (isset($_GET['p']) && !empty($_GET['p'])) {
 	}
 	$tpl = 'source.html';
 } 
-//debug($_POST);
+
 eval("echoTemplate(\"".getTemplate("templates/$tpl")."\");");
 ?>
 <!-- content -->
