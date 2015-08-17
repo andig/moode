@@ -150,50 +150,39 @@ foreach ($mpdconf as $key => $value) {
 	}
 }
 
-// Output device names
-$dev1 = file_get_contents('/proc/asound/card0/id');
-$dev2 = file_get_contents('/proc/asound/card1/id');
-$dev3 = file_get_contents('/proc/asound/card2/id');
+function getDeviceName($file) {
+	$dev = rtrim(@file_get_contents($file));
 
-// TC (Tim Curtis) 2015-04-29: add friendly name check for "CODEC" (Behringer audio device)
-// TC (Tim Curtis) 2015-05-30: add friendly name check for "Interf" (Wyred4Sound DAC)
-// TC (Tim Curtis) 2015-05-30: add friendly name check for "x20" (Eastern Electric Minimax Junior DAC)
-// TC (Tim Curtis) 2015-06-26: add friendly name check for "G1V5" (Geek Pulse X-Fi DAC)
-// TC (Tim Curtis) 2015-07-31: add friendly name check for "Audio" (CM6631A USB/SPDIF converter)
-if ($dev1 == "") {
-} else if ($dev1 == "DAC\n" || $dev1 == "CODEC\n" || $dev1 == "Interf\n" || $dev1 == "x20\n" || $dev1 == "G1V5\n" || $dev1 == "Audio\n") {
-	$dev1 = "USB audio device";
-} else if ($dev1 == "ALSA\n") {
-	$dev1 = "On-board audio device";
-} else {
-	$dev1 = "I2S audio device";
+	switch ($dev) {
+		case "DAC":
+		case "CODEC":
+		case "Interf":
+		case "x20":
+		case "G1V5":
+		case "Audio":
+			return "USB audio device";
+			break;
+		case "ALSA":
+			return "On-board audio device";
+			break;
+		default:
+			return "I2S audio device";
+	}
 }
-if ($dev2 == "") {
-} else if ($dev2 == "DAC\n" || $dev2 == "CODEC\n" || $dev2 == "Interf\n" || $dev2 == "x20\n" || $dev2 == "G1V5\n" || $dev2 == "Audio\n") {
-	$dev2 = "USB audio device";
-} else if ($dev2 == "ALSA\n") {
-	$dev2 = "On-board audio device";
-} else {
-	$dev2 = "I2S audio device";
-}
-if ($dev3 == "") {
-} else if ($dev3 == "DAC\n" || $dev3 == "CODEC\n" || $dev3 == "Interf\n" || $dev3 == "x20\n" || $dev3 == "G1V5\n" || $dev3 == "Audio\n") {
-	$dev3 = "USB audio device";
-} else if ($dev3 == "ALSA\n") {
-	$dev3 = "On-board audio device";
-} else {
-	$dev3 = "I2S audio device";
-}
+
+// Output device names
+$dev1 = getDeviceName('/proc/asound/card0/id');
+$dev2 = getDeviceName('/proc/asound/card1/id');
+$dev3 = getDeviceName('/proc/asound/card2/id');
+
 
 // Load template values
 
 // Audio output device
 // TC (Tim Curtis) 2015-04-29: add a bit of logic
-if ($dev1 != "") {$_mpd_select['device'] .= "<option value=\"0\" ".(($_mpd['device'] == '0') ? "selected" : "")." >$dev1</option>\n";}
-if ($dev2 != "") {$_mpd_select['device'] .= "<option value=\"1\" ".(($_mpd['device'] == '1') ? "selected" : "")." >$dev2</option>\n";}
-if ($dev3 != "") {$_mpd_select['device'] .= "<option value=\"2\" ".(($_mpd['device'] == '2') ? "selected" : "")." >$dev3</option>\n";}
-// TC (Tim Curtis) 2015-04-29: comment out
-//$_mpd_select['device'] .= "<option value=\"3\" ".(($_mpd['device'] == '3') ? "selected" : "")." >$dev4</option>\n";
+$_mpd_select['device'] .= "<option value=\"0\" ".(($_mpd['device'] == '0') ? "selected" : "")." >$dev1</option>\n";
+$_mpd_select['device'] .= "<option value=\"1\" ".(($_mpd['device'] == '1') ? "selected" : "")." >$dev2</option>\n";
+$_mpd_select['device'] .= "<option value=\"2\" ".(($_mpd['device'] == '2') ? "selected" : "")." >$dev3</option>\n";
 
 // Volume control
 $_mpd_select['mixer_type'] .= "<option value=\"disabled\" ".(($_mpd['mixer_type'] == 'none' OR $_mpd['mixer_type'] == '') ? "selected" : "").">disabled</option>\n";

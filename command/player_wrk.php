@@ -215,12 +215,7 @@ if (isset($_SESSION['playerid']) && $_SESSION['playerid'] == '') {
 
 // --- NORMAL STARTUP --- //
 } else {
-	// check ENV files
-	// TC (Tim Curtis) 2015-07-31: shovel & broom remove
-	//if ($arch != '--') {
-	//	wrk_sysEnvCheck($arch,0);
-	//}
-	// start samba
+
 	// TC (Tim Curtis) 2015-07-31: shovel & broom change to /etc/samba/smb.conf instead of _OS_SETTINGS/etc/...
 	sysCmd('/usr/sbin/smbd -D --configfile=/var/www/etc/samba/smb.conf');
 	sysCmd('/usr/sbin/nmbd -D --configfile=/var/www/etc/samba/smb.conf');
@@ -245,30 +240,21 @@ if ($_SESSION['dev'] == 0) {
 }
 
 // check current eth0 / wlan0 IP Address
-$cmd1 = "ip addr list eth0 |grep \"inet \" |cut -d' ' -f6|cut -d/ -f1";
-$cmd2 = "ip addr list wlan0 |grep \"inet \" |cut -d' ' -f6|cut -d/ -f1";
-$cmd3 = "ip addr list eth0:0 |grep \"inet \" |cut -d' ' -f6|cut -d/ -f1";
-$ip_eth0 = sysCmd($cmd1);
-$ip_wlan0 = sysCmd($cmd2);
+$ip_eth0 = sysCmd("ip addr list eth0 |grep \"inet \" |cut -d' ' -f6|cut -d/ -f1");
+$ip_wlan0 = sysCmd("ip addr list wlan0 |grep \"inet \" |cut -d' ' -f6|cut -d/ -f1");
 $ip_fallback = "192.168.10.110";
 
-// check IP for minidlna assignment.
-if (isset($ip_eth0) && !empty($ip_eth0) && isset($ip_wlan0) && !empty($ip_wlan0)) {
+// check IP for minidlna assignment and add to session
+if (isset($ip_eth0) && !empty($ip_eth0)) {
 	$ip = $ip_eth0[0];
-} else  if (isset($ip_eth0) && !empty($ip_eth0)) {
-	$ip = $ip_eth0[0];
-} else if (isset($ip_wlan0) && !empty($ip_wlan0)) {
+	$_SESSION['netconf']['eth0']['ip'] = $ip;
+}
+elseif (isset($ip_wlan0) && !empty($ip_wlan0)) {
 	$ip = $ip_wlan0[0];
-} else {
+	$_SESSION['netconf']['wlan0']['ip'] = $ip;
+}
+else {
 	$ip = $ip_fallback;
-}
-
-// record current IP addresses in PHP session
-if (!empty($ip_eth0[0])) {
-	$_SESSION['netconf']['eth0']['ip'] = $ip_eth0[0];
-}
-if (!empty($ip_wlan0[0])) {
-	$_SESSION['netconf']['wlan0']['ip'] = $ip_wlan0[0];
 }
 
 // Copy /etc/minidlna.conf to /run/minidlna.conf

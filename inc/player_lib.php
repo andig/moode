@@ -26,7 +26,9 @@ define("MPD_RESPONSE_ERR", "ACK");
 define("MPD_RESPONSE_OK",  "OK");
 
 function openMpdSocket($host, $port) {
-	$sock = stream_socket_client('tcp://'.$host.':'.$port, $errorno, $errorstr, 30);
+	if (false === ($sock = stream_socket_client('tcp://'.$host.':'.$port, $errorno, $errorstr, 30))) {
+		die('Error: could not connect to MPD');
+	}
 	$response = readMpdResponse($sock);
 	return $sock;
 }

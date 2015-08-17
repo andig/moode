@@ -40,7 +40,7 @@ var M = {
 M.log = function(obj, opt) {
 	if (this.logLevel) {
 		console.log(obj);
-		if (typeof opt !== undefined) {
+		if (opt !== undefined) {
 			console.log(opt);
 		}
 	}
@@ -177,7 +177,7 @@ M.getDB = function(cmd, path, browsemode, uplevel) {
 			}, function(data) {
 				populateDB(data, path, uplevel);
 			}, 'json');
-			// unreachable break;
+			// break; // unreachable
 
 		case 'add':
 		case 'addplay':
@@ -189,7 +189,7 @@ M.getDB = function(cmd, path, browsemode, uplevel) {
 			return $.post('db/?cmd=' + cmd, {
 				'path': path
 			}, null, 'json');
-			// unreachable break;
+			// break; // unreachable
 
 		case 'deletesavedpl':
 			return $.post('db/?cmd=' + cmd, {
@@ -197,7 +197,7 @@ M.getDB = function(cmd, path, browsemode, uplevel) {
 			}, null, 'json').done(function() {
 				return M.getDB('filepath', '', null, 0);
 			});
-			// unreachable break;
+			// break; // unreachable
 
 		case 'deleteradiostn':
 			return $.post('db/?cmd=' + cmd, {
@@ -205,7 +205,7 @@ M.getDB = function(cmd, path, browsemode, uplevel) {
 			}, null, 'json').done(function() {
 				return updateWebRadio();
 			});
-			// unreachable break;
+			// break; // unreachable
 
 		case 'addradiostn':
 		case 'updateradiostn':
@@ -218,7 +218,7 @@ M.getDB = function(cmd, path, browsemode, uplevel) {
 				// TODO: check if uplevel is required populateDB(data, 'WEBRADIO', 0);
 				return updateWebRadio();
 			});
-			// unreachable break;
+			// break; // unreachable
 
 		// TC (Tim Curtis) 2014-12-23: if no search keyword, dont post, clear search tally
 		case 'search':
