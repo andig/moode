@@ -1,4 +1,4 @@
-/*
+/**
  *  This Program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
  *  the Free Software Foundation; either version 3, or (at your option)
@@ -17,102 +17,7 @@
  *	Tsunamp Team
  *	http://www.tsunamp.com
  *
- *	UI-design/JS code by: 	Andrea Coiutti (aka ACX)
- *	PHP/JS code by:			Simone De Gregori (aka Orion)
- *
- *	file:					scripts-playback.js
- * 	version:				1.1
- *
- *	TCMODS Edition
- *
- *	TC (Tim Curtis) 2014-09-17, r1.0
- *  - added code in the handler below for processing saved playlist db-entry
- *		- $('.database').on('click', '.db-browse', function()
- *	- fix typeError bug in $('.context-menu a').click(function()
- *
- *	TC (Tim Curtis) 2014-10-31, r1.2
- *	- added GUI.DBentry[3] to store GUI row posn of song item to allow highlight to be removed after context menu action
- *
- *	TC (Tim Curtis) 2014-12-23, r1.3
- *	- call readTcmConf() function to load contents of tcmods.conf file into global array
- *	- tcmods.conf settings to control various things
- *	- add volumemute-2 code for 2nd voume control
- *	- btn click for delete playlist, radio station confirmation modals
- *	- btn click for toolbar hide/show
- *	- click countdown time to toggle count up/down and count direction indicator
- *	- set #total to 00:00 with indicator when state = stop
- *	- click handlers for Browse and Library tabs
- *	- hide/show certain header btns depending on tab
- *	- load library only if (1) on the Library panel and page reload requested, (2) click Library btn and !libLoaded
- *	- change from delete btn to action menu for playlist items
- *	- action menu handlers for add, update radio station
- *	- btn click handlers for add, update radio station
- *	- action menu handlers for delete, move playlist items
- *	- btn click handlers for delete, move playlist items
- *	- handler for custom am/pm select control on clock radio modal
- *	- clock radio modal form handler
- *	- send '' instead of msg in notify()
- *	- added GUI.DBentry[4] to store num playlist items for use by delete/move item modals
- *	- shovel & broom
- *
- *	TC (Tim Curtis) 2015-01-01, r1.4
- *	- remove highlighting and implement play/pause toggle
- *	- radio station typedown search
- *	- toggle db, typedown search
- *
- *	TC (Tim Curtis) 2015-01-27, r1.5
- *	- various bug fuxes in pl action click for clock radio
- *	- speed btns for move and delete pl items modals to set top and bottom pos
- *	- tcmods config editor modal and click handlers
- *	- library album typedown search
- *	- action menu stay within wondow
- *	- release() function in $('.volumeknob').knob not needed, causes duplicate setvol's
- *	- fix display glitch in countdown causing brief count up display when releasing slider
- *	- countdown time updates during manual slider change
- *	- add element volume_warning_limit to global for tcmods.conf
- *	- upd tcmods.conf read/update for volume_warning_limit
- *	- add volume warning limit popup to volume btns and knob slider
- *	- remove updateGUI() call in init section, not needed since GUI.json = 0 at first
- *	- set GUI.volume global in init section
- *	- chg countdown format from 'MS' to 'hMS' to display hours if > 0
- *	- add countdown layout so hours does not display leading 0
- *	- add onTick watchCountdown() to .countdown()
- *	- set volume warning limit text
- *	- set focus to search fields
- *	- remove timer_knob_radiocount
- *	- clock radio, replace colon (:) with semicolon (;) in station name to avoid parsing issue in readTcmConf()
- *	- add search_autofocus_enabled to tcmods conf
- *	- global for indicating time knob slider paint is complete
- *	- shovel & broom
- *
- *	TC (Tim Curtis) 2015-02-25, r1.6
- *	- add sys_ items to tcmods.conf
- *
- *	TC (Tim Curtis) 2015-03-21, r1.7
- *	- moved menu and button click handlers for Clockradio, TCMODS and About to player_lib.js so these popups launch from the Config pages
- *
- *	TC (Tim Curtis) 2015-04-29, r1.8
- *	- add theme color setting to tcmods.conf
- *	- add automatic scrollto on play
- *	- chg name of previous-track btn from 'previous' to 'prev'
- *	- add support for individual toolbar for each panel
- *	- add support for playback panel with integrated playlist
- *
- *	TC (Tim Curtis) 2015-05-30: r1.9
- *	- add play_history_ fields to tcmods.conf
- *  - add click handler for playhistory typedown search
- *  - add click handlers for playhistory first/last page
- *  - add click handler for info show/hide toggle
- *
- *	TC (Tim Curtis) 2015-06-26: r2.0
- *	- new volume control with optional logarithmic mapping of knob 0-100 range to hardware range
- *	- add volume_ elements to tcmods.conf for logarithmic volume control and improved mute
- *	- add first/last page click handlers for Customization settiongs popup
- *
- *	TC (Tim Curtis) 2015-07-31: r2.1
- *	- set volume knob to readonly if MPD volume control = disabled
- *	- add playback-page-cycle click handler to cycle through knobs, albumart when UI is vertical
- *
+ * Rewrite by Tim Curtis and Andreas Goetz
  */
 
 // GLOBAL DATA
@@ -136,46 +41,8 @@ var GUI = {
 };
 
 // TC (Tim Curtis) 2014-11-30: global for tcmods.conf file
-// TC (Tim Curtis) 2015-01-27: add element volume_warning_limit
-// TC (Tim Curtis) 2015-01-27: remove timer_knob_radiocount
-// TC (Tim Curtis) 2015-01-27: add search_auto_focus
-// TC (Tim Curtis) 2015-02-25: add sys_ items
-// TC (Tim Curtis) 2015-04-29: add theme_color
-// TC (Tim Curtis) 2015-05-30: add play_history_currentsong
-// TC (Tim Curtis) 2015-06-26: add volume_ elements and albumart_lookup_method
 var TCMCONF = {
 	json: 0
-
-	/* data elements
-	TCMCONF.json['albumart_lookup_method'];
-	TCMCONF.json['audio_device_name'];
-	TCMCONF.json['audio_device_dac'];
-	TCMCONF.json['audio_device_arch'];
-	TCMCONF.json['audio_device_iface'];
-	TCMCONF.json['audio_device_other'];
-	TCMCONF.json['clock_radio_enabled'];
-	TCMCONF.json['clock_radio_playitem'];
-	TCMCONF.json['clock_radio_playname'];
-	TCMCONF.json['clock_radio_starttime'];
-	TCMCONF.json['clock_radio_stoptime'];
-	TCMCONF.json['clock_radio_volume'];
-	TCMCONF.json['clock_radio_shutdown'];
-	TCMCONF.json['play_history_currentsong'];
-	TCMCONF.json['play_history_enabled'];
-	TCMCONF.json['search_autofocus_enabled'];
-	TCMCONF.json['sys_kernel_ver'];
-	TCMCONF.json['sys_processor_arch'];
-	TCMCONF.json['sys_mpd_ver'];
-	TCMCONF.json['time_knob_countup'];
-	TCMCONF.json['theme_color'];
-	TCMCONF.json['volume_curve_factor'];
-	TCMCONF.json['volume_curve_logarithmic'];
-	TCMCONF.json['volume_knob_setting'];
-	TCMCONF.json['volume_max_percent'];
-	TCMCONF.json['volume_mixer_type'];
-	TCMCONF.json['volume_muted'];
-	TCMCONF.json['volume_warning_limit'];
-	*/
 };
 
 // TC (Tim Curtis) 2014-12-23: global for triggering Library load
@@ -210,36 +77,25 @@ jQuery(document).ready(function($) { 'use strict';
 	// Populate browse panel root
 	getDB('filepath', GUI.currentpath, 'file');
 
-	// Setup pines notify
-	$.pnotify.defaults.history = false;
-
 	// Hide "Connecting" screen
 	if (GUI.state != 'disconnected') {
 		$('#loader').hide();
 	}
 
-	// TC (Tim Curtis) 2015-01-27: set volume level
-	// TC (Tim Curtis) 2015-06-26: Original code
-	//GUI.volume = getMpdStatus()['volume'];
-	//$('#volume').val(GUI.volume);
-
 	// TC (Tim Curtis) 2015-07-31: set volume knob to readonly if MPD volume control = disabled
 	if (TCMCONF.json['volume_mixer_type'] == "disabled") {
-		$('#volume').attr('data-readOnly', "true");
-		$('#volume').attr('data-fgColor', "#4c5454"); // shade of Asbestos
-		$('#volume-2').attr('data-readOnly', "true");
-		$('#volume-2').attr('data-fgColor', "#4c5454");
+		$('#volume, #volume-2').attr('data-readOnly', "true");
+		$('#volume, #volume-2').attr('data-fgColor', "#4c5454"); // shade of Asbestos
 		TCMCONF.json['volume_knob_setting'] = 0;
 		var rtnString = updateTcmConf();
-	} else {
-		$('#volume').attr('data-readOnly', "false")
-		$('#volume-2').attr('data-readOnly', "false")
+	}
+	else {
+		$('#volume, #volume-2').attr('data-readOnly', "false")
 	}
 
 	// TC (Tim Curtis) 2015-06-26: for new setVolume() volume control
 	GUI.volume = TCMCONF.json['volume_knob_setting'];
-	$('#volume').val(GUI.volume);
-	$('#volume-2').val(GUI.volume);
+	$('#volume, #volume-2').val(GUI.volume);
 
 	// BUTTON CLICK HANDLERS
 	// TC (Tim Curtis) 2015-01-01: remove highlighting and implement play/pause toggle, stop btn code removed
@@ -622,7 +478,7 @@ jQuery(document).ready(function($) { 'use strict';
 	// TC (Tim Curtis) 2015-07-31: hide/show playback-page-cycle button on Browse and Library panels
 
 	// Click on Browse tab
-	$('#open-panel-sx a').click(function(){
+	$('#open-panel-sx a').click(function() {
 		$('.playback-controls').removeClass('hidden');
 		$('#volume-ctl').removeClass('hidden');
 		$('#toolbar-btn').removeClass('hidden');
@@ -631,7 +487,7 @@ jQuery(document).ready(function($) { 'use strict';
 
 	// Click on Library tab
 	// TC (Tim Curtis) 2015-01-27: chg addClass to removeClass for lib, support toolbar
-	$('#open-panel-lib a').click(function(){
+	$('#open-panel-lib a').click(function() {
 		$('.playback-controls').removeClass('hidden');
 		$('#volume-ctl').removeClass('hidden');
 		$('#toolbar-btn').removeClass('hidden');
@@ -649,7 +505,7 @@ jQuery(document).ready(function($) { 'use strict';
 	});
 
 	// Click on Playback tab
-	$('#open-playback a').click(function(){
+	$('#open-playback a').click(function() {
 		$('.playback-controls').addClass('hidden');
 		$('#volume-ctl').removeClass('hidden');
 		$('#toolbar-btn').removeClass('hidden'); // TC (Tim Curtis) 2015-04-29: playback tab has a toolbar for integrated playlist
@@ -661,7 +517,7 @@ jQuery(document).ready(function($) { 'use strict';
 	});
 
 	// TC (Tim Curtis) 2015-07-31: click to cycle through knobs and album art when UI is vertical
-	$('#playback-page-cycle').click(function(){
+	$('#playback-page-cycle').click(function() {
 		if (pageCycle == 1) {
 			var selector = "#timeknob";
 			pageCycle = 2;
@@ -676,17 +532,6 @@ jQuery(document).ready(function($) { 'use strict';
 
 		// #container-playlist (or #playlist), #timeknob, .covers
 	});
-
-	/* TC (Tim Curtis) 2015-04-29: legacy code since playlist integrated into playback panel
-	// Click on Playlist tab
-	$('#open-panel-dx a').click(function(){
-		$('.playback-controls').removeClass('hidden');
-		$('#volume-ctl').removeClass('hidden');
-		$('#toolbar-btn').removeClass('hidden');
-		var current = parseInt(GUI.json['song']);
-		customScroll('pl', current, 200);
-	});
-	*/
 
 	// DATABASE PANEL CLICK HANDLERS
 	// Click on back btn"
@@ -795,7 +640,7 @@ jQuery(document).ready(function($) { 'use strict';
 
 	// ACTION MENU AND MAIN MENU CLICK HANDLERS
 	// TC (Tim Curtis) 2014-12-23: send '' instead of path in notify()
-	$('.context-menu a').click(function(){
+	$('.context-menu a').click(function() {
 		var path = GUI.DBentry[0]; // File path or item num
 
 		if ($(this).data('cmd') == 'add') {
@@ -883,23 +728,23 @@ jQuery(document).ready(function($) { 'use strict';
 	// TC (Tim Curtis) 2014-12-23: btns for add, update radio station modals
 	// TC (Tim Curtis) 2014-12-23: btns for delete and move pl items
 	// TC (Tim Curtis) 2014-12-23: send '' instead of GUI.DBentry[0] (path) in notify()
-	$('.btn-del-savedpl').click(function(){
+	$('.btn-del-savedpl').click(function() {
 		getDB('deletesavedpl', GUI.DBentry[0]);
 		M.notify('deletesavedpl');
 	});
-	$('.btn-del-radiostn').click(function(){
+	$('.btn-del-radiostn').click(function() {
 		getDB('deleteradiostn', GUI.DBentry[0]);
 		M.notify('deleteradiostn');
 	});
-	$('.btn-add-radiostn').click(function(){
+	$('.btn-add-radiostn').click(function() {
 		getDB('addradiostn', $('#add-station-name').val() + "\n" + $('#add-station-url').val() + "\n");
 		M.notify('addradiostn');
 	});
-	$('.btn-update-radiostn').click(function(){
+	$('.btn-update-radiostn').click(function() {
 		getDB('updateradiostn', $('#edit-station-name').val() + "\n" + $('#edit-station-url').val() + "\n");
 		M.notify('updateradiostn');
 	});
-	$('.btn-delete-plitem').click(function(){
+	$('.btn-delete-plitem').click(function() {
 		var cmd = '';
 		var begpos = $('#delete-plitem-begpos').val() - 1;
 		var endpos = $('#delete-plitem-endpos').val() - 1;
@@ -910,16 +755,16 @@ jQuery(document).ready(function($) { 'use strict';
 	});
 
 	// TC (Tim Curtis) 2015-01-27: speed btns on delete modal
-	$('#btn-delete-setpos-top').click(function(){
+	$('#btn-delete-setpos-top').click(function() {
 		$('#delete-plitem-begpos').val(1);
 		return false;
 	});
-	$('#btn-delete-setpos-bot').click(function(){
+	$('#btn-delete-setpos-bot').click(function() {
 		$('#delete-plitem-endpos').val(GUI.DBentry[4]);
 		return false;
 	});
 
-	$('.btn-move-plitem').click(function(){
+	$('.btn-move-plitem').click(function() {
 		var cmd = '';
 		var begpos = $('#move-plitem-begpos').val() - 1;
 		var endpos = $('#move-plitem-endpos').val() - 1;
@@ -931,19 +776,19 @@ jQuery(document).ready(function($) { 'use strict';
 		sendPLCmd(cmd);
 	});
 	// TC (Tim Curtis) 2015-01-27: speed btns on move modal
-	$('#btn-move-setpos-top').click(function(){
+	$('#btn-move-setpos-top').click(function() {
 		$('#move-plitem-begpos').val(1);
 		return false;
 	});
-	$('#btn-move-setpos-bot').click(function(){
+	$('#btn-move-setpos-bot').click(function() {
 		$('#move-plitem-endpos').val(GUI.DBentry[4]);
 		return false;
 	});
-	$('#btn-move-setnewpos-top').click(function(){
+	$('#btn-move-setnewpos-top').click(function() {
 		$('#move-plitem-newpos').val(1);
 		return false;
 	});
-	$('#btn-move-setnewpos-bot').click(function(){
+	$('#btn-move-setnewpos-bot').click(function() {
 		$('#move-plitem-newpos').val(GUI.DBentry[4]);
 		return false;
 	});
@@ -960,59 +805,59 @@ jQuery(document).ready(function($) { 'use strict';
 	});
 
 	// SCROLL BUTTON CLICK HANDLER
-	$('.db-firstPage').click(function(){
+	$('.db-firstPage').click(function() {
 		$.scrollTo(0 , 500);
 	});
-	$('.db-prevPage').click(function(){
+	$('.db-prevPage').click(function() {
 		var scrolloffset = '-=' + $(window).height() + 'px';
 		$.scrollTo(scrolloffset , 500);
 	});
-	$('.db-nextPage').click(function(){
+	$('.db-nextPage').click(function() {
 		var scrolloffset = '+=' + $(window).height() + 'px';
 		$.scrollTo(scrolloffset , 500);
 	});
-	$('.db-lastPage').click(function(){
+	$('.db-lastPage').click(function() {
 		$.scrollTo('100%', 500);
 	});
 
-	$('.pl-firstPage').click(function(){
+	$('.pl-firstPage').click(function() {
 		$('#container-playlist').scrollTo(0 , 500);  // TC (Tim Curtis) 2015-04-29: for playback panel w integrated playlist
 	});
-	$('.pl-prevPage').click(function(){
+	$('.pl-prevPage').click(function() {
 		var scrollTop = $(window).scrollTop();
 		var scrolloffset = scrollTop - $(window).height();
 		$.scrollTo(scrolloffset , 500);
 	});
-	$('.pl-nextPage').click(function(){
+	$('.pl-nextPage').click(function() {
 		var scrollTop = $(window).scrollTop();
 		var scrolloffset = scrollTop + $(window).height();
 		$.scrollTo(scrolloffset , 500);
 	});
-	$('.pl-lastPage').click(function(){
+	$('.pl-lastPage').click(function() {
 		$('#container-playlist').scrollTo('100%', 500); // TC (Tim Curtis) 2015-04-29: for playback panel w integrated playlist
 	});
 
 	// TC (Tim Curtis) 2015-05-30; plaback history first/last page click handlers
-	$('.ph-firstPage').click(function(){
+	$('.ph-firstPage').click(function() {
 		$('#container-playhistory').scrollTo(0 , 500);
 	});
-	$('.ph-lastPage').click(function(){
+	$('.ph-lastPage').click(function() {
 		$('#container-playhistory').scrollTo('100%', 500);
 	});
 
 	// TC (Tim Curtis) 2015-06-26; customization settings first/last page click handlers
-	$('.cs-firstPage').click(function(){
+	$('.cs-firstPage').click(function() {
 		$('#container-customize').scrollTo(0 , 500);
 	});
-	$('.cs-lastPage').click(function(){
+	$('.cs-lastPage').click(function() {
 		$('#container-customize').scrollTo('100%', 500);
 	});
 
 	// DEBUG BUTTON CLICK HANDLERS
-	$('#db-debug-btn').click(function(){
+	$('#db-debug-btn').click(function() {
 		var scrollTop = $(window).scrollTop();
 	});
-	$('#pl-debug-btn').click(function(){
+	$('#pl-debug-btn').click(function() {
 		randomScrollPL();
 	});
 
@@ -1033,10 +878,10 @@ jQuery(document).ready(function($) { 'use strict';
 
 	// SEARCH INPUT HANDLERS
 	// Playlist typedown search
-	$("#pl-filter").keyup(function(){
+	$("#pl-filter").keyup(function() {
 		$.scrollTo(0 , 500);
 		var filter = $(this).val(), count = 0;
-		$(".playlist li").each(function(){
+		$(".playlist li").each(function() {
 			if ($(this).text().search(new RegExp(filter, "i")) < 0) {
 				$(this).hide();
 			} else {
@@ -1054,10 +899,10 @@ jQuery(document).ready(function($) { 'use strict';
 	});
 
 	// TC (Tim Curtis) 2015-01-01: radio station typedown search
-	$("#rs-filter").keyup(function(){
+	$("#rs-filter").keyup(function() {
 		$.scrollTo(0 , 500);
 		var filter = $(this).val(), count = 0;
-		$(".database li").each(function(){
+		$(".database li").each(function() {
 			if ($(this).text().search(new RegExp(filter, "i")) < 0) {
 				$(this).hide();
 			} else {
@@ -1074,7 +919,7 @@ jQuery(document).ready(function($) { 'use strict';
 	});
 
 	// TC (Tim Curtis) 2015-01-27: typedown search for library albumslist
-	$("#lib-album-filter").keyup(function(){
+	$("#lib-album-filter").keyup(function() {
 		$.scrollTo(0 , 500);
 		var filter = $(this).val(), count = 0;
 		$(".albumslist li").each(function() {
@@ -1094,10 +939,10 @@ jQuery(document).ready(function($) { 'use strict';
 	});
 
 	// Playlist history typedown search
-	$("#ph-filter").keyup(function(){
+	$("#ph-filter").keyup(function() {
 		$.scrollTo(0 , 500);
 		var filter = $(this).val(), count = 0;
-		$(".playhistory li").each(function(){
+		$(".playhistory li").each(function() {
 			if ($(this).text().search(new RegExp(filter, "i")) < 0) {
 				$(this).hide();
 			} else {
@@ -1146,14 +991,6 @@ jQuery(document).ready(function($) { 'use strict';
 		$('#playback-page-cycle').css({"display":"inline"});
 		//$('#playback-page-cycle').removeClass('hidden');
 	}
-	// Playlist panel
-	/* TC (Tim Curtis) 2015-07-31: comment out, not used since release 1.8
-	} else if ($('#open-panel-dx').hasClass('active')) {
-		$('.playback-controls').removeClass('hidden');
-		$('#volume-ctl').removeClass('hidden');
-		$('#toolbar-btn').removeClass('hidden');
-	}
-	*/
 
 	// CONTROL WHEN LIBRARY LOADS
 	// TC (Tim Curtis) 2014-12-23: load library only if on the Library tab and page reload requested
@@ -1179,47 +1016,3 @@ $('.info-toggle').click(function() {
 		$(spanId).addClass('hide');
 	}
 });
-
-// MISCELLANEOUS CODE
-// Check active tab
-(function() {
-	hidden = 'hidden';
-	// Standards:
-	if (hidden in document)
-		document.addEventListener('visibilitychange', onchange);
-	else if ((hidden = 'mozHidden') in document)
-		document.addEventListener('mozvisibilitychange', onchange);
-	else if ((hidden = "webkitHidden") in document)
-		document.addEventListener('webkitvisibilitychange', onchange);
-	else if ((hidden = "msHidden") in document)
-		document.addEventListener('msvisibilitychange', onchange);
-	// IE 9 and lower:
-	else if ('onfocusin' in document)
-		document.onfocusin = document.onfocusout = onchange;
-	// All others:
-	else
-		window.onpageshow = window.onpagehide
-			= window.onfocus = window.onblur = onchange;
-
-	function onchange (evt) {
-		var v = 'visible', h = 'hidden',
-			evtMap = {
-				focus:v, focusin:v, pageshow:v, blur:h, focusout:h, pagehide:h
-			};
-
-		evt = evt || window.event;
-		if (evt.type in evtMap) {
-			document.body.className = evtMap[evt.type];
-			//console.log('boh? = ', evtMap[evt.type]);
-		} else {
-			document.body.className = this[hidden] ? 'hidden' : 'visible';
-			if (this[hidden]) {
-				GUI.visibility = 'hidden';
-				//console.log('focus = hidden');
-			} else {
-				GUI.visibility = 'visible';
-				//console.log('focus = visible');
-			}
-		}
-	}
-})();
