@@ -26,7 +26,7 @@ define("MPD_RESPONSE_ERR", "ACK");
 define("MPD_RESPONSE_OK",  "OK");
 
 function openMpdSocket($host, $port) {
-	$sock = stream_socket_client('tcp://'.$host.':'.$port.'', $errorno, $errorstr, 30);
+	$sock = stream_socket_client('tcp://'.$host.':'.$port, $errorno, $errorstr, 30);
 	$response = readMpdResponse($sock);
 	return $sock;
 }
@@ -59,15 +59,94 @@ function readMpdResponse($sock) {
 	return $res;
 }
 
+function execMpdCommand($sock, $command) {
+	sendMpdCommand($sock, $command);
+	return readMpdResponse($sock);
+}
+
 function chainMpdCommands($sock, $commands) {
 	$res = '';
 
 	foreach ($commands as $command) {
-		sendMpdCommand($sock, $command);
-		$res .= readMpdResponse($sock);
+		$res .= execMpdCommand($sock, $command);
 	}
 
 	return $res;
+}
+
+function playAll($sock, $json) {
+	$commands = array();
+
+	foreach ($json as $song) {
+		$path = $song["file"];
+		array_push($commands, "add \"".html_entity_decode($path)."\"");
+	}
+
+	return chainMpdCommands($sock, $commands);
+}
+
+function playAllReplace($sock, $json) {
+	$commands = array("clear");
+
+	foreach ($json as $song) {
+		$path = $song["file"];
+		array_push($commands, "add \"".html_entity_decode($path)."\"");
+	}
+
+	array_push($commands, "play");
+	return chainMpdCommands($sock, $commands);
+}
+
+function enqueueAll($sock, $json) {
+	$commands = array();
+
+	foreach ($json as $song) {
+		$path = $song["file"];
+		array_push($commands, "add \"".html_entity_decode($path)."\"");
+	}
+
+	return chainMpdCommands($sock, $commands);
+}
+
+function mpdStatus($sock) {
+	return execMpdCommand($sock, "status");
+}
+
+function monitorMpdState($sock) {
+	execMpdCommand($sock, "idle");
+	return _parseStatusResponse(mpdStatus($sock));
+}
+
+function getTrackInfo($sock, $songID) {
+	$resp = execMpdCommand($sock, "playlistinfo ".$songID);
+	return _parseFileListResponse($resp);
+}
+
+function getPlayQueue($sock) {
+	return getTrackInfo($sock, '');
+}
+
+function listPlayList($sock, $plname) {
+	$resp = execMpdCommand($sock, "listplaylist "." \"".$plname."\"");
+	return _parseFileListResponse($resp);
+}
+
+function removePlayList($sock, $plname) {
+	$resp = execMpdCommand($sock, "rm "." \"".$plname."\"");
+	return $resp;
+}
+
+function remTrackQueue($sock, $songpos) {
+	$resp = execMpdCommand($sock, "delete " . $songpos);
+	return $resp;
+}
+
+function addQueue($sock, $path) {
+	$ext = parseFileStr($path, '.');
+	$cmd = ($ext == 'm3u' OR $ext == 'pls' OR strpos($path, '/') === false) ? 'load' : 'add';
+
+	$resp = execMpdCommand($sock, $cmd . '"' . html_entity_decode($path) . '"');
+	return $resp;
 }
 
 function libLog($str, $overwrite = false) {
@@ -79,9 +158,9 @@ function libLog($str, $overwrite = false) {
 // TC (Tim Curtis) 2015-06-26: add debug logging
 function loadAllLib($sock) {
 	// TC (Tim Curtis) 2015-06-26: debug
-	$debug_flags = str_replace("\n", '', explode(',', file_get_contents("/var/www/liblog.conf")));
+	$debug_flags = str_replace("\n", '', explode(', ', file_get_contents("/var/www/liblog.conf")));
 	// write out the debug flags
-	libLog("debug flags= ".$debug_flags[0].",".$debug_flags[1].",".$debug_flags[2].",".$debug_flags[3].",".$debug_flags[4], true);
+	libLog("debug flags= ".$debug_flags[0].", ".$debug_flags[1].", ".$debug_flags[2].", ".$debug_flags[3].", ".$debug_flags[4], true);
 
 	$lib = array();
 	if (false !== ($count = _loadDirForLib($sock, $lib, $debug_flags))) {
@@ -97,17 +176,17 @@ function loadAllLib($sock) {
 // AG (Andreas Goetz) 2015-08-10: less memory-intensive library parsing
 function _loadDirForLib($sock, &$lib, $debug_flags) {
 	if ($debug_flags[4] == "1") {
-		sendMpdCommand($sock, "find modified-since 36500"); // number of days
+		$cmd = "find modified-since 36500"; // number of days
 	} else if ($debug_flags[4] == "2") {
-		sendMpdCommand($sock, "find modified-since 1901-01-01T00:00:00Z"); // full time stamp
+		$cmd = "find modified-since 1901-01-01T00:00:00Z"; // full time stamp
 	} else {
-		sendMpdCommand($sock, "find modified-since 36500"); // default: number of days
+		$cmd = "find modified-since 36500"; // default: number of days
 	}
 
 	$libCount = 0;
 	$item = array();
 
-	foreach (explode("\n", readMpdResponse($sock, true)) as $line) {
+	foreach (explode("\n", execMpdCommand($sock, $cmd)) as $line) {
 		list($key, $val) = explode(": ", $line, 2);
 		if ($key == "file") {
 			if (count($item)) {
@@ -115,11 +194,11 @@ function _loadDirForLib($sock, &$lib, $debug_flags) {
 				$libCount++;
 // if ($libCount > 1000) return $libCount;
 				$item = array();
-			} 
+			}
 
 			if ($debug_flags[1] == "y") {
 				libLog("_loadDirForLib() item= ".$libCount.", file= ".$val);
-			} 
+			}
 		}
 
 		if ($debug_flags[2] == "y") {
@@ -163,90 +242,6 @@ function _libAddItem(&$lib, $item) {
 	array_push($lib[$genre][$artist][$album], $libItem);
 }
 
-function playAll($sock, $json) {
-	$commands = array();
-
-	foreach ($json as $song) {
-		$path = $song["file"];
-		array_push($commands, "add \"".html_entity_decode($path)."\"");
-	}
-
-	chainMpdCommands($sock, $commands);
-}
-
-function playAllReplace($sock, $json) {
-	$commands = array("clear");
-
-	foreach ($json as $song) {
-		$path = $song["file"];
-		array_push($commands, "add \"".html_entity_decode($path)."\"");
-	}
-
-	array_push($commands, "play");
-	chainMpdCommands($sock, $commands);
-}
-
-function enqueueAll($sock, $json) {
-	$commands = array();
-
-	foreach ($json as $song) {
-		$path = $song["file"];
-		array_push($commands, "add \"".html_entity_decode($path)."\"");
-	}
-
-	chainMpdCommands($sock, $commands);
-}
-
-// v2
-function sendMpdIdle($sock) {
-	sendMpdCommand($sock,"idle");
-	$response = readMpdResponse($sock);
-	return true;
-}
-
-function mpdStatus($sock) {
-	sendMpdCommand($sock,"status");
-	$status = readMpdResponse($sock);
-	return $status;
-}
-
-function monitorMpdState($sock) {
-	if (sendMpdIdle($sock)) {
-		$status = _parseStatusResponse(mpdStatus($sock));
-		return $status;
-	}
-}
-
-function getTrackInfo($sock,$songID) {
-	sendMpdCommand($sock,"playlistinfo ".$songID);
-	$track = readMpdResponse($sock);
-	return _parseFileListResponse($track);
-}
-
-function getPlayQueue($sock) {
-	return getTrackInfo($sock, '');
-}
-
-function listPlayList($sock, $plname) {
-	sendMpdCommand($sock,"listplaylist "." \"".$plname."\"");
-	$plcontents = readMpdResponse($sock);
-	return _parseFileListResponse($plcontents);
-}
-
-function removePlayList($sock, $plname) {
-	sendMpdCommand($sock,"rm "." \"".$plname."\"");
-	$response = readMpdResponse($sock);
-	return $response;
-}
-
-function getTemplate($template) {
-	return str_replace("\"","\\\"",implode("",file($template)));
-}
-
-function echoTemplate($template) {
-	echo $template;
-}
-
 function searchDB($sock, $type, $query = '') {
 	if ('' !== $query) {
 		$query = ' "' . html_entity_decode($query) . '"';
@@ -254,39 +249,17 @@ function searchDB($sock, $type, $query = '') {
 
 	switch ($type) {
 		case "filepath":
-			sendMpdCommand($sock, "lsinfo" . $query);
+			$resp = execMpdCommand($sock, "lsinfo" . $query);
 			break;
 		case "album":
 		case "artist":
 		case "title":
 		case "file":
-			sendMpdCommand($sock, "search " . $type . $query);
+			$resp = execMpdCommand($sock, "search " . $type . $query);
 			break;
 	}
 
-	$response = readMpdResponse($sock);
-	return _parseFileListResponse($response);
-}
-
-// TC (Tim Curtis) 2014-12-23
-// - modify for track range begpos:endpos
-// - return range instead of path
-function remTrackQueue($sock,$songpos) {
-	$datapath = $songpos;
-	sendMpdCommand($sock,"delete ".$songpos);
-	$response = readMpdResponse($sock);
-	return $datapath;
-}
-
-function addQueue($sock,$path) {
-	$fileext = parseFileStr($path,'.');
-	if ($fileext == 'm3u' OR $fileext == 'pls' OR strpos($path, '/') === false) {
-		sendMpdCommand($sock,"load \"".html_entity_decode($path)."\"");
-	} else {
-		sendMpdCommand($sock,"add \"".html_entity_decode($path)."\"");
-	}
-	$response = readMpdResponse($sock);
-	return $response;
+	return _parseFileListResponse($resp);
 }
 
 // create JS like Timestamp
@@ -359,7 +332,7 @@ function _parseStatusResponse($resp) {
 			case '96000':
 			case '192000':
 			case '384000':
-				$status['audio_sample_rate'] = rtrim(rtrim(number_format($audio_format[0]),0),',');
+				$status['audio_sample_rate'] = rtrim(rtrim(number_format($audio_format[0]),0), ', ');
 				break;
 			// decimal format
 			case '22050':
@@ -369,7 +342,7 @@ function _parseStatusResponse($resp) {
 			case '88200':
 			case '176400':
 			case '352800':
-				$status['audio_sample_rate'] = rtrim(number_format($audio_format[0],0,',','.'),0);
+				$status['audio_sample_rate'] = rtrim(number_format($audio_format[0],0, ', ', '.'),0);
 				break;
 		}
 		// format "audio_sample_depth" string
@@ -410,7 +383,7 @@ function _parseFileListResponse($resp) {
 		if ("file" == $key) {
 			$cnt++;
 			$res[$cnt]["file"] = $val;
-			$res[$cnt]["fileext"] = parseFileStr($val,'.');
+			$res[$cnt]["fileext"] = parseFileStr($val, '.');
 		}
 		elseif ("directory" == $key) {
 			$cnt++;
@@ -423,12 +396,12 @@ function _parseFileListResponse($resp) {
 			if ( substr($val, 0, 8 ) == "WEBRADIO") {
 				$cnt++;
 				$res[$cnt]["file"] = $val;
-				$res[$cnt]["fileext"] = parseFileStr($val,'.');
-			}
+				$res[$cnt]["fileext"] = parseFileStr($val, '.');
+			} 
 			else {
 				$cnt++;
 				$res[$cnt]["playlist"] = $val;
-			}
+			} 
 		}
 		else {
 			$res[$cnt][$key] = $val;
@@ -461,7 +434,7 @@ function _parseMpdCurrentSong($resp) {
 }
 
 // get file extension
-function parseFileStr($strFile,$delimiter) {
+function parseFileStr($strFile, $delimiter) {
 	$pos = strrpos($strFile, $delimiter);
 	$str = substr($strFile, $pos+1);
 	return $str;
@@ -472,7 +445,7 @@ function playerSession($action, $db = null, $var = null, $value = null) {
 	// open new PHP SESSION
 	if ($action == 'open') {
 		// check presence of sessionID into SQLite datastore
-		$sessionid = playerSession('getsessionid',$db);
+		$sessionid = playerSession('getsessionid', $db);
 		if (!empty($sessionid)) {
 			// echo "<br>---------- SET SESSION ID-------------<br>";
 			session_id($sessionid);
@@ -480,11 +453,11 @@ function playerSession($action, $db = null, $var = null, $value = null) {
 		} else {
 			session_start();
 			// echo "<br>---------- STORE SESSION -------------<br>";
-			playerSession('storesessionid',$db);
+			playerSession('storesessionid', $db);
 		}
 		$dbh  = cfgdb_connect($db);
 		// scan cfg_engine and store values in the new session
-		$params = cfgdb_read('cfg_engine',$dbh);
+		$params = cfgdb_read('cfg_engine', $dbh);
 		foreach ($params as $row) {
 			$_SESSION[$row['param']] = $row['value'];
 		}
@@ -502,7 +475,7 @@ function playerSession($action, $db = null, $var = null, $value = null) {
 		session_unset();
 		if (session_destroy()) {
 			$dbh  = cfgdb_connect($db);
-			if (cfgdb_update('cfg_engine',$dbh,'sessionid','')) {
+			if (cfgdb_update('cfg_engine', $dbh, 'sessionid', '')) {
 				$dbh = null;
 				return true;
 			} else {
@@ -516,20 +489,20 @@ function playerSession($action, $db = null, $var = null, $value = null) {
 	if ($action == 'write') {
 		$_SESSION[$var] = $value;
 		$dbh  = cfgdb_connect($db);
-		cfgdb_update('cfg_engine',$dbh,$var,$value);
+		cfgdb_update('cfg_engine', $dbh, $var, $value);
 		$dbh = null;
 	}
 
 	// record actual PHP Session ID in SQLite datastore
 	if ($action == 'storesessionid') {
 		$sessionid = session_id();
-		playerSession('write',$db,'sessionid',$sessionid);
+		playerSession('write', $db, 'sessionid', $sessionid);
 	}
 
 	// read PHP SESSION ID stored in SQLite datastore and use it to "attatch" the same SESSION (used in worker)
 	if ($action == 'getsessionid') {
 		$dbh  = cfgdb_connect($db);
-		$result = cfgdb_read('cfg_engine',$dbh,'sessionid');
+		$result = cfgdb_read('cfg_engine', $dbh, 'sessionid');
 		$dbh = null;
 		return $result['0']['value'];
 	}
@@ -545,7 +518,7 @@ function cfgdb_connect($dbpath) {
 	}
 }
 
-function cfgdb_read($table,$dbh,$param = null,$id = null) {
+function cfgdb_read($table, $dbh, $param = null, $id = null) {
 	if(!isset($param)) {
 		$querystr = 'SELECT * from '.$table;
 	} else if (isset($id)) {
@@ -563,12 +536,12 @@ function cfgdb_read($table,$dbh,$param = null,$id = null) {
 	}
 
 	//debug
-	error_log(">>>>> cfgdb_read(".$table.",dbh,".$param.",".$id.") >>>>> \n".$querystr, 0);
-	$result = sdbquery($querystr,$dbh);
+	error_log(">>>>> cfgdb_read(".$table.",dbh, ".$param.", ".$id.") >>>>> \n".$querystr, 0);
+	$result = sdbquery($querystr, $dbh);
 	return $result;
 }
 
-function cfgdb_update($table,$dbh,$key,$value) {
+function cfgdb_update($table, $dbh, $key, $value) {
 	switch ($table) {
 		case 'cfg_engine':
 			$querystr = "UPDATE ".$table." SET value='".$value."' where param='".$key."'";
@@ -591,41 +564,41 @@ function cfgdb_update($table,$dbh,$key,$value) {
 			break;
 	}
 	//debug
-	error_log(">>>>> cfgdb_update(".$table.",dbh,".$key.",".$value.") >>>>> \n".$querystr, 0);
-	if (sdbquery($querystr,$dbh)) {
+	error_log(">>>>> cfgdb_update(".$table.",dbh, ".$key.", ".$value.") >>>>> \n".$querystr, 0);
+	if (sdbquery($querystr, $dbh)) {
 		return true;
 	} else {
 		return false;
 	}
 }
 
-function cfgdb_write($table,$dbh,$values) {
+function cfgdb_write($table, $dbh, $values) {
 	$querystr = "INSERT INTO ".$table." VALUES (NULL, ".$values.")";
 	//debug
-	error_log(">>>>> cfgdb_write(".$table.",dbh,".$values.") >>>>> \n".$querystr, 0);
-	if (sdbquery($querystr,$dbh)) {
+	error_log(">>>>> cfgdb_write(".$table.",dbh, ".$values.") >>>>> \n".$querystr, 0);
+	if (sdbquery($querystr, $dbh)) {
 		return true;
 	} else {
 		return false;
 	}
 }
 
-function cfgdb_delete($table,$dbh,$id) {
+function cfgdb_delete($table, $dbh, $id) {
 	if (!isset($id)) {
 		$querystr = "DELETE FROM ".$table;
 	} else {
 		$querystr = "DELETE FROM ".$table." WHERE id=".$id;
 	}
 	//debug
-	error_log(">>>>> cfgdb_delete(".$table.",dbh,".$id.") >>>>> \n".$querystr, 0);
-	if (sdbquery($querystr,$dbh)) {
+	error_log(">>>>> cfgdb_delete(".$table.",dbh, ".$id.") >>>>> \n".$querystr, 0);
+	if (sdbquery($querystr, $dbh)) {
 		return true;
 	} else {
 		return false;
 	}
 }
 
-function sdbquery($querystr,$dbh) {
+function sdbquery($querystr, $dbh) {
 	$query = $dbh->prepare($querystr);
 	if ($query->execute()) {
 		$result = array();
@@ -651,7 +624,7 @@ function recursiveDelete($str){
 		// aggiungere ricerca path in playlist e conseguente remove from playlist
 	}
 	else if (is_dir($str)) {
-		$scan = glob(rtrim($str,'/').'/*');
+		$scan = glob(rtrim($str, '/').'/*');
 		foreach($scan as $index=>$path){
 			recursiveDelete($path);
 		}
@@ -669,7 +642,7 @@ function waitWorker($sleeptime, $section = null) {
 		switch ($section) {
 			case 'sources':
 			$mpd = openMpdSocket('localhost', 6600);
-			sendMpdCommand($mpd,'update');
+			sendMpdCommand($mpd, 'update');
 			closeMpdSocket($mpd);
 			break;
 		}
@@ -683,13 +656,13 @@ function ui_notify($notify) {
 	$output .= "jQuery(document).ready(function() {";
 	$output .= "$.pnotify.defaults.history = false;";
 	$output .= "$.pnotify({";
-	$output .= "title: '".$notify['title']."',";
-	$output .= "text: '".$notify['msg']."',";
-	$output .= "icon: 'icon-ok',";
+	$output .= "title: '".$notify['title']."', ";
+	$output .= "text: '".$notify['msg']."', ";
+	$output .= "icon: 'icon-ok', ";
 	if (isset($notify['duration'])) {
-		$output .= "delay: ".strval($notify['duration'] * 1000).",";
+		$output .= "delay: ".strval($notify['duration'] * 1000).", ";
 	} else {
-		$output .= "delay: '2000',";
+		$output .= "delay: '2000', ";
 	}
 	$output .= "opacity: .9});";
 	$output .= "});";
@@ -703,10 +676,10 @@ function _parseHwParams($resp) {
 		return 'Error, _parseHwParams response is null';
 	} else if ($resp != "closed\n") {
 		$tcArray = array();
-		$tcLine = strtok($resp,"\n");
+		$tcLine = strtok($resp, "\n");
 		$tcFile = "";
 		while ( $tcLine ) {
-			list ( $element, $value ) = explode(": ",$tcLine);
+			list ( $element, $value ) = explode(": ", $tcLine);
 			$tcArray[$element] = $value;
 			$tcLine = strtok("\n");
 		}
@@ -721,7 +694,7 @@ function _parseHwParams($resp) {
 			case '96000':
 			case '192000':
 			case '384000':
-				$tcArray['rate'] = rtrim(rtrim(number_format($rate),0),',');
+				$tcArray['rate'] = rtrim(rtrim(number_format($rate),0), ', ');
 				break;
 			// decimal format
 			case '22050':
@@ -731,7 +704,7 @@ function _parseHwParams($resp) {
 			case '88200':
 			case '176400':
 			case '352800':
-				$tcArray['rate'] = rtrim(number_format($rate,0,',','.'),0);
+				$tcArray['rate'] = rtrim(number_format($rate,0, ', ', '.'),0);
 				break;
 		}
 		// format sample depth, ex "S24_3LE"
@@ -744,7 +717,7 @@ function _parseHwParams($resp) {
 		if ($tcArray['channels'] > 2) $tcArray['channels'] = "Multichannel";
 
 		$tcArray['status'] = 'active';
-		$tcArray['calcrate'] = number_format((($_rate * $_bits * $_chans) / 1000000),3,'.','');
+		$tcArray['calcrate'] = number_format((($_rate * $_bits * $_chans) / 1000000),3, '.', '');
 	} else {
 		$tcArray['status'] = 'closed';
 		$tcArray['calcrate'] = '0 bps';
@@ -755,7 +728,7 @@ function _parseHwParams($resp) {
 // DSP: parse MPD Conf
 function _parseMpdConf($dbh) {
 	// read in mpd conf settings
-	$mpdconf = cfgdb_read('',$dbh,'mpdconf');
+	$mpdconf = cfgdb_read('', $dbh, 'mpdconf');
 	// prepare array
 	$_mpd = array (
 		'port' => '',
@@ -792,7 +765,7 @@ function _parseMpdConf($dbh) {
 		case '96000':
 		case '192000':
 		case '384000':
-			$_mpd['audio_sample_rate'] = rtrim(rtrim(number_format($audio_format[0]),0),',');
+			$_mpd['audio_sample_rate'] = rtrim(rtrim(number_format($audio_format[0]),0), ', ');
 			break;
 
 		// decimal format
@@ -800,7 +773,7 @@ function _parseMpdConf($dbh) {
 		case '88200':
 		case '176400':
 		case '352800':
-			$_mpd['audio_sample_rate'] = rtrim(number_format($audio_format[0],0,',','.'),0);
+			$_mpd['audio_sample_rate'] = rtrim(number_format($audio_format[0],0, ', ', '.'),0);
 			break;
 	}
 	// add sample depth, ex "16"
@@ -820,11 +793,11 @@ function _parseTcmodsConf($resp) {
 	}
 	else {
 		$tcArray = array();
-		$tcLine = strtok($resp,"\n");
+		$tcLine = strtok($resp, "\n");
 		$tcFile = "";
 
 		while ( $tcLine ) {
-			list ( $element, $value ) = explode(": ",$tcLine);
+			list ( $element, $value ) = explode(": ", $tcLine);
 			$tcArray[$element] = $value;
 			$tcLine = strtok("\n");
 		}
@@ -840,11 +813,11 @@ function _parseStationFile($resp) {
 	}
 
 	$tcArray = array();
-	$tcLine = strtok($resp,"\n");
+	$tcLine = strtok($resp, "\n");
 	$tcFile = "";
 
 	while ( $tcLine ) {
-		list ( $element, $value ) = explode("=",$tcLine);
+		list ( $element, $value ) = explode("=", $tcLine);
 		$tcArray[$element] = $value;
 		$tcLine = strtok("\n");
 	}
@@ -912,7 +885,7 @@ function _parsePlayHistory($resp) {
 	}
 
 	$tcArray = array();
-	$tcLine = strtok($resp,"\n");
+	$tcLine = strtok($resp, "\n");
 	$i = 0;
 
 	while ( $tcLine ) {
@@ -922,6 +895,14 @@ function _parsePlayHistory($resp) {
 	}
 
 	return $tcArray;
+}
+
+function getTemplate($template) {
+	return str_replace("\"", "\\\"",implode("",file($template)));
+}
+
+function echoTemplate($template) {
+	echo $template;
 }
 
 // TC (Tim Curtis) 2015-05-30: update play history log

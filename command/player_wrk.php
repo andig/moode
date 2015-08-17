@@ -32,7 +32,7 @@ require_once dirname(__FILE__) . '/../inc/player_lib.php';
 require_once dirname(__FILE__) . '/../inc/worker.php';
 
 ini_set('display_errors', '1');
-ini_set('error_log','/var/log/php_errors.log');
+ini_set('error_log', '/var/log/php_errors.log');
 $db = 'sqlite:/var/www/db/player.db';
 
 // --- DEMONIZE --- //
@@ -83,7 +83,7 @@ sysCmd('chmod -R 777 /var/www/db');
 session_save_path('/run');
 
 // load session
-playerSession('open',$db,'','');
+playerSession('open', $db, '', '');
 
 // reset session file permissions
 sysCmd('chmod 777 /run/sess*');
@@ -105,7 +105,7 @@ sysCmd('chmod 777 /var/www/playhistory.log');
 sysCmd('chmod 777 /var/www/liblog.txt');
 
 // mount all sources
-wrk_sourcemount($db,'mountall');
+wrk_sourcemount($db, 'mountall');
 
 // start MPD daemon
 sysCmd("service mpd start");
@@ -118,7 +118,7 @@ sysCmd("ln -s /var/lib/mpd/music /var/www/coverroot");
 $arch = wrk_getHwPlatform();
 if ($arch != $_SESSION['hwplatformid']) {
 	// reset playerID if architectureID not match. This condition "fire" another first-install process
-	playerSession('write',$db,'playerid','');
+	playerSession('write', $db, 'playerid', '');
 }
 // --- END INITIALIZE ENVIRONMENT --- //
 
@@ -127,16 +127,16 @@ if (isset($_SESSION['playerid']) && $_SESSION['playerid'] == '') {
 	// register HW architectureID and playerID
 	wrk_setHwPlatform($db);
 	// destroy actual session
-	playerSession('destroy',$db,'','');
+	playerSession('destroy', $db, '', '');
 	// reload session data
-	playerSession('open',$db,'','');
+	playerSession('open', $db, '', '');
 	// reset ENV parameters
 	wrk_sysChmod();
 
 	// reset netconf to defaults
 	$value = array('ssid' => '', 'encryption' => '', 'password' => '');
 	$dbh = cfgdb_connect($db);
-	cfgdb_update('cfg_wifisec',$dbh,'',$value);
+	cfgdb_update('cfg_wifisec', $dbh, '', $value);
 	$file = '/etc/network/interfaces';
 	$fp = fopen($file, 'w');
 	$netconf = "auto lo\n";
@@ -151,7 +151,7 @@ if (isset($_SESSION['playerid']) && $_SESSION['playerid'] == '') {
 	fclose($fp);
 	// update hash
 	$hash = md5_file('/etc/network/interfaces');
-	playerSession('write',$db,'netconfhash',$hash);
+	playerSession('write', $db, 'netconfhash', $hash);
 	// restart wlan0 interface
 	if (strpos($netconf, 'wlan0') != false) {
 		$cmd = "ip addr list wlan0 |grep \"inet \" |cut -d' ' -f6|cut -d/ -f1";
@@ -159,7 +159,7 @@ if (isset($_SESSION['playerid']) && $_SESSION['playerid'] == '') {
 		if (!empty($ip_wlan0[0])) {
 			$_SESSION['netconf']['wlan0']['ip'] = $ip_wlan0[0];
 		} else {
-			if (wrk_checkStrSysfile('/proc/net/wireless','wlan0')) {
+			if (wrk_checkStrSysfile('/proc/net/wireless', 'wlan0')) {
 				$_SESSION['netconf']['wlan0']['ip'] = '--- NO IP ASSIGNED ---';
 			} else {
 				$_SESSION['netconf']['wlan0']['ip'] = '--- NO INTERFACE PRESENT ---';
@@ -170,20 +170,20 @@ if (isset($_SESSION['playerid']) && $_SESSION['playerid'] == '') {
 	sysCmd('service networking restart');
 
 	// reset sourcecfg to defaults
-	wrk_sourcecfg($db,'reset');
-	sendMpdCommand($mpd,'update');
+	wrk_sourcecfg($db, 'reset');
+	sendMpdCommand($mpd, 'update');
 
 	// reset mpdconf to defaults
-	$mpdconfdefault = cfgdb_read('',$dbh,'mpdconfdefault');
+	$mpdconfdefault = cfgdb_read('', $dbh, 'mpdconfdefault');
 	foreach($mpdconfdefault as $element) {
-		cfgdb_update('cfg_mpd',$dbh,$element['param'],$element['value_default']);
+		cfgdb_update('cfg_mpd', $dbh, $element['param'], $element['value_default']);
 	}
 	// tell worker to write new MPD config
-	wrk_mpdconf('/etc',$db);
+	wrk_mpdconf('/etc', $db);
 
 	// update hash
 	$hash = md5_file('/etc/mpd.conf');
-	playerSession('write',$db,'mpdconfhash',$hash);
+	playerSession('write', $db, 'mpdconfhash', $hash);
 	sysCmd('service mpd restart');
 	$dbh = null;
 
@@ -291,7 +291,7 @@ foreach($fileData as $line) {
 
 // Commit changes to /run/minidlna.conf
 $fp = fopen($file, 'w');
-fwrite($fp, implode("",$newArray));
+fwrite($fp, implode("", $newArray));
 fclose($fp);
 
 // Start minidlna service
@@ -302,13 +302,13 @@ if (isset($_SESSION['djmount']) && $_SESSION['djmount'] == 1) {
 
 
 // unlock session files
-playerSession('unlock',$db,'','');
+playerSession('unlock', $db, '', '');
 
 // Shairport (Airplay receiver service)
 if (isset($_SESSION['shairport']) && $_SESSION['shairport'] == 1) {
 	$dbh = cfgdb_connect($db);
 	$query_cfg = "SELECT param,value_player FROM cfg_mpd WHERE value_player!=''";
-	$mpdcfg = sdbquery($query_cfg,$dbh);
+	$mpdcfg = sdbquery($query_cfg, $dbh);
 	$dbh = null;
 	foreach ($mpdcfg as $cfg) {
 		if ($cfg['param'] == 'audio_output_format' && $cfg['value_player'] == 'disabled'){
@@ -349,8 +349,8 @@ $_ver_str = explode(": ", strtok(shell_exec('dpkg-query -p mpd | grep Version'),
 $_tcmods_conf['sys_mpd_ver'] = $_ver_str[1];
 $rtn = _updTcmodsConf($_tcmods_conf);
 // store in DB and $_SESSION[kernelver], $_SESSION[procarch] vars
-playerSession('write',$db,'kernelver',$_tcmods_conf['sys_kernel_ver']);
-playerSession('write',$db,'procarch',$_tcmods_conf['sys_processor_arch']);
+playerSession('write', $db, 'kernelver', $_tcmods_conf['sys_kernel_ver']);
+playerSession('write', $db, 'procarch', $_tcmods_conf['sys_processor_arch']);
 
 // Ensure audio output is unmuted
 // TC (Tim Curtis) 2015-01-27: moved from command/orion_optimize.sh
@@ -372,10 +372,10 @@ $mixername = getMixerName(getKernelVer($_SESSION['kernelver']), $_SESSION['i2s']
 $cmd = "/var/www/tcmods/".$TCMODS_REL."/cmds/tcmods.sh get-pcmvol ".$mixername;
 $rtn = sysCmd($cmd);
 if (substr($rtn[0], 0, 6 ) == 'amixer') {
-	playerSession('write',$db,'pcm_volume', 'none');
+	playerSession('write', $db, 'pcm_volume', 'none');
 } else {
 	$rtn[0] = str_replace("%", "", $rtn[0]);
-	playerSession('write',$db,'pcm_volume', $rtn[0]);
+	playerSession('write', $db, 'pcm_volume', $rtn[0]);
 }
 
 // --- END NORMAL STARTUP --- //
@@ -389,7 +389,7 @@ while (1) {
 	if ($TCMODS_CONSUMEMODE_ON == "1") {
 		$TCMODS_CONSUMEMODE_ON = "0";
 		$mpd = openMpdSocket('localhost', 6600);
-		sendMpdCommand($mpd,'consume 0');
+		sendMpdCommand($mpd, 'consume 0');
 		closeMpdSocket($mpd);
 	}
 
@@ -399,9 +399,6 @@ while (1) {
 		if ($current_time == $clock_radio_starttime) {
 			$clock_radio_starttime = '';
 			$mpd = openMpdSocket('localhost', 6600);
-			// TC (Tim Curtis) 2015-06-26: Original code
-			//sendMpdCommand($mpd,'setvol '.$_tcmods_conf['clock_radio_volume']);
-			//readMpdResponse($mpd); // use after each cmd when sending multiple cmds
 
 			// TC (Tim Curtis) 2015-06-26: new volume control with optional logarithmic mapping of knob 0-100 range to hardware range
 			$_tcmods_conf = _parseTcmodsConf(shell_exec('cat /var/www/tcmods.conf')); // read in conf file
@@ -422,16 +419,15 @@ while (1) {
 			$_tcmods_conf['volume_knob_setting'] = $_tcmods_conf['clock_radio_volume'];
 			$rtn = _updTcmodsConf($_tcmods_conf); // update conf file
 			if ($_tcmods_conf['volume_muted'] == 0) { // unmuted
-				sendMpdCommand($mpd,'setvol '.$level);
-				readMpdResponse($mpd);
+				execMpdCommand($mpd, 'setvol '.$level);
 			}
 
-			sendMpdCommand($mpd,'play '.$_tcmods_conf['clock_radio_playitem']);
+			execMpdCommand($mpd, 'play '.$_tcmods_conf['clock_radio_playitem']);
 			closeMpdSocket($mpd);
 		} else if ($current_time == $clock_radio_stoptime) {
 			//$_tcmods_conf['clock_radio_stoptime'] = '';
 			$mpd = openMpdSocket('localhost', 6600);
-			sendMpdCommand($mpd,'stop');
+			execMpdCommand($mpd, 'stop');
 			closeMpdSocket($mpd);
 			// retry stop cmd to improve robustness
 			if ($TCMODS_CLOCKRAD_RETRY == 0) {
@@ -451,8 +447,7 @@ while (1) {
 	if ($_tcmods_conf['play_history_enabled'] == "Yes") {
 		// Get MPD currentsong data
 		$mpd = openMpdSocket('localhost', 6600);
-		sendMpdCommand($mpd, 'currentsong');
-		$resp = readMpdResponse($mpd);
+		$resp = execMpdCommand($mpd, 'currentsong');
 		closeMpdSocket($mpd);
 
 		$currentsong = _parseMpdCurrentSong($resp);
@@ -583,7 +578,7 @@ while (1) {
 				fclose($fp);
 				// update hash
 				$hash = md5_file('/etc/network/interfaces');
-				playerSession('write',$db,'netconfhash',$hash);
+				playerSession('write', $db, 'netconfhash', $hash);
 				// restart wlan0 interface
 				if (strpos($netconf, 'wlan0') != false) {
 				$cmd = "ip addr list wlan0 |grep \"inet \" |cut -d' ' -f6|cut -d/ -f1";
@@ -591,7 +586,7 @@ while (1) {
 					if (!empty($ip_wlan0[0])) {
 						$_SESSION['netconf']['wlan0']['ip'] = $ip_wlan0[0];
 					} else {
-						if (wrk_checkStrSysfile('/proc/net/wireless','wlan0')) {
+						if (wrk_checkStrSysfile('/proc/net/wireless', 'wlan0')) {
 							$_SESSION['netconf']['wlan0']['ip'] = '--- NO IP ASSIGNED ---';
 						} else {
 							$_SESSION['netconf']['wlan0']['ip'] = '--- NO INTERFACE PRESENT ---';
@@ -612,7 +607,7 @@ while (1) {
 				wrk_mpdconf('/etc', $db, getKernelVer($_SESSION['kernelver']), $_SESSION['i2s']);
 				// update hash
 				$hash = md5_file('/etc/mpd.conf');
-				playerSession('write',$db,'mpdconfhash',$hash);
+				playerSession('write', $db, 'mpdconfhash', $hash);
 				sysCmd('killall mpd');
 				sysCmd('service mpd start');
 				break;
@@ -625,7 +620,7 @@ while (1) {
 				sysCmd('service mpd start');
 				break;
 			case 'sourcecfg':
-				wrk_sourcecfg($db,$_SESSION['w_queueargs']);
+				wrk_sourcecfg($db, $_SESSION['w_queueargs']);
 				break;
 
 			// TC (Tim Curtis) 2014-08-23: process theme change requests

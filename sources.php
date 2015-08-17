@@ -51,7 +51,7 @@ if (isset($_POST['reset']) && $_POST['reset'] == 1) {
 if (isset($_POST['updatempd'])) {
 	if ($mpd) {
 		session_start();
-		sendMpdCommand($mpd,'update');
+		execMpdCommand($mpd,'update');
 		$_SESSION['notify']['title'] = 'Database update';
 		$_SESSION['notify']['msg'] = 'MPD database update initiated...';
 		session_write_close();

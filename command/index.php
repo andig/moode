@@ -32,21 +32,7 @@ if (!isset($_GET['cmd'])) {
 }
 $cmd = $_GET['cmd'];
 
-sendMpdCommand($mpd, $cmd);
-$resp = readMpdResponse($mpd);
-
-// TC (Tim Curtis) 2015-01-01
-// - to see if we can send back the error line when cmd=play and connect fails to radio station url
-// - problem is that MPD automatically tries to play the next playlist item if play fails so the data
-//   we get back reflects the next playlist item and not the error item...
-/*
-if ($resp == "OK\n") {
-	$resp = json_encode(_parseStatusResponse(MpdStatus($mpd)));
-} else {
-    $resp = 'Error: command/index.php, sendMpdCommand resed >'.$resp.'<';
-}
-*/
-
+$resp = execMpdCommand($mpd, $cmd);
 closeMpdSocket($mpd);
 
 // replace tcmods-cs

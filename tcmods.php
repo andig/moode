@@ -142,7 +142,7 @@ if (isset($_POST['syscmd'])) {
 			break;
 
 		case 'getmpdstatus':
-			echo json_encode(_parseStatusResponse(MpdStatus($mpd)));
+			echo json_encode(_parseStatusResponse(mpdStatus($mpd)));
 			break;
 
 		case 'readstationfile':
@@ -195,13 +195,12 @@ if (isset($_POST['syscmd'])) {
         $audioinfo_mpdstatus = 'Error Connecting to MPD daemon';
 	} else {
 		// mpd currentsong
-		sendMpdCommand($mpd, 'currentsong');
-		$resp = readMpdResponse($mpd);
-		$_mpdcurrentsong = _parseMpdCurrentSong($resp);
+		$res = execMpdCommand($mpd, 'currentsong');
+		$_mpdcurrentsong = _parseMpdCurrentSong($res);
 
 		$audioinfo_mpdcurrentsong_file = $_mpdcurrentsong['file'];
 		// mpd status
-		$_mpdstatus = _parseStatusResponse(MpdStatus($mpd));
+		$_mpdstatus = _parseStatusResponse(mpdStatus($mpd));
 		if ($_hwparams['status'] == 'active') {
 		// source format
 		$audioinfo_mpdstatus_format = $_mpdstatus['audio_channels'];

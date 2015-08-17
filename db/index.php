@@ -110,27 +110,24 @@ switch ($cmd) {
 
 	case 'addplay':
 		if (null !== $path) {
-			$status = _parseStatusResponse(MpdStatus($mpd));
+			$status = _parseStatusResponse(mpdStatus($mpd));
 			$pos = $status['playlistlength'] ;
 			addQueue($mpd, $path);
-			sendMpdCommand($mpd, 'play '.$pos);
-			$res = readMpdResponse($mpd);
+			$res = execMpdCommand($mpd, 'play '.$pos);
 		}
 		break;
 
 	case 'addreplaceplay':
 		if (null !== $path) {
-			sendMpdCommand($mpd, 'clear');
+			$res = execMpdCommand($mpd, 'clear');
 			addQueue($mpd, $path);
-			sendMpdCommand($mpd, 'play');
-			$res = readMpdResponse($mpd);
+			$res = execMpdCommand($mpd, 'play');
 		}
 		break;
 
 	case 'update':
 		if (null !== $path) {
-			sendMpdCommand($mpd,"update \"" .html_entity_decode($path) . "\"");
-			$res = readMpdResponse($mpd);
+			$res = execMpdCommand($mpd,"update \"" .html_entity_decode($path) . "\"");
 		}
 		break;
 
@@ -145,16 +142,15 @@ switch ($cmd) {
 	case 'trackmove':
 		if (isset($_GET['songid']) && $_GET['songid'] != '') {
 			$_args = $_GET['songid'].' '.$_GET['newpos'];
-			sendMpdCommand($mpd, 'move '.$_args);
+			execMpdCommand($mpd, 'move '.$_args);
 			$res = 'track move args= '.$_args;
 		}
 		break;
 
 	case 'savepl':
 		if (isset($_GET['plname']) && $_GET['plname'] != '') {
-			sendMpdCommand($mpd,"rm \"" .html_entity_decode($_GET['plname']) . "\"");
-			sendMpdCommand($mpd,"save \"" .html_entity_decode($_GET['plname']) . "\"");
-			$res = readMpdResponse($mpd);
+			$res = execMpdCommand($mpd,"rm \"" .html_entity_decode($_GET['plname']) . "\"");
+			$res = execMpdCommand($mpd,"save \"" .html_entity_decode($_GET['plname']) . "\"");
 		}
 		break;
 
@@ -181,12 +177,11 @@ switch ($cmd) {
 	case 'playall':
 		if (null !== $path) {
 			// TC just a copy/paste from addplay above
-			$status = _parseStatusResponse(MpdStatus($mpd));
+			$status = _parseStatusResponse(mpdStatus($mpd));
 			$pos = $status['playlistlength'] ;
 			// original code, did not set play posn
 			$res = playAll($mpd, $path);
-			sendMpdCommand($mpd, 'play '.$pos);
-			$res = readMpdResponse($mpd);
+			$res = execMpdCommand($mpd, 'play '.$pos);
 		}
 		break;
 
