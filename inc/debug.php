@@ -74,13 +74,11 @@ function debug_footer($db) {
 	echo "\n";
 	echo "###### PHP backend ######\n";
 	echo "\n";
-	echo "php version:\t".phpVer()."\n";
 	echo "debug level:\t".$_SESSION['debug']."\n";
 	echo "\n";
 	echo "\n";
 	echo "###### SESSION ######\n";
 	echo "\n";
-	echo "STATUS:\t\t".session_status()."\n";
 	echo "ID:\t\t".session_id()."\n"; 
 	echo "SAVE PATH:\t".session_save_path()."\n";
 	echo "\n";

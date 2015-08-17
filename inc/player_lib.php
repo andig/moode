@@ -1,8 +1,8 @@
 <?php
 /**
- *      PlayerUI Copyright (C) 2013 Andrea Coiutti & Simone De Gregori
- *		 Tsunamp Team
- *      http://www.tsunamp.com
+ *  PlayerUI Copyright (C) 2013 Andrea Coiutti & Simone De Gregori
+ *	Tsunamp Team
+ *  http://www.tsunamp.com
  *
  *  This Program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -301,22 +301,6 @@ function songTime($sec) {
 	return $minutes.$seconds;
 }
 
-function phpVer() {
-	$version = phpversion();
-	return substr($version, 0, 3);
-}
-
-// fix sessioni per ambienti PHP 5.3 (il solito WAMP di ACX...)
-if (phpVer() == '5.3') {
-	function session_status() {
-		if (session_id()) {
-			return 1;
-		} else {
-			return 2;
-		}
-	}
-}
-
 function sysCmd($syscmd) {
 	exec($syscmd." 2>&1", $output);
 	return $output;
@@ -485,24 +469,18 @@ function parseFileStr($strFile,$delimiter) {
 
 // cfg engine and session management
 function playerSession($action, $db = null, $var = null, $value = null) {
-	$status = session_status();
 	// open new PHP SESSION
 	if ($action == 'open') {
-		// check the PHP SESSION status
-		if($status != 2) {
-			// check presence of sessionID into SQLite datastore
-			//debug
-			// echo "<br>---------- READ SESSION -------------<br>";
-			$sessionid = playerSession('getsessionid',$db);
-			if (!empty($sessionid)) {
-				// echo "<br>---------- SET SESSION ID-------------<br>";
-				session_id($sessionid);
-				session_start();
-			} else {
-				session_start();
-				// echo "<br>---------- STORE SESSION -------------<br>";
-				playerSession('storesessionid',$db);
-			}
+		// check presence of sessionID into SQLite datastore
+		$sessionid = playerSession('getsessionid',$db);
+		if (!empty($sessionid)) {
+			// echo "<br>---------- SET SESSION ID-------------<br>";
+			session_id($sessionid);
+			session_start();
+		} else {
+			session_start();
+			// echo "<br>---------- STORE SESSION -------------<br>";
+			playerSession('storesessionid',$db);
 		}
 		$dbh  = cfgdb_connect($db);
 		// scan cfg_engine and store values in the new session
@@ -559,7 +537,7 @@ function playerSession($action, $db = null, $var = null, $value = null) {
 }
 
 function cfgdb_connect($dbpath) {
-	if ($dbh  = new PDO($dbpath)) {
+	if ($dbh = new PDO($dbpath)) {
 		return $dbh;
 	}
 	else {
@@ -576,16 +554,14 @@ function cfgdb_read($table,$dbh,$param = null,$id = null) {
 		$querystr = "SELECT param,value_player FROM cfg_mpd WHERE value_player!=''";
 	} else if ($param == 'mpdconfdefault') {
 		$querystr = "SELECT param,value_default FROM cfg_mpd WHERE value_default!=''";
-	// TC (Tim Curtis) 2015-03-21: add for audio device lookup
-	// TC (Tim Curtis) 2015-07-31: specify fields instead of *
 	} else if ($table == 'cfg_audiodev') {
 		$querystr = 'SELECT name, dacchip, arch, iface, other from '.$table.' WHERE name="'.$param.'"';
-	// TC (Tim Curtis) 2015-07-31: radio station table
 	} else if ($table == 'cfg_radio') {
 		$querystr = 'SELECT station, name, logo from '.$table.' WHERE station="'.$param.'"';
 	} else {
 		$querystr = 'SELECT value from '.$table.' WHERE param="'.$param.'"';
 	}
+
 	//debug
 	error_log(">>>>> cfgdb_read(".$table.",dbh,".$param.",".$id.") >>>>> \n".$querystr, 0);
 	$result = sdbquery($querystr,$dbh);
@@ -603,7 +579,7 @@ function cfgdb_update($table,$dbh,$key,$value) {
 			break;
 
 		case 'cfg_mpd':
-			$querystr = "UPDATE ".$table." set value_player='".$value."' where param='".$key."'";
+			$querystr = "UPDATE ".$table." SET value_player='".$value."' where param='".$key."'";
 			break;
 
 		case 'cfg_wifisec':
@@ -720,80 +696,6 @@ function ui_notify($notify) {
 	$output .= "</script>";
 	echo $output;
 }
-
-function ui_lastFM_coverart($artist,$album,$lastfm_apikey) {
-	$url = "http://ws.audioscrobbler.com/2.0/?method=album.getinfo&api_key=".$lastfm_apikey."&artist=".urlencode($artist)."&album=".urlencode($album)."&format=json";
-	// debug
-	//echo $url;
-	$ch = curl_init($url);
-	curl_setopt($ch, CURLOPT_FILE, $fp);
-	curl_setopt($ch, CURLOPT_HEADER, 0);
-	curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-	$output = curl_exec($ch);
-	$output = json_decode($output,true);
-	curl_close($ch);
-	/* debug
-	echo "<pre>";
-	print_r($output);
-	echo "</pre>";
-	echo "<br>";
-	*/
-	// key [3] == extralarge last.fm image
-	return $output['album']['image'][3]['#text'];
-}
-
-// ACX Functions
-function sezione() {
-	echo '<pre><strong>sezione</strong> = '.$GLOBALS['sezione'].'</pre>';
-}
-
-function ami($sz=null) {
-	switch ($sz) {
-		case 'index':
-			echo (in_array($GLOBALS['sezione'], array(
-				'index'
-				))?'active':'');
-			break;
-		case 'sources':
-			echo (in_array($GLOBALS['sezione'], array(
-				'sources', 'sources-add', 'sources-edit'
-				))?'active':'');
-			break;
-		case 'mpd-config':
-			echo (in_array($GLOBALS['sezione'], array(
-				'mpd-config'
-				))?'active':'');
-			break;
-		case 'mpd-config-network':
-			echo (in_array($GLOBALS['sezione'], array(
-				'mpd-config-network'
-				))?'active':'');
-			break;
-		case 'system':
-			echo (in_array($GLOBALS['sezione'], array(
-				'system'
-				))?'active':'');
-			break;
-		case 'help':
-			echo (in_array($GLOBALS['sezione'], array(
-				'help'
-				))?'active':'');
-			break;
-		case 'credits':
-			echo (in_array($GLOBALS['sezione'], array(
-				'credits'
-				))?'active':'');
-			break;
-	}
-}
-
-function current_item($sez=null) {
-	echo (($GLOBALS['sezione'] == $sez)?' class="current"':'');
-}
-// end ACX Functions
-
-// TC (Tim Curtis) 2014-12-23
-// - tcmods functions
 
 // OUTPUT: parse HW_PARAMS
 function _parseHwParams($resp) {
@@ -913,19 +815,20 @@ function _parseMpdConf($dbh) {
 
 // DEVICE: parse /var/www/tcmods.conf
 function _parseTcmodsConf($resp) {
-		if (is_null($resp) ) {
-			return 'Error, _parseTcmodsConf response is null';
-		} else {
-			$tcArray = array();
-			$tcLine = strtok($resp,"\n");
-			$tcFile = "";
+	if (is_null($resp) ) {
+		return 'Error, _parseTcmodsConf response is null';
+	}
+	else {
+		$tcArray = array();
+		$tcLine = strtok($resp,"\n");
+		$tcFile = "";
 
-			while ( $tcLine ) {
-				list ( $element, $value ) = explode(": ",$tcLine);
-				$tcArray[$element] = $value;
-				$tcLine = strtok("\n");
-			}
+		while ( $tcLine ) {
+			list ( $element, $value ) = explode(": ",$tcLine);
+			$tcArray[$element] = $value;
+			$tcLine = strtok("\n");
 		}
+	}
 	return $tcArray;
 }
 
@@ -934,16 +837,16 @@ function _parseTcmodsConf($resp) {
 function _parseStationFile($resp) {
 	if (is_null($resp) ) {
 		return 'Error, _parseStationFile response is null';
-	} else {
-		$tcArray = array();
-		$tcLine = strtok($resp,"\n");
-		$tcFile = "";
+	}
 
-		while ( $tcLine ) {
-			list ( $element, $value ) = explode("=",$tcLine);
-			$tcArray[$element] = $value;
-			$tcLine = strtok("\n");
-		}
+	$tcArray = array();
+	$tcLine = strtok($resp,"\n");
+	$tcFile = "";
+
+	while ( $tcLine ) {
+		list ( $element, $value ) = explode("=",$tcLine);
+		$tcArray[$element] = $value;
+		$tcLine = strtok("\n");
 	}
 
 	return $tcArray;
@@ -955,39 +858,46 @@ function _parseStationFile($resp) {
 // TC (Tim Curtis) 2015-06-26: add volume_ elements to tcmods.conf for logarithmic volume control and improved mute
 // TC (Tim Curtis) 2015-06-26: add albumart_lookup_method
 function _updTcmodsConf($tcmconf) {
+
+	$keys = array(
+		'albumart_lookup_method',
+		'audio_device_name',
+		'audio_device_dac',
+		'audio_device_arch',
+		'audio_device_iface',
+		'audio_device_other',
+		'clock_radio_enabled',
+		'clock_radio_playitem',
+		'clock_radio_playname',
+		'clock_radio_starttime',
+		'clock_radio_stoptime',
+		'clock_radio_volume',
+		'clock_radio_shutdown',
+		'play_history_currentsong',
+		'play_history_enabled',
+		'search_autofocus_enabled',
+		'sys_kernel_ver',
+		'sys_processor_arch',
+		'sys_mpd_ver',
+		'time_knob_countup',
+		'theme_color',
+		'volume_curve_factor',
+		'volume_curve_logarithmic',
+		'volume_knob_setting',
+		'volume_max_percent',
+		'volume_mixer_type',
+		'volume_muted',
+		'volume_warning_limit'
+	);
+
+	$data = '';
+	foreach ($keys as $key) {
+		$data .= $key . ': ' . $tcmconf[$key]."\n";
+	}
+
 	// Open file for write, clears contents
 	$_file = '/var/www/tcmods.conf';
 	$handle = fopen($_file, 'w') or die('tcmods.php: file open failed on '.$_file); // creates file if none exists
-	// format conf lines
-	$data = 'albumart_lookup_method: '.$tcmconf['albumart_lookup_method']."\n";
-	$data .= 'audio_device_name: '.$tcmconf['audio_device_name']."\n";
-	$data .= 'audio_device_dac: '.$tcmconf['audio_device_dac']."\n";
-	$data .= 'audio_device_arch: '.$tcmconf['audio_device_arch']."\n";
-	$data .= 'audio_device_iface: '.$tcmconf['audio_device_iface']."\n";
-	$data .= 'audio_device_other: '.$tcmconf['audio_device_other']."\n";
-	$data .= 'clock_radio_enabled: '.$tcmconf['clock_radio_enabled']."\n";
-	$data .= 'clock_radio_playitem: '.$tcmconf['clock_radio_playitem']."\n";
-	$data .= 'clock_radio_playname: '.$tcmconf['clock_radio_playname']."\n";
-	$data .= 'clock_radio_starttime: '.$tcmconf['clock_radio_starttime']."\n";
-	$data .= 'clock_radio_stoptime: '.$tcmconf['clock_radio_stoptime']."\n";
-	$data .= 'clock_radio_volume: '.$tcmconf['clock_radio_volume']."\n";
-	$data .= 'clock_radio_shutdown: '.$tcmconf['clock_radio_shutdown']."\n";
-	$data .= 'play_history_currentsong: '.$tcmconf['play_history_currentsong']."\n";
-	$data .= 'play_history_enabled: '.$tcmconf['play_history_enabled']."\n";
-	$data .= 'search_autofocus_enabled: '.$tcmconf['search_autofocus_enabled']."\n";
-	$data .= 'sys_kernel_ver: '.$tcmconf['sys_kernel_ver']."\n";
-	$data .= 'sys_processor_arch: '.$tcmconf['sys_processor_arch']."\n";
-	$data .= 'sys_mpd_ver: '.$tcmconf['sys_mpd_ver']."\n";
-	$data .= 'time_knob_countup: '.$tcmconf['time_knob_countup']."\n";
-	$data .= 'theme_color: '.$tcmconf['theme_color']."\n";
-	$data .= 'volume_curve_factor: '.$tcmconf['volume_curve_factor']."\n";
-	$data .= 'volume_curve_logarithmic: '.$tcmconf['volume_curve_logarithmic']."\n";
-	$data .= 'volume_knob_setting: '.$tcmconf['volume_knob_setting']."\n";
-	$data .= 'volume_max_percent: '.$tcmconf['volume_max_percent']."\n";
-	$data .= 'volume_mixer_type: '.$tcmconf['volume_mixer_type']."\n";
-	$data .= 'volume_muted: '.$tcmconf['volume_muted']."\n";
-	$data .= 'volume_warning_limit: '.$tcmconf['volume_warning_limit']."\n";
-	// Write data, close file
 	fwrite($handle, $data);
 	fclose($handle);
 
@@ -997,19 +907,20 @@ function _updTcmodsConf($tcmconf) {
 
 // TC (Tim Curtis) 2015-05-30: parse play history log
 function _parsePlayHistory($resp) {
-		if (is_null($resp) ) {
-			return 'Error, _parsePlayHistory response is null';
-		} else {
-			$tcArray = array();
-			$tcLine = strtok($resp,"\n");
-			$i = 0;
+	if (is_null($resp) ) {
+		return 'Error, _parsePlayHistory response is null';
+	}
 
-			while ( $tcLine ) {
-				$tcArray[$i] = $tcLine;
-				$i++;
-				$tcLine = strtok("\n");
-			}
-		}
+	$tcArray = array();
+	$tcLine = strtok($resp,"\n");
+	$i = 0;
+
+	while ( $tcLine ) {
+		$tcArray[$i] = $tcLine;
+		$i++;
+		$tcLine = strtok("\n");
+	}
+
 	return $tcArray;
 }
 
@@ -1025,26 +936,18 @@ function _updatePlayHistory($currentsong) {
 	return '_updatePlayHistory: update playhistory.log complete';
 }
 
-// TC (Tim Curtis) 2015-02-25: for 3.18 kernels
-// TC (Tim Curtis) 2015-03-21: add IQaudIO Pi-AMP+
-// TC (Tim Curtis) 2015-04-29: add RaspyPlay4
-// TC (Tim Curtis) 2015-04-29: add Durio Sound PRO
-// TC (Tim Curtis) 2015-06-26: add IQaudIO Pi-DigiAMP+ and Hifimediy ES9023
-// TC (Tim Curtis) 2015-07-31: add Audiophonics I-Sabre DAC ES9023 TCXO
 function _setI2sDtoverlay($db, $device) {
-	$file = '/etc/modules';
 	if ($device == 'I2S Off') {
-		$text = "# I2S output deactivated\n";
-		$text .= "snd-bcm2835\n";
-		file_put_contents($file, $text);
-	} else {
+		_setI2sModules($db, 'I2S Off');
+	}
+	else {
 		$text = "# Device Tree Overlay being used\n";
-		file_put_contents($file, $text);
+		file_put_contents('/etc/modules', $text);
+
 		switch ($device) {
-			case 'G2 Labs BerryNOS':
-			case 'G2 Labs BerryNOS Red': // use hifiberry driver
-				sysCmd('echo dtoverlay=hifiberry-dac >> /boot/config.txt');
-				break;
+			case 'Generic': 				// use hifiberry driver
+			case 'G2 Labs BerryNOS':		// use hifiberry driver
+			case 'G2 Labs BerryNOS Red':	// use hifiberry driver
 			case 'Durio Sound PRO':
 			case 'Hifimediy ES9023':
 			case 'Audiophonics I-Sabre DAC ES9023 TCXO':
@@ -1079,101 +982,71 @@ function _setI2sDtoverlay($db, $device) {
 				$text .= "snd_soc_rpi_dac\n";
 				file_put_contents($file, $text);
 				break;
-			case 'Generic': // use hifiberry driver
-				sysCmd('echo dtoverlay=hifiberry-dac >> /boot/config.txt');
-				break;
 		}
 	}
 }
 
 // TC (Tim Curtis) 2015-02-25: for pre 3.18 kernels
 function _setI2sModules($db, $device) {
-	$file = '/etc/modules';
-	if ($device == 'I2S Off') {
-		$text = "# I2S output deactivated\n";
-		$text .= "snd-bcm2835\n";
-		file_put_contents($file, $text);
-	} else {
-		switch ($device) {
-			case 'G2 Labs BerryNOS':
-			case 'G2 Labs BerryNOS Red':
-				$text = "# ". $device."\n";
-				$text .= "snd_soc_bcm2708\n";
-				$text .= "bcm2708_dmaengine\n";
-				$text .= "snd_soc_pcm5102a\n";
-				$text .= "snd_soc_hifiberry_dac\n";
-				file_put_contents($file, $text);
-				break;
-			case 'HiFiBerry DAC':
-				$text = "# ". $device."\n";
-				$text .= "snd_soc_bcm2708\n";
-				$text .= "bcm2708_dmaengine\n";
-				$text .= "snd_soc_pcm5102a\n";
-				$text .= "snd_soc_hifiberry_dac\n";
-				file_put_contents($file, $text);
-				break;
-			case 'HiFiBerry DAC+':
-				$text = "# ". $device."\n";
-				$text .= "snd_soc_bcm2708\n";
-				$text .= "bcm2708_dmaengine\n";
-				$text .= "snd_soc_pcm512x\n";
-				$text .= "snd_soc_hifiberry_dacplus\n";
-				file_put_contents($file, $text);
-				break;
-			case 'HiFiBerry Digi(Digi+)':
-				$text = "# ". $device."\n";
-				$text .= "snd_soc_bcm2708\n";
-				$text .= "bcm2708_dmaengine\n";
-				$text .= "snd_soc_hifiberry_digi\n";
-				file_put_contents($file, $text);
-				break;
-			case 'HiFiBerry Amp(Amp+)':
-				$text = "# ". $device."\n";
-				$text .= "snd_soc_bcm2708\n";
-				$text .= "bcm2708_dmaengine\n";
-				$text .= "snd_soc_hifiberry_amp\n";
-				file_put_contents($file, $text);
-				break;
-			case 'IQaudIO Pi-DAC':
-				$text = "# ". $device."\n";
-				$text .= "snd_soc_bcm2708\n";
-				$text .= "snd_soc_bcm2708_i2s\n";
-				$text .= "bcm2708_dmaengine\n";
-				$text .= "snd_soc_pcm512x\n";
-				$text .= "snd_soc_iqaudio_dac\n";
-				file_put_contents($file, $text);
-				break;
-			case 'IQaudIO Pi-DAC+':
-				$text = "# ". $device."\n";
-				$text .= "snd_soc_bcm2708\n";
-				$text .= "snd_soc_bcm2708_i2s\n";
-				$text .= "bcm2708_dmaengine\n";
-				$text .= "snd_soc_pcm512x\n";
-				$text .= "snd_soc_iqaudio_dac\n";
-				file_put_contents($file, $text);
-				break;
-			case 'RPi DAC':
-				$text = "# ". $device."\n";
-				$text .= "snd_soc_bcm2708\n";
-				$text .= "snd_soc_bcm2708_i2s\n";
-				$text .= "bcm2708_dmaengine\n";
-				$text .= "snd_soc_pcm5102a\n";
-				$text .= "snd_soc_rpi_dac\n";
-				file_put_contents($file, $text);
-				break;
-			case 'Generic':
-				$text = "# Generic I2S driver\n";
-				$text .= "snd_soc_bcm2708\n";
-				$text .= "snd_soc_bcm2708_i2s\n";
-				$text .= "bcm2708_dmaengine\n";
-				$text .= "snd_soc_pcm5102a\n";
-				$text .= "snd_soc_pcm512x\n";
-				$text .= "snd_soc_hifiberry_dac\n";
-				$text .= "snd_soc_rpi_dac\n";
-				file_put_contents($file, $text);
-				break;
-		}
+	$text = "# ". $device."\n";
+
+	switch ($device) {
+		case 'I2S Off':
+			$text = "# I2S output deactivated\n";
+			$text .= "snd-bcm2835\n";
+			break;
+		case 'G2 Labs BerryNOS':
+		case 'G2 Labs BerryNOS Red':
+		case 'HiFiBerry DAC':
+			$text .= "snd_soc_bcm2708\n";
+			$text .= "bcm2708_dmaengine\n";
+			$text .= "snd_soc_pcm5102a\n";
+			$text .= "snd_soc_hifiberry_dac\n";
+			break;
+		case 'HiFiBerry DAC+':
+			$text .= "snd_soc_bcm2708\n";
+			$text .= "bcm2708_dmaengine\n";
+			$text .= "snd_soc_pcm512x\n";
+			$text .= "snd_soc_hifiberry_dacplus\n";
+			break;
+		case 'HiFiBerry Digi(Digi+)':
+			$text .= "snd_soc_bcm2708\n";
+			$text .= "bcm2708_dmaengine\n";
+			$text .= "snd_soc_hifiberry_digi\n";
+			break;
+		case 'HiFiBerry Amp(Amp+)':
+			$text .= "snd_soc_bcm2708\n";
+			$text .= "bcm2708_dmaengine\n";
+			$text .= "snd_soc_hifiberry_amp\n";
+			break;
+		case 'IQaudIO Pi-DAC':
+		case 'IQaudIO Pi-DAC+':
+			$text .= "snd_soc_bcm2708\n";
+			$text .= "snd_soc_bcm2708_i2s\n";
+			$text .= "bcm2708_dmaengine\n";
+			$text .= "snd_soc_pcm512x\n";
+			$text .= "snd_soc_iqaudio_dac\n";
+			break;
+		case 'RPi DAC':
+			$text .= "snd_soc_bcm2708\n";
+			$text .= "snd_soc_bcm2708_i2s\n";
+			$text .= "bcm2708_dmaengine\n";
+			$text .= "snd_soc_pcm5102a\n";
+			$text .= "snd_soc_rpi_dac\n";
+			break;
+		case 'Generic':
+			$text = "# Generic I2S driver\n";
+			$text .= "snd_soc_bcm2708\n";
+			$text .= "snd_soc_bcm2708_i2s\n";
+			$text .= "bcm2708_dmaengine\n";
+			$text .= "snd_soc_pcm5102a\n";
+			$text .= "snd_soc_pcm512x\n";
+			$text .= "snd_soc_hifiberry_dac\n";
+			$text .= "snd_soc_rpi_dac\n";
+			break;
 	}
+
+	file_put_contents('/etc/modules', $text);
 }
 
 // TC (Tim Curtis) 2015-06-26: return kernel version number without "-v7" suffix
