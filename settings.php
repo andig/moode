@@ -1,4 +1,4 @@
-<?php 
+<?php
 /**
  *  This Program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -20,16 +20,13 @@
  *
  * Rewrite by Tim Curtis and Andreas Goetz
  */
- 
+
 $TCMODS_REL = "r21"; // Current release
- 
-// config
+
 require_once dirname(__FILE__) . '/inc/connection.php';
 
-// player lib
-require_once dirname(__FILE__) . '/inc/player_lib.php';
 
-playerSession('open',$db,'',''); 
+playerSession('open',$db,'','');
 playerSession('unlock',$db,'','');
 
 if (isset($_POST['syscmd'])) {
@@ -85,8 +82,8 @@ if (isset($_POST['update_i2s_device'])) {
 			// TC (Tim Curtis) 2015-03-21: Adjust message depending on selected device
 			if ($_POST['i2s'] == "IQaudIO Pi-AMP+") {
 				$_SESSION['notify']['msg'] = $_SESSION['notify']['msg']."<br><br>This device REQUIRES hardware volume control. After rebooting, set MPD Volume control to Hardware.";
-			} else if ($_POST['i2s'] == "HiFiBerry DAC+" || 
-				$_POST['i2s'] == "HiFiBerry Amp(Amp+)" || 
+			} else if ($_POST['i2s'] == "HiFiBerry DAC+" ||
+				$_POST['i2s'] == "HiFiBerry Amp(Amp+)" ||
 				$_POST['i2s'] == "IQaudIO Pi-DAC" ||
 				$_POST['i2s'] == "IQaudIO Pi-DAC+" ||
 				$_POST['i2s'] == "RaspyPlay4") {
@@ -98,11 +95,11 @@ if (isset($_POST['update_i2s_device'])) {
 		} else {
 			echo "background worker busy";
 		}
-	} 
+	}
 }
 // TC (Tim Curtis) 2015-02-25: kernel select handler
 // TC (Tim Curtis) 2015-06-26: use unique notify Title in update_kernel_version for Waitworker(1) test at end of script to allow the Notify message to appear
-// TC (Tim Curtis) 2015-06-26: change notify message duration from 5 to 10 mins 
+// TC (Tim Curtis) 2015-06-26: change notify message duration from 5 to 10 mins
 if (isset($_POST['update_kernel_version'])) {
 	if (isset($_POST['kernelver']) && $_POST['kernelver'] != $_SESSION['kernelver']) {
 		if ($_SESSION['w_lock'] != 1 && $_SESSION['w_queue'] == '') {
@@ -119,7 +116,7 @@ if (isset($_POST['update_kernel_version'])) {
 		} else {
 			echo "background worker busy";
 		}
-	} 
+	}
 }
 // TC (Tim Curtis) 2015-04-29: timezone select handler
 if (isset($_POST['update_time_zone'])) {
@@ -138,7 +135,7 @@ if (isset($_POST['update_time_zone'])) {
 		} else {
 			echo "background worker busy";
 		}
-	} 
+	}
 }
 if (isset($_POST['update_latency_setting'])) {
 	if (isset($_POST['orionprofile']) && $_POST['orionprofile'] != $_SESSION['orionprofile']) {
@@ -161,24 +158,8 @@ if (isset($_POST['update_latency_setting'])) {
 		} else {
 			return "background worker busy";
 		}
-	} 
+	}
 }
-if (isset($_POST['cmediafix']) && $_POST['cmediafix'] != $_SESSION['cmediafix']) {
-	session_start();
-	if ($_POST['cmediafix'] == 1 OR $_POST['cmediafix'] == 0) {
-		playerSession('write',$db,'cmediafix',$_POST['cmediafix']);
-	}
-	if ($_POST['cmediafix'] == 1) {
-		$_SESSION['notify']['title'] = 'Setting change';
-		$_SESSION['notify']['msg'] = 'CMedia fix enabled, REBOOT for setting to take effect.';
-		$_SESSION['notify']['duration'] = 4; // secs
-	} else {
-		$_SESSION['notify']['title'] = 'Setting change';
-		$_SESSION['notify']['msg'] = 'CMedia fix disabled, REBOOT for setting to take effect.';
-		$_SESSION['notify']['duration'] = 4; // secs
-	}
-	playerSession('unlock');
-} 
 
 if (isset($_POST['shairport']) && $_POST['shairport'] != $_SESSION['shairport']) {
 	session_start();
@@ -195,7 +176,7 @@ if (isset($_POST['shairport']) && $_POST['shairport'] != $_SESSION['shairport'])
 		$_SESSION['notify']['duration'] = 4; // secs
 	}
 	playerSession('unlock');
-} 
+}
 
 if (isset($_POST['upnpmpdcli']) && $_POST['upnpmpdcli'] != $_SESSION['upnpmpdcli']) {
 	session_start();
@@ -212,7 +193,7 @@ if (isset($_POST['upnpmpdcli']) && $_POST['upnpmpdcli'] != $_SESSION['upnpmpdcli
 		$_SESSION['notify']['duration'] = 4; // secs
 	}
 	playerSession('unlock');
-} 
+}
 
 if (isset($_POST['djmount']) && $_POST['djmount'] != $_SESSION['djmount']) {
 	session_start();
@@ -229,7 +210,7 @@ if (isset($_POST['djmount']) && $_POST['djmount'] != $_SESSION['djmount']) {
 		$_SESSION['notify']['duration'] = 4; // secs
 	}
 	playerSession('unlock');
-} 
+}
 
 // TC (Tim Curtis) 2015-04-29: host and network service name change handlers
 if (isset($_POST['update_host_name'])) {
@@ -251,7 +232,7 @@ if (isset($_POST['update_host_name'])) {
 			} else {
 				echo "background worker busy";
 			}
-		} 
+		}
 		playerSession('unlock');
 	}
 }
@@ -270,7 +251,7 @@ if (isset($_POST['update_browser_title'])) {
 		} else {
 			echo "background worker busy";
 		}
-	} 
+	}
 }
 if (isset($_POST['update_airplay_name'])) {
 	if (isset($_POST['airplay_name']) && $_POST['airplay_name'] != $_SESSION['airplay_name']) {
@@ -287,7 +268,7 @@ if (isset($_POST['update_airplay_name'])) {
 		} else {
 			echo "background worker busy";
 		}
-	} 
+	}
 }
 if (isset($_POST['update_upnp_name'])) {
 	if (isset($_POST['upnp_name']) && $_POST['upnp_name'] != $_SESSION['upnp_name']) {
@@ -398,7 +379,7 @@ if (isset($_POST['update_expand_sdcard'])) {
 // TC (Tim Curtis) 2015-03-21: add IQaudIO Pi-AMP+
 // TC (Tim Curtis) 2015-04-29: add RaspyPlay4 and Durio Sound PRO
 // TC (Tim Curtis) 2015-04-29: cleanup i2s if() logic
-// TC (Tim Curtis) 2015-06-26: use getKernelVer()  
+// TC (Tim Curtis) 2015-06-26: use getKernelVer()
 // TC (Tim Curtis) 2015-06-26: add IQaudIO Pi-DigiAMP+ and Hifimediy ES9023
 // TC (Tim Curtis) 2015-07-31: add Audiophonics I-Sabre DAC ES9023 TCXO
 $kernelver = getKernelVer($_SESSION['kernelver']);
@@ -447,7 +428,7 @@ if ($_SESSION['pcm_volume'] == 'none') {
 
 	$rtn = sysCmd($cmd);
 	$_pcm_volume = str_replace("%", "", $rtn[0]);
-	
+
 	if (isset($_POST['pcm_volume']) && $_pcm_volume != $_POST['pcm_volume']) { // player_wrk has not processed the change yet
 		$_pcm_volume = 	$_POST['pcm_volume'];
 	}
@@ -471,16 +452,13 @@ if ($_SESSION['procarch'] == "armv7l") { // Pi-2
 	//$_linux_kernel['kernelver'] .= "<option value=\"3.12.26+\" ".(($_SESSION['kernelver'] == '3.12.26+') ? "selected" : "").">3.12.26+</option>\n";
 	//$_linux_kernel['kernelver'] .= "<option value=\"3.10.36+\" ".(($_SESSION['kernelver'] == '3.10.36+') ? "selected" : "").">3.10.36+</option>\n";
 } else {
-	$_linux_kernel['kernelver'] .= "<option value=\"Unknown Arch\" "."selected".">None</option>\n"; 
+	$_linux_kernel['kernelver'] .= "<option value=\"Unknown Arch\" "."selected".">None</option>\n";
 }
 
 // kernel tweak profiles
 $_system_select['orionprofile'] .= "<option value=\"Default\" ".(($_SESSION['orionprofile'] == 'Default') ? "selected" : "").">Default</option>\n";
 $_system_select['orionprofile'] .= "<option value=\"ACX\" ".(($_SESSION['orionprofile'] == 'ACX') ? "selected" : "").">ACX</option>\n";
 $_system_select['orionprofile'] .= "<option value=\"Orion\" ".(($_SESSION['orionprofile'] == 'Orion') ? "selected" : "").">Orion</option>\n";
-// cmedia fix
-$_system_select['cmediafix1'] .= "<input type=\"radio\" name=\"cmediafix\" id=\"togglecmedia1\" value=\"1\" ".(($_SESSION['cmediafix'] == 1) ? "checked=\"checked\"" : "").">\n";
-$_system_select['cmediafix0'] .= "<input type=\"radio\" name=\"cmediafix\" id=\"togglecmedia2\" value=\"0\" ".(($_SESSION['cmediafix'] == 0) ? "checked=\"checked\"" : "").">\n";
 // airplay receiver
 $_system_select['shairport1'] .= "<input type=\"radio\" name=\"shairport\" id=\"toggleshairport1\" value=\"1\" ".(($_SESSION['shairport'] == 1) ? "checked=\"checked\"" : "").">\n";
 $_system_select['shairport0'] .= "<input type=\"radio\" name=\"shairport\" id=\"toggleshairport2\" value=\"0\" ".(($_SESSION['shairport'] == 0) ? "checked=\"checked\"" : "").">\n";
@@ -1034,28 +1012,28 @@ $_timezone['timezone'] .= "<option value=\"Zulu\" ".(($_SESSION['timezone'] == '
 $tpl = "settings.html";
 ?>
 
-<?php
+<?php 
 $sezione = basename(__FILE__, '.php');
-include('_header.php'); 
+include('_header.php');
 ?>
 
-<!-- 
+<!--
 TC (Tim Curtis) 2014-11-30
-- remove trailing ! in 1st content line causing code to be grayed out in editor 
+- remove trailing ! in 1st content line causing code to be grayed out in editor
 -->
 <!-- content -->
-<?php
+<?php 
 // wait for worker output if $_SESSION['w_active'] = 1
 // TC (Tim Curtis) 2015-02-25: dont wait if kernel select so page returns and ui_notify message appears
 // TC (Tim Curtis) 2015-02-25: use notify title as the check since its not cleared by worker (player_wrk.php)
 if ($_SESSION['notify']['title'] != 'Kernel change') {
-	waitWorker(1);	
+	waitWorker(1);
 }
 eval("echoTemplate(\"".getTemplate("templates/$tpl")."\");");
 ?>
 <!-- content -->
 
-<?php 
+<?php
 debug($_POST);
 ?>
 

@@ -32,11 +32,6 @@ if (!$mpd) {
 // Fetch MPD status
 $status = _parseStatusResponse(MpdStatus($mpd));
 
-// Check for CMediaFix
-if (isset($_SESSION['cmediafix']) && $_SESSION['cmediafix'] == 1) {
-	$_SESSION['lastbitdepth'] = $status['
-}
-
 // Register player state in session
 $_SESSION['state'] = $status['state'];
 session_write_close(); // Unlock SESSION file
@@ -54,20 +49,13 @@ if (isset($curTrack[0]['Title'])) {
 	$status['currentsong'] = $curTrack[0]['Title'];
 	$status['currentalbum'] = $curTrack[0]['Album'];
 	$status['fileext'] = parseFileStr($curTrack[0]['file'],'.');
-} else {
+}
+else {
 	$path = parseFileStr($curTrack[0]['file'],'/');
 	$status['fileext'] = parseFileStr($curTrack[0]['file'],'.');
 	$status['currentartist'] = "";
 	$status['currentsong'] = $song;
 	$status['currentalbum'] = "path: ".$path;
-}
-	
-// CMediaFix
-if (isset($_SESSION['cmediafix']) && $_SESSION['cmediafix'] == 1 && $status['state'] == 'play' ) {
-	$status['lastbitdepth'] = $_SESSION['lastbitdepth'];
-	if ($_SESSION['lastbitdepth'] != $status['audio']) {
-		sendMpdCommand($mpd,'cmediafix');
-	}
 }
 
 closeMpdSocket($mpd);

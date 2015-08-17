@@ -13,54 +13,11 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this software. If not, refer to the following link.
  *  http://www.gnu.org/licenses/
- * 
- *	TCMODS Edition 
  *
- *	TC (Tim Curtis) 2014-08-23, r1.0
- *	- handle power off and reboot actions from "Turn off" menu pick
- *	- handle power off and info actions from header btns
- *	- generate data for Audioinfo html template
- *
- *	TC (Tim Curtis) 2014-12-23, r1.3
- *	- command 'readtcmconf' to read contents of tcmods.conf 
- *	- command 'getmpdstatus' to return MPD status information
- *	- command 'updatetcmconf' to update contents of tcmods.conf 
- *	- read and parse radio station file
- *	- move functions to player_lib.php
- *	- reload clock radio settings from conf file	
- *	- add element volume_warning_limit to tcmods.conf
- *	- shovel & broom
- *
- *	TC (Tim Curtis) 2015-01-27: r1.5
- *	- remove timer_knob_radiocount
- *	- query cfg_logourl for station logo url
- *	- add search_autofocus_enabled to tcmods conf 
- *
- *	TC (Tim Curtis) 2015-02-25: r1.6
- *	- move updatetcmconf code to _updTcmodsConf() function 
- *	- add processor architecture to Audio Info popup
- *
- *	TC (Tim Curtis) 2015-03-21: r1.7
- *	- query cfg_audiodev for audio device description
- *
- *	TC (Tim Curtis) 2015-05-30: r1.9
- *	- add case for reload tcmods config
- *	- add case for play history read
- *	- add case for get upnp coverart url
- *
- *	TC (Tim Curtis) 2015-06-26: r2.0
- *	- TESTING ALSA-Direct volume control, requires www-data user in visudo (using different method but leaving this code in place)
- *	- add Volume settings under DSP INFO in Audio info popup
- *
- *	TC (Tim Curtis) 2015-07-31: r2.1
- *	- replace getlogourl with getradioinfo
- *	- audio info input section, format bit depth to ",dsd" instead of ",dsd bit" (for dsf files)
- *
+ * Rewrite by Tim Curtis and Andreas Goetz
  */
 
-// common include
 require_once dirname(__FILE__) . '/inc/connection.php';
-require_once dirname(__FILE__) . '/inc/player_lib.php';
 
 playerSession('open',$db,'',''); 
 playerSession('unlock',$db,'','');

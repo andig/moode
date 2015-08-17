@@ -122,160 +122,153 @@ if(isset($_POST['mpdconf']) && !empty($_POST['mpdconf'])) {
 // Wait for worker output if $_SESSION['w_active'] = 1
 waitWorker(1);
 
-// Check integrity of /etc/mpd.conf
-if(!hashCFG('check_mpd',$db)) {
-	$_mpdconf = file_get_contents('/etc/mpd.conf');
-	// Set manual config template
-	$tpl = "mpd-config-manual.html";
-} else {
-	$mpdconf = cfgdb_read('',$dbh,'mpdconf');
-	// Prepare array
-	$_mpd = array (
-		'port' => '',
-		'gapless_mp3_playback' => '',
-		'auto_update' => '',
-		'samplerate_converter' => '',
-		'auto_update_depth' => '',
-		'zeroconf_enabled' => '',
-		'zeroconf_name' => '',
-		'audio_output_format' => '',
-		'mixer_type' => '',
-		'audio_buffer_size' => '',
-		'buffer_before_play' => '',
-		'dsd_usb' => '',
-		'device' => '',
-		'volume_normalization' => ''
-	);
+$mpdconf = cfgdb_read('',$dbh,'mpdconf');
+// Prepare array
+$_mpd = array (
+	'port' => '',
+	'gapless_mp3_playback' => '',
+	'auto_update' => '',
+	'samplerate_converter' => '',
+	'auto_update_depth' => '',
+	'zeroconf_enabled' => '',
+	'zeroconf_name' => '',
+	'audio_output_format' => '',
+	'mixer_type' => '',
+	'audio_buffer_size' => '',
+	'buffer_before_play' => '',
+	'dsd_usb' => '',
+	'device' => '',
+	'volume_normalization' => ''
+);
 
-	// debug($mpdconf);							
-	// Parse output for template $_mpdconf
-	foreach ($mpdconf as $key => $value) {
-		foreach ($_mpd as $key2 => $value2) {
-			if ($value['param'] == $key2) {
-				$_mpd[$key2] = $value['value_player'];	
-			}
+// debug($mpdconf);
+// Parse output for template $_mpdconf
+foreach ($mpdconf as $key => $value) {
+	foreach ($_mpd as $key2 => $value2) {
+		if ($value['param'] == $key2) {
+			$_mpd[$key2] = $value['value_player'];
 		}
 	}
-
-	// Output device names
-	$dev1 = file_get_contents('/proc/asound/card0/id');
-	$dev2 = file_get_contents('/proc/asound/card1/id');
-	$dev3 = file_get_contents('/proc/asound/card2/id');
-	
-	// TC (Tim Curtis) 2015-04-29: add friendly name check for "CODEC" (Behringer audio device)
-	// TC (Tim Curtis) 2015-05-30: add friendly name check for "Interf" (Wyred4Sound DAC)
-	// TC (Tim Curtis) 2015-05-30: add friendly name check for "x20" (Eastern Electric Minimax Junior DAC)
-	// TC (Tim Curtis) 2015-06-26: add friendly name check for "G1V5" (Geek Pulse X-Fi DAC)
-	// TC (Tim Curtis) 2015-07-31: add friendly name check for "Audio" (CM6631A USB/SPDIF converter)
-	if ($dev1 == "") {		
-	} else if ($dev1 == "DAC\n" || $dev1 == "CODEC\n" || $dev1 == "Interf\n" || $dev1 == "x20\n" || $dev1 == "G1V5\n" || $dev1 == "Audio\n") {
-		$dev1 = "USB audio device";
-	} else if ($dev1 == "ALSA\n") {
-		$dev1 = "On-board audio device";
-	} else {
-		$dev1 = "I2S audio device";
-	}
-	if ($dev2 == "") {		
-	} else if ($dev2 == "DAC\n" || $dev2 == "CODEC\n" || $dev2 == "Interf\n" || $dev2 == "x20\n" || $dev2 == "G1V5\n" || $dev2 == "Audio\n") {
-		$dev2 = "USB audio device";
-	} else if ($dev2 == "ALSA\n") {
-		$dev2 = "On-board audio device";
-	} else {
-		$dev2 = "I2S audio device";
-	}
-	if ($dev3 == "") {		
-	} else if ($dev3 == "DAC\n" || $dev3 == "CODEC\n" || $dev3 == "Interf\n" || $dev3 == "x20\n" || $dev3 == "G1V5\n" || $dev3 == "Audio\n") {
-		$dev3 = "USB audio device";
-	} else if ($dev3 == "ALSA\n") {
-		$dev3 = "On-board audio device";
-	} else {
-		$dev3 = "I2S audio device";
-	}
-	
-	// Load template values
-
-	// Audio output device
-	// TC (Tim Curtis) 2015-04-29: add a bit of logic
-	if ($dev1 != "") {$_mpd_select['device'] .= "<option value=\"0\" ".(($_mpd['device'] == '0') ? "selected" : "")." >$dev1</option>\n";}
-	if ($dev2 != "") {$_mpd_select['device'] .= "<option value=\"1\" ".(($_mpd['device'] == '1') ? "selected" : "")." >$dev2</option>\n";}
-	if ($dev3 != "") {$_mpd_select['device'] .= "<option value=\"2\" ".(($_mpd['device'] == '2') ? "selected" : "")." >$dev3</option>\n";}
-	// TC (Tim Curtis) 2015-04-29: comment out
-	//$_mpd_select['device'] .= "<option value=\"3\" ".(($_mpd['device'] == '3') ? "selected" : "")." >$dev4</option>\n";
-	
-	// Volume control
-	$_mpd_select['mixer_type'] .= "<option value=\"disabled\" ".(($_mpd['mixer_type'] == 'none' OR $_mpd['mixer_type'] == '') ? "selected" : "").">disabled</option>\n";
-	$_mpd_select['mixer_type'] .= "<option value=\"hardware\" ".(($_mpd['mixer_type'] == 'hardware') ? "selected" : "").">Hardware</option>\n";
-	$_mpd_select['mixer_type'] .= "<option value=\"software\" ".(($_mpd['mixer_type'] == 'software') ? "selected" : "").">Software</option>\n";
-	
-	// Gapless mp3 playback
-	$_mpd_select['gapless_mp3_playback'] .= "<option value=\"yes\" ".(($_mpd['gapless_mp3_playback'] == 'yes') ? "selected" : "")." >yes</option>\n";	
-	$_mpd_select['gapless_mp3_playback'] .= "<option value=\"no\" ".(($_mpd['gapless_mp3_playback'] == 'no') ? "selected" : "")." >no</option>\n";
-	
-	// DSD audio support
-	$_mpd_select['dsd_usb'] .= "<option value=\"yes\" ".(($_mpd['dsd_usb'] == 'yes') ? "selected" : "")." >yes</option>\n";	
-	$_mpd_select['dsd_usb'] .= "<option value=\"no\" ".(($_mpd['dsd_usb'] == 'no') ? "selected" : "")." >no</option>\n";	
-	
-	// Volume normalization
-	$_mpd_select['volume_normalization'] .= "<option value=\"yes\" ".(($_mpd['volume_normalization'] == 'yes') ? "selected" : "")." >yes</option>\n";	
-	$_mpd_select['volume_normalization'] .= "<option value=\"no\" ".(($_mpd['volume_normalization'] == 'no') ? "selected" : "")." >no</option>\n";	
-	
-	// Audio buffer size
-	// $_mpd[audio_buffer_size]
-	
-	// Buffer fill percentage before play
-	$_mpd_select['buffer_before_play'] .= "<option value=\"0%\" ".(($_mpd['buffer_before_play'] == '0%') ? "selected" : "")." >disabled</option>\n";	
-	$_mpd_select['buffer_before_play'] .= "<option value=\"10%\" ".(($_mpd['buffer_before_play'] == '10%') ? "selected" : "")." >10%</option>\n";	
-	$_mpd_select['buffer_before_play'] .= "<option value=\"20%\" ".(($_mpd['buffer_before_play'] == '20%') ? "selected" : "")." >20%</option>\n";	
-	$_mpd_select['buffer_before_play'] .= "<option value=\"30%\" ".(($_mpd['buffer_before_play'] == '30%') ? "selected" : "")." >30%</option>\n";	
-	
-	// Auto MPD DB update
-	$_mpd_select['auto_update'] .= "<option value=\"yes\" ".(($_mpd['auto_update'] == 'yes') ? "selected" : "").">yes</option>\n";	
-	$_mpd_select['auto_update'] .= "<option value=\"no\" ".(($_mpd['auto_update'] == 'no') ? "selected" : "").">no</option>\n";
-	
-	// Zeroconf enabled
-	$_mpd_select['zeroconf_enabled'] .= "<option value=\"yes\" ".(($_mpd['zeroconf_enabled'] == 'yes') ? "selected" : "").">yes</option>\n";
-	$_mpd_select['zeroconf_enabled'] .= "<option value=\"no\" ".(($_mpd['zeroconf_enabled'] == 'no') ? "selected" : "").">no</option>\n";
-	
-	// Zeroconf name
-	// $_mpd[zeroconf_name]
-	
-	// Audio output format (none or sample rate conversion)
-	// TC (Tim Curtis) 2014-08-23: added new sample rates 48000:16:2, 88200:16:2, 48000:24:2, 88200:24:2
-	// TC (Tim Curtis) 2014-12-23: added new sample rates 176400:16:2 and 176400:24:2
-	$_mpd_select['audio_output_format'] .= "<option value=\"disabled\" ".(($_mpd['audio_output_format'] == 'disabled' OR $_mpd['audio_output_format'] == '') ? "selected" : "").">disabled</option>\n";
-	$_mpd_select['audio_output_format'] .= "<option value=\"44100:16:2\" ".(($_mpd['audio_output_format'] == '44100:16:2') ? "selected" : "").">16 bit / 44.1 kHz</option>\n";
-	$_mpd_select['audio_output_format'] .= "<option value=\"48000:16:2\" ".(($_mpd['audio_output_format'] == '48000:16:2') ? "selected" : "").">16 bit / 48 kHz</option>\n";
-	$_mpd_select['audio_output_format'] .= "<option value=\"88200:16:2\" ".(($_mpd['audio_output_format'] == '88200:16:2') ? "selected" : "").">16 bit / 88.2 kHz</option>\n";
-	$_mpd_select['audio_output_format'] .= "<option value=\"96000:16:2\" ".(($_mpd['audio_output_format'] == '96000:16:2') ? "selected" : "").">16 bit / 96 kHz</option>\n";
-	$_mpd_select['audio_output_format'] .= "<option value=\"176400:16:2\" ".(($_mpd['audio_output_format'] == '176400:16:2') ? "selected" : "").">16 bit / 176.4 kHz</option>\n";
-
-	$_mpd_select['audio_output_format'] .= "<option value=\"44100:24:2\" ".(($_mpd['audio_output_format'] == '44100:24:2') ? "selected" : "").">24 bit / 44.1 kHz</option>\n";
-	$_mpd_select['audio_output_format'] .= "<option value=\"48000:24:2\" ".(($_mpd['audio_output_format'] == '48000:24:2') ? "selected" : "").">24 bit / 48 kHz</option>\n";
-	$_mpd_select['audio_output_format'] .= "<option value=\"88200:24:2\" ".(($_mpd['audio_output_format'] == '88200:24:2') ? "selected" : "").">24 bit / 88.2 kHz</option>\n";
-	$_mpd_select['audio_output_format'] .= "<option value=\"96000:24:2\" ".(($_mpd['audio_output_format'] == '96000:24:2') ? "selected" : "").">24 bit / 96 kHz</option>\n";
-	$_mpd_select['audio_output_format'] .= "<option value=\"176400:24:2\" ".(($_mpd['audio_output_format'] == '176400:24:2') ? "selected" : "").">24 bit / 176.4 kHz</option>\n";
-	$_mpd_select['audio_output_format'] .= "<option value=\"192000:24:2\" ".(($_mpd['audio_output_format'] == '192000:24:2') ? "selected" : "").">24 bit / 192 kHz</option>\n";
-
-	$_mpd_select['audio_output_format'] .= "<option value=\"44100:32:2\" ".(($_mpd['audio_output_format'] == '44100:32:2') ? "selected" : "").">32 bit / 44.1 kHz</option>\n";
-	$_mpd_select['audio_output_format'] .= "<option value=\"96000:32:2\" ".(($_mpd['audio_output_format'] == '96000:32:2') ? "selected" : "").">32 bit / 96 kHz</option>\n";
-	$_mpd_select['audio_output_format'] .= "<option value=\"192000:32:2\" ".(($_mpd['audio_output_format'] == '192000:32:2') ? "selected" : "").">32 bit / 192 kHz</option>\n";
-	$_mpd_select['audio_output_format'] .= "<option value=\"384000:32:2\" ".(($_mpd['audio_output_format'] == '384000:32:2') ? "selected" : "").">32 bit / 384 kHz</option>\n";
-	
-	// Samplerate converter
-	// TC (Tim Curtis) 2015-02-25: added SoX prefixes
-	// TC (Tim Curtis) 2015-02-25: updated SRC text
-	// SoX
-	$_mpd_select['samplerate_converter'] .= "<option value=\"soxr medium\" ".(($_mpd['samplerate_converter'] == 'soxr medium') ? "selected" : "")." >SoX: Medium Quality</option>\n";	
-	$_mpd_select['samplerate_converter'] .= "<option value=\"soxr high\" ".(($_mpd['samplerate_converter'] == 'soxr high') ? "selected" : "")." >SoX: High Quality</option>\n";	
-	$_mpd_select['samplerate_converter'] .= "<option value=\"soxr very high\" ".(($_mpd['samplerate_converter'] == 'soxr very high') ? "selected" : "")." >SoX: Very High Quality</option>\n";	
-	// SRC (Secret Rabbit Code) 
-	$_mpd_select['samplerate_converter'] .= "<option value=\"Fastest Sinc Interpolator\" ".(($_mpd['samplerate_converter'] == 'Fastest Sinc Interpolator') ? "selected" : "")." >SRC: Low Quality</option>\n";	
-	$_mpd_select['samplerate_converter'] .= "<option value=\"Medium Sinc Interpolator\" ".(($_mpd['samplerate_converter'] == 'Medium Sinc Interpolator') ? "selected" : "")." >SRC: Medium Quality</option>\n";	
-	$_mpd_select['samplerate_converter'] .= "<option value=\"Best Sinc Interpolator\" ".(($_mpd['samplerate_converter'] == 'Best Sinc Interpolator') ? "selected" : "")." >SRC: Best Quality</option>\n";	
-	
-	// Set normal config template
-	$tpl = "mpd-config.html";
 }
+
+// Output device names
+$dev1 = file_get_contents('/proc/asound/card0/id');
+$dev2 = file_get_contents('/proc/asound/card1/id');
+$dev3 = file_get_contents('/proc/asound/card2/id');
+
+// TC (Tim Curtis) 2015-04-29: add friendly name check for "CODEC" (Behringer audio device)
+// TC (Tim Curtis) 2015-05-30: add friendly name check for "Interf" (Wyred4Sound DAC)
+// TC (Tim Curtis) 2015-05-30: add friendly name check for "x20" (Eastern Electric Minimax Junior DAC)
+// TC (Tim Curtis) 2015-06-26: add friendly name check for "G1V5" (Geek Pulse X-Fi DAC)
+// TC (Tim Curtis) 2015-07-31: add friendly name check for "Audio" (CM6631A USB/SPDIF converter)
+if ($dev1 == "") {
+} else if ($dev1 == "DAC\n" || $dev1 == "CODEC\n" || $dev1 == "Interf\n" || $dev1 == "x20\n" || $dev1 == "G1V5\n" || $dev1 == "Audio\n") {
+	$dev1 = "USB audio device";
+} else if ($dev1 == "ALSA\n") {
+	$dev1 = "On-board audio device";
+} else {
+	$dev1 = "I2S audio device";
+}
+if ($dev2 == "") {
+} else if ($dev2 == "DAC\n" || $dev2 == "CODEC\n" || $dev2 == "Interf\n" || $dev2 == "x20\n" || $dev2 == "G1V5\n" || $dev2 == "Audio\n") {
+	$dev2 = "USB audio device";
+} else if ($dev2 == "ALSA\n") {
+	$dev2 = "On-board audio device";
+} else {
+	$dev2 = "I2S audio device";
+}
+if ($dev3 == "") {
+} else if ($dev3 == "DAC\n" || $dev3 == "CODEC\n" || $dev3 == "Interf\n" || $dev3 == "x20\n" || $dev3 == "G1V5\n" || $dev3 == "Audio\n") {
+	$dev3 = "USB audio device";
+} else if ($dev3 == "ALSA\n") {
+	$dev3 = "On-board audio device";
+} else {
+	$dev3 = "I2S audio device";
+}
+
+// Load template values
+
+// Audio output device
+// TC (Tim Curtis) 2015-04-29: add a bit of logic
+if ($dev1 != "") {$_mpd_select['device'] .= "<option value=\"0\" ".(($_mpd['device'] == '0') ? "selected" : "")." >$dev1</option>\n";}
+if ($dev2 != "") {$_mpd_select['device'] .= "<option value=\"1\" ".(($_mpd['device'] == '1') ? "selected" : "")." >$dev2</option>\n";}
+if ($dev3 != "") {$_mpd_select['device'] .= "<option value=\"2\" ".(($_mpd['device'] == '2') ? "selected" : "")." >$dev3</option>\n";}
+// TC (Tim Curtis) 2015-04-29: comment out
+//$_mpd_select['device'] .= "<option value=\"3\" ".(($_mpd['device'] == '3') ? "selected" : "")." >$dev4</option>\n";
+
+// Volume control
+$_mpd_select['mixer_type'] .= "<option value=\"disabled\" ".(($_mpd['mixer_type'] == 'none' OR $_mpd['mixer_type'] == '') ? "selected" : "").">disabled</option>\n";
+$_mpd_select['mixer_type'] .= "<option value=\"hardware\" ".(($_mpd['mixer_type'] == 'hardware') ? "selected" : "").">Hardware</option>\n";
+$_mpd_select['mixer_type'] .= "<option value=\"software\" ".(($_mpd['mixer_type'] == 'software') ? "selected" : "").">Software</option>\n";
+
+// Gapless mp3 playback
+$_mpd_select['gapless_mp3_playback'] .= "<option value=\"yes\" ".(($_mpd['gapless_mp3_playback'] == 'yes') ? "selected" : "")." >yes</option>\n";
+$_mpd_select['gapless_mp3_playback'] .= "<option value=\"no\" ".(($_mpd['gapless_mp3_playback'] == 'no') ? "selected" : "")." >no</option>\n";
+
+// DSD audio support
+$_mpd_select['dsd_usb'] .= "<option value=\"yes\" ".(($_mpd['dsd_usb'] == 'yes') ? "selected" : "")." >yes</option>\n";
+$_mpd_select['dsd_usb'] .= "<option value=\"no\" ".(($_mpd['dsd_usb'] == 'no') ? "selected" : "")." >no</option>\n";
+
+// Volume normalization
+$_mpd_select['volume_normalization'] .= "<option value=\"yes\" ".(($_mpd['volume_normalization'] == 'yes') ? "selected" : "")." >yes</option>\n";
+$_mpd_select['volume_normalization'] .= "<option value=\"no\" ".(($_mpd['volume_normalization'] == 'no') ? "selected" : "")." >no</option>\n";
+
+// Audio buffer size
+// $_mpd[audio_buffer_size]
+
+// Buffer fill percentage before play
+$_mpd_select['buffer_before_play'] .= "<option value=\"0%\" ".(($_mpd['buffer_before_play'] == '0%') ? "selected" : "")." >disabled</option>\n";
+$_mpd_select['buffer_before_play'] .= "<option value=\"10%\" ".(($_mpd['buffer_before_play'] == '10%') ? "selected" : "")." >10%</option>\n";
+$_mpd_select['buffer_before_play'] .= "<option value=\"20%\" ".(($_mpd['buffer_before_play'] == '20%') ? "selected" : "")." >20%</option>\n";
+$_mpd_select['buffer_before_play'] .= "<option value=\"30%\" ".(($_mpd['buffer_before_play'] == '30%') ? "selected" : "")." >30%</option>\n";
+
+// Auto MPD DB update
+$_mpd_select['auto_update'] .= "<option value=\"yes\" ".(($_mpd['auto_update'] == 'yes') ? "selected" : "").">yes</option>\n";
+$_mpd_select['auto_update'] .= "<option value=\"no\" ".(($_mpd['auto_update'] == 'no') ? "selected" : "").">no</option>\n";
+
+// Zeroconf enabled
+$_mpd_select['zeroconf_enabled'] .= "<option value=\"yes\" ".(($_mpd['zeroconf_enabled'] == 'yes') ? "selected" : "").">yes</option>\n";
+$_mpd_select['zeroconf_enabled'] .= "<option value=\"no\" ".(($_mpd['zeroconf_enabled'] == 'no') ? "selected" : "").">no</option>\n";
+
+// Zeroconf name
+// $_mpd[zeroconf_name]
+
+// Audio output format (none or sample rate conversion)
+// TC (Tim Curtis) 2014-08-23: added new sample rates 48000:16:2, 88200:16:2, 48000:24:2, 88200:24:2
+// TC (Tim Curtis) 2014-12-23: added new sample rates 176400:16:2 and 176400:24:2
+$_mpd_select['audio_output_format'] .= "<option value=\"disabled\" ".(($_mpd['audio_output_format'] == 'disabled' OR $_mpd['audio_output_format'] == '') ? "selected" : "").">disabled</option>\n";
+$_mpd_select['audio_output_format'] .= "<option value=\"44100:16:2\" ".(($_mpd['audio_output_format'] == '44100:16:2') ? "selected" : "").">16 bit / 44.1 kHz</option>\n";
+$_mpd_select['audio_output_format'] .= "<option value=\"48000:16:2\" ".(($_mpd['audio_output_format'] == '48000:16:2') ? "selected" : "").">16 bit / 48 kHz</option>\n";
+$_mpd_select['audio_output_format'] .= "<option value=\"88200:16:2\" ".(($_mpd['audio_output_format'] == '88200:16:2') ? "selected" : "").">16 bit / 88.2 kHz</option>\n";
+$_mpd_select['audio_output_format'] .= "<option value=\"96000:16:2\" ".(($_mpd['audio_output_format'] == '96000:16:2') ? "selected" : "").">16 bit / 96 kHz</option>\n";
+$_mpd_select['audio_output_format'] .= "<option value=\"176400:16:2\" ".(($_mpd['audio_output_format'] == '176400:16:2') ? "selected" : "").">16 bit / 176.4 kHz</option>\n";
+
+$_mpd_select['audio_output_format'] .= "<option value=\"44100:24:2\" ".(($_mpd['audio_output_format'] == '44100:24:2') ? "selected" : "").">24 bit / 44.1 kHz</option>\n";
+$_mpd_select['audio_output_format'] .= "<option value=\"48000:24:2\" ".(($_mpd['audio_output_format'] == '48000:24:2') ? "selected" : "").">24 bit / 48 kHz</option>\n";
+$_mpd_select['audio_output_format'] .= "<option value=\"88200:24:2\" ".(($_mpd['audio_output_format'] == '88200:24:2') ? "selected" : "").">24 bit / 88.2 kHz</option>\n";
+$_mpd_select['audio_output_format'] .= "<option value=\"96000:24:2\" ".(($_mpd['audio_output_format'] == '96000:24:2') ? "selected" : "").">24 bit / 96 kHz</option>\n";
+$_mpd_select['audio_output_format'] .= "<option value=\"176400:24:2\" ".(($_mpd['audio_output_format'] == '176400:24:2') ? "selected" : "").">24 bit / 176.4 kHz</option>\n";
+$_mpd_select['audio_output_format'] .= "<option value=\"192000:24:2\" ".(($_mpd['audio_output_format'] == '192000:24:2') ? "selected" : "").">24 bit / 192 kHz</option>\n";
+
+$_mpd_select['audio_output_format'] .= "<option value=\"44100:32:2\" ".(($_mpd['audio_output_format'] == '44100:32:2') ? "selected" : "").">32 bit / 44.1 kHz</option>\n";
+$_mpd_select['audio_output_format'] .= "<option value=\"96000:32:2\" ".(($_mpd['audio_output_format'] == '96000:32:2') ? "selected" : "").">32 bit / 96 kHz</option>\n";
+$_mpd_select['audio_output_format'] .= "<option value=\"192000:32:2\" ".(($_mpd['audio_output_format'] == '192000:32:2') ? "selected" : "").">32 bit / 192 kHz</option>\n";
+$_mpd_select['audio_output_format'] .= "<option value=\"384000:32:2\" ".(($_mpd['audio_output_format'] == '384000:32:2') ? "selected" : "").">32 bit / 384 kHz</option>\n";
+
+// Samplerate converter
+// TC (Tim Curtis) 2015-02-25: added SoX prefixes
+// TC (Tim Curtis) 2015-02-25: updated SRC text
+// SoX
+$_mpd_select['samplerate_converter'] .= "<option value=\"soxr medium\" ".(($_mpd['samplerate_converter'] == 'soxr medium') ? "selected" : "")." >SoX: Medium Quality</option>\n";
+$_mpd_select['samplerate_converter'] .= "<option value=\"soxr high\" ".(($_mpd['samplerate_converter'] == 'soxr high') ? "selected" : "")." >SoX: High Quality</option>\n";
+$_mpd_select['samplerate_converter'] .= "<option value=\"soxr very high\" ".(($_mpd['samplerate_converter'] == 'soxr very high') ? "selected" : "")." >SoX: Very High Quality</option>\n";
+// SRC (Secret Rabbit Code)
+$_mpd_select['samplerate_converter'] .= "<option value=\"Fastest Sinc Interpolator\" ".(($_mpd['samplerate_converter'] == 'Fastest Sinc Interpolator') ? "selected" : "")." >SRC: Low Quality</option>\n";
+$_mpd_select['samplerate_converter'] .= "<option value=\"Medium Sinc Interpolator\" ".(($_mpd['samplerate_converter'] == 'Medium Sinc Interpolator') ? "selected" : "")." >SRC: Medium Quality</option>\n";
+$_mpd_select['samplerate_converter'] .= "<option value=\"Best Sinc Interpolator\" ".(($_mpd['samplerate_converter'] == 'Best Sinc Interpolator') ? "selected" : "")." >SRC: Best Quality</option>\n";
+
+// Set normal config template
+$tpl = "mpd-config.html";
 
 
 // Close DB connection

@@ -121,29 +121,6 @@ if(isset($_POST['mount']) && !empty($_POST['mount'])) {
 		} 
 	}
 }
-	
-// handle manual config
-// rel 1.0 autoFS 
-/*
-if(isset($_POST['sourceconf']) && !empty($_POST['sourceconf'])) {
-	// tell worker to write new MPD config
-	if ($_SESSION['w_lock'] != 1 && $_SESSION['w_queue'] == '') {
-		session_start();
-		$_SESSION['w_queue'] = "sourcecfgman";
-		$_SESSION['w_queueargs'] = $_POST['sourceconf'];
-		$_SESSION['w_active'] = 1;
-		// set UI notify
-		$_SESSION['notify']['title'] = 'auto.nas modified';
-		$_SESSION['notify']['msg'] = 'remount shares in progress...';
-		session_write_close();
-	} else {
-		session_start();
-		$_SESSION['notify']['title'] = 'Job Failed';
-		$_SESSION['notify']['msg'] = 'background worker is busy.';
-		session_write_close();
-	}
-} 
-*/
 
 // wait for worker output if $_SESSION['w_active'] = 1
 waitWorker(5,'sources');

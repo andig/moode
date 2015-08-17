@@ -37,10 +37,6 @@ function closeMpdSocket($sock) {
 }
 
 function sendMpdCommand($sock, $cmd) {
-	if ($cmd == 'cmediafix') {
-		$cmd = "pause\npause";
-	}
-
 	fputs($sock, $cmd . "\n");
 }
 
@@ -119,11 +115,11 @@ function _loadDirForLib($sock, &$lib, $debug_flags) {
 				$libCount++;
 // if ($libCount > 1000) return $libCount;
 				$item = array();
-			}
+			} 
 
 			if ($debug_flags[1] == "y") {
 				libLog("_loadDirForLib() item= ".$libCount.", file= ".$val);
-			}
+			} 
 		}
 
 		if ($debug_flags[2] == "y") {
@@ -307,7 +303,7 @@ function songTime($sec) {
 
 function phpVer() {
 	$version = phpversion();
-	return substr($version, 0, 3); 
+	return substr($version, 0, 3);
 }
 
 // fix sessioni per ambienti PHP 5.3 (il solito WAMP di ACX...)
@@ -489,7 +485,7 @@ function parseFileStr($strFile,$delimiter) {
 
 // cfg engine and session management
 function playerSession($action, $db = null, $var = null, $value = null) {
-	$status = session_status();	
+	$status = session_status();
 	// open new PHP SESSION
 	if ($action == 'open') {
 		// check the PHP SESSION status
@@ -522,7 +518,7 @@ function playerSession($action, $db = null, $var = null, $value = null) {
 	if ($action == 'unlock') {
 		session_write_close();
 	}
-	
+
 	// unset and destroy current PHP SESSION
 	if ($action == 'destroy') {
 		session_unset();
@@ -537,7 +533,7 @@ function playerSession($action, $db = null, $var = null, $value = null) {
 			}
 		}
 	}
-	
+
 	// store a value in the cfgdb and in current PHP SESSION
 	if ($action == 'write') {
 		$_SESSION[$var] = $value;
@@ -545,13 +541,13 @@ function playerSession($action, $db = null, $var = null, $value = null) {
 		cfgdb_update('cfg_engine',$dbh,$var,$value);
 		$dbh = null;
 	}
-	
+
 	// record actual PHP Session ID in SQLite datastore
 	if ($action == 'storesessionid') {
 		$sessionid = session_id();
 		playerSession('write',$db,'sessionid',$sessionid);
 	}
-	
+
 	// read PHP SESSION ID stored in SQLite datastore and use it to "attatch" the same SESSION (used in worker)
 	if ($action == 'getsessionid') {
 		$dbh  = cfgdb_connect($db);
@@ -559,15 +555,15 @@ function playerSession($action, $db = null, $var = null, $value = null) {
 		$dbh = null;
 		return $result['0']['value'];
 	}
-	
+
 }
 
 function cfgdb_connect($dbpath) {
 	if ($dbh  = new PDO($dbpath)) {
 		return $dbh;
-	} else {
-		echo "cannot open the database";
-		return false;
+	}
+	else {
+		die("Error: cannot open database " . $dbpath);
 	}
 }
 
@@ -601,19 +597,19 @@ function cfgdb_update($table,$dbh,$key,$value) {
 		case 'cfg_engine':
 			$querystr = "UPDATE ".$table." SET value='".$value."' where param='".$key."'";
 			break;
-		
+
 		case 'cfg_lan':
 			$querystr = "UPDATE ".$table." SET dhcp='".$value['dhcp']."', ip='".$value['ip']."', netmask='".$value['netmask']."', gw='".$value['gw']."', dns1='".$value['dns1']."', dns2='".$value['dns2']."' where name='".$value['name']."'";
 			break;
-		
+
 		case 'cfg_mpd':
 			$querystr = "UPDATE ".$table." set value_player='".$value."' where param='".$key."'";
 			break;
-		
+
 		case 'cfg_wifisec':
 			$querystr = "UPDATE ".$table." SET ssid='".$value['ssid']."', security='".$value['encryption']."', password='".$value['password']."' where id=1";
 			break;
-		
+
 		case 'cfg_source':
 			$querystr = "UPDATE ".$table." SET name='".$value['name']."', type='".$value['type']."', address='".$value['address']."', remotedir='".$value['remotedir']."', username='".$value['username']."', password='".$value['password']."', charset='".$value['charset']."', rsize='".$value['rsize']."', wsize='".$value['wsize']."', options='".$value['options']."', error='".$value['error']."' where id=".$value['id'];
 			break;
@@ -686,11 +682,6 @@ function recursiveDelete($str){
 	}
 }
 
-// check if mpd.conf or interfaces was modified outside
-function hashCFG($action,$db) {
-	return true;
-}
-
 function waitWorker($sleeptime, $section = null) {
 	if ($_SESSION['w_active'] == 1) {
 		do {
@@ -707,7 +698,7 @@ function waitWorker($sleeptime, $section = null) {
 			break;
 		}
 	}
-} 
+}
 
 // TC (Tim Curtis) 2014-12-23: add delay: 2000 (2 secs)
 // TC (Tim Curtis) 2015-02-25: add optional delay duration arg
@@ -719,7 +710,7 @@ function ui_notify($notify) {
 	$output .= "title: '".$notify['title']."',";
 	$output .= "text: '".$notify['msg']."',";
 	$output .= "icon: 'icon-ok',";
-	if (isset($notify['duration'])) {	
+	if (isset($notify['duration'])) {
 		$output .= "delay: ".strval($notify['duration'] * 1000).",";
 	} else {
 		$output .= "delay: '2000',";
@@ -793,7 +784,7 @@ function ami($sz=null) {
 				'credits'
 				))?'active':'');
 			break;
-	}	
+	}
 }
 
 function current_item($sez=null) {
@@ -816,7 +807,7 @@ function _parseHwParams($resp) {
 			list ( $element, $value ) = explode(": ",$tcLine);
 			$tcArray[$element] = $value;
 			$tcLine = strtok("\n");
-		} 
+		}
 		// format sample rate, ex: "44100 (44100/1)"
 		// TC (Tim Curtis) 2015-06-26: add cases 22050, 32000, 384000
 		$rate = substr($tcArray['rate'], 0, strpos($tcArray['rate'], ' ('));
@@ -851,10 +842,10 @@ function _parseHwParams($resp) {
 		if ($tcArray['channels'] > 2) $tcArray['channels'] = "Multichannel";
 
 		$tcArray['status'] = 'active';
-		$tcArray['calcrate'] = number_format((($_rate * $_bits * $_chans) / 1000000),3,'.','');	 
+		$tcArray['calcrate'] = number_format((($_rate * $_bits * $_chans) / 1000000),3,'.','');
 	} else {
 		$tcArray['status'] = 'closed';
-		$tcArray['calcrate'] = '0 bps';	 
+		$tcArray['calcrate'] = '0 bps';
 	}
 	return $tcArray;
 }
@@ -879,17 +870,17 @@ function _parseMpdConf($dbh) {
 		'dsd_usb' => '',
 		'device' => '',
 		'volume_normalization' => ''
-	);					
-	
+	);
+
 	// parse output for template
 	foreach ($mpdconf as $key => $value) {
 		foreach ($_mpd as $key2 => $value2) {
 			if ($value['param'] == $key2) {
-				$_mpd[$key2] = $value['value_player'];	
+				$_mpd[$key2] = $value['value_player'];
 			}
 		}
 	}
-		
+
 	// parse audio output format, ex "44100:16:2"
 	$audio_format = explode(":", $_mpd['audio_output_format']);
 	// TC (Tim Curtis) 2015-06-26: add sample rate 384000
@@ -901,7 +892,7 @@ function _parseMpdConf($dbh) {
 		case '384000':
 			$_mpd['audio_sample_rate'] = rtrim(rtrim(number_format($audio_format[0]),0),',');
 			break;
-		
+
 		// decimal format
 		case '44100':
 		case '88200':
@@ -916,10 +907,10 @@ function _parseMpdConf($dbh) {
 	if ($audio_format[2] == "2") $_mpd['audio_channels'] = "Stereo";
 	if ($audio_format[2] == "1") $_mpd['audio_channels'] = "Mono";
 	if ($audio_format[2] > 2) $_mpd['audio_channels'] = "Multichannel";
-	
+
 	return $_mpd;
 }
-	
+
 // DEVICE: parse /var/www/tcmods.conf
 function _parseTcmodsConf($resp) {
 		if (is_null($resp) ) {
@@ -933,7 +924,7 @@ function _parseTcmodsConf($resp) {
 				list ( $element, $value ) = explode(": ",$tcLine);
 				$tcArray[$element] = $value;
 				$tcLine = strtok("\n");
-			} 
+			}
 		}
 	return $tcArray;
 }
@@ -999,11 +990,11 @@ function _updTcmodsConf($tcmconf) {
 	// Write data, close file
 	fwrite($handle, $data);
 	fclose($handle);
-	
+
 	return '_updTcmodsConf: update tcmods.conf complete';
 }
 
-	
+
 // TC (Tim Curtis) 2015-05-30: parse play history log
 function _parsePlayHistory($resp) {
 		if (is_null($resp) ) {
@@ -1012,12 +1003,12 @@ function _parsePlayHistory($resp) {
 			$tcArray = array();
 			$tcLine = strtok($resp,"\n");
 			$i = 0;
-			
+
 			while ( $tcLine ) {
 				$tcArray[$i] = $tcLine;
 				$i++;
 				$tcLine = strtok("\n");
-			} 
+			}
 		}
 	return $tcArray;
 }
@@ -1030,7 +1021,7 @@ function _updatePlayHistory($currentsong) {
 	// Append data, close file
 	fwrite($handle, $currentsong."\n");
 	fclose($handle);
-	
+
 	return '_updatePlayHistory: update playhistory.log complete';
 }
 
@@ -1038,7 +1029,7 @@ function _updatePlayHistory($currentsong) {
 // TC (Tim Curtis) 2015-03-21: add IQaudIO Pi-AMP+
 // TC (Tim Curtis) 2015-04-29: add RaspyPlay4
 // TC (Tim Curtis) 2015-04-29: add Durio Sound PRO
-// TC (Tim Curtis) 2015-06-26: add IQaudIO Pi-DigiAMP+ and Hifimediy ES9023 
+// TC (Tim Curtis) 2015-06-26: add IQaudIO Pi-DigiAMP+ and Hifimediy ES9023
 // TC (Tim Curtis) 2015-07-31: add Audiophonics I-Sabre DAC ES9023 TCXO
 function _setI2sDtoverlay($db, $device) {
 	$file = '/etc/modules';
@@ -1195,7 +1186,7 @@ function getKernelVer($kernel) {
 function getMixerName($kernelver, $i2s) {
 	if ($i2s != 'I2S Off') {
 		if ($i2s == 'HiFiBerry Amp(Amp+)') {
-			$mixername = 'Master'; // Hifiberry Amp(Amp+) i2s device 
+			$mixername = 'Master'; // Hifiberry Amp(Amp+) i2s device
 		}
 		else {
 			if ($kernelver == '3.18.11+' || $kernelver == '3.18.14+') {

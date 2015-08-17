@@ -162,58 +162,53 @@ if (isset($_POST) && !empty($_POST)) {
 
 // wait for worker output if $_SESSION['w_active'] = 1
 waitWorker(1);
-// check integrity of /etc/network/interfaces
-if(!hashCFG('check_net',$db)) {
-	$_netconf = file_get_contents('/etc/network/interfaces');
-	// set manual config template
-	$tpl = "net-config-manual.html";
+
+$dbh = cfgdb_connect($db);
+$net = cfgdb_read('cfg_lan',$dbh);
+$wifisec = cfgdb_read('cfg_wifisec',$dbh);
+$dbh = null;
+
+// eth0
+if (isset($_SESSION['netconf']['eth0']) && !empty($_SESSION['netconf']['eth0'])) {
+	// TC (Tim Curtis) 2014-08-23
+    // changed class from "alert alert-info" to "help-block", added <br>
+    // TC (Tim Curtis) 2015-04-29: new layout
+    $_eth0 .= $_SESSION['netconf']['eth0']['ip'];
 } else {
-	$dbh = cfgdb_connect($db);
-	$net = cfgdb_read('cfg_lan',$dbh);
-	$wifisec = cfgdb_read('cfg_wifisec',$dbh);
-	$dbh = null;
-
-    // eth0
-    if (isset($_SESSION['netconf']['eth0']) && !empty($_SESSION['netconf']['eth0'])) {
-		// TC (Tim Curtis) 2014-08-23
-	    // changed class from "alert alert-info" to "help-block", added <br>
-	    // TC (Tim Curtis) 2015-04-29: new layout
-	    $_eth0 .= $_SESSION['netconf']['eth0']['ip'];
-    } else {
-	    $_eth0 .= "Not used";
-    }
-    //$_eth0 .= "<div class=\"help-block\">\n";
-    //$_eth0 .= " IP address: ".$_SESSION['netconf']['eth0']['ip']."\n";
-    //$_eth0 .= "</div>\n";
-    //$_eth0 .= "<br>\n";
-    //$_int0name .= $net[0]['name'];
-    $_int0dhcp .= "<option value=\"true\" ".((isset($net[0]['dhcp']) && $net[0]['dhcp']=="true") ? "selected" : "")." >enabled (Auto)</option>\n";
-    $_int0dhcp .= "<option value=\"false\" ".((isset($net[0]['dhcp']) && $net[0]['dhcp']=="false") ? "selected" : "")." >disabled (Static)</option>\n";
-    $_int0 = $net[0];
-
-    // wlan0
-    if (isset($_SESSION['netconf']['wlan0']) && !empty($_SESSION['netconf']['wlan0'])) {
-		// TC (Tim Curtis) 2014-08-23
-	    // changed class from "alert alert-info" to "help-block", added <br>
-	    // TC (Tim Curtis) 2015-04-29: new layout
-	    $_wlan0 .= $_SESSION['netconf']['wlan0']['ip'];
-	} else {
-	    $_wlan0 .= "Not used";
-	}
-    //$_wlan0 .= "<legend>WLAN Interface: ".$net[1]['name']."</legend>\n";
-    //$_wlan0 .= "<div class=\"help-block\">\n";
-    //$_wlan0 .= $net[1]['name']." IP address: ".$_SESSION['netconf']['wlan0']['ip']."\n";
-    //$_wlan0 .= "</div>\n";
-    //$_wlan0 .= "<br>\n";
-	$_wlan0ssid = $wifisec[0]['ssid'];
-
-	// TC (Tim Curtis) 2015-04-29: reorder so WPA/WPA2 is first
-    $_wlan0security .= "<option value=\"wpa\"".(($wifisec[0]['security'] == 'wpa') ? "selected" : "").">WPA/WPA2 Personal</option>\n";
-    $_wlan0security .= "<option value=\"wep\"".(($wifisec[0]['security'] == 'wep') ? "selected" : "").">WEP</option>\n";
-    $_wlan0security .= "<option value=\"none\"".(($wifisec[0]['security'] == 'none') ? "selected" : "").">No security</option>\n";
-
-	$tpl = "net-config.html";
+    $_eth0 .= "Not used";
 }
+//$_eth0 .= "<div class=\"help-block\">\n";
+//$_eth0 .= " IP address: ".$_SESSION['netconf']['eth0']['ip']."\n";
+//$_eth0 .= "</div>\n";
+//$_eth0 .= "<br>\n";
+//$_int0name .= $net[0]['name'];
+$_int0dhcp .= "<option value=\"true\" ".((isset($net[0]['dhcp']) && $net[0]['dhcp']=="true") ? "selected" : "")." >enabled (Auto)</option>\n";
+$_int0dhcp .= "<option value=\"false\" ".((isset($net[0]['dhcp']) && $net[0]['dhcp']=="false") ? "selected" : "")." >disabled (Static)</option>\n";
+$_int0 = $net[0];
+
+// wlan0
+if (isset($_SESSION['netconf']['wlan0']) && !empty($_SESSION['netconf']['wlan0'])) {
+	// TC (Tim Curtis) 2014-08-23
+    // changed class from "alert alert-info" to "help-block", added <br>
+    // TC (Tim Curtis) 2015-04-29: new layout
+    $_wlan0 .= $_SESSION['netconf']['wlan0']['ip'];
+} else {
+    $_wlan0 .= "Not used";
+}
+//$_wlan0 .= "<legend>WLAN Interface: ".$net[1]['name']."</legend>\n";
+//$_wlan0 .= "<div class=\"help-block\">\n";
+//$_wlan0 .= $net[1]['name']." IP address: ".$_SESSION['netconf']['wlan0']['ip']."\n";
+//$_wlan0 .= "</div>\n";
+//$_wlan0 .= "<br>\n";
+$_wlan0ssid = $wifisec[0]['ssid'];
+
+// TC (Tim Curtis) 2015-04-29: reorder so WPA/WPA2 is first
+$_wlan0security .= "<option value=\"wpa\"".(($wifisec[0]['security'] == 'wpa') ? "selected" : "").">WPA/WPA2 Personal</option>\n";
+$_wlan0security .= "<option value=\"wep\"".(($wifisec[0]['security'] == 'wep') ? "selected" : "").">WEP</option>\n";
+$_wlan0security .= "<option value=\"none\"".(($wifisec[0]['security'] == 'none') ? "selected" : "").">No security</option>\n";
+
+$tpl = "net-config.html";
+
 
 // unlock session files
 playerSession('unlock',$db,'','');

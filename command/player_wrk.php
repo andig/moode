@@ -1,9 +1,9 @@
 #!/usr/bin/php5
 <?php
 /**
- *      PlayerUI Copyright (C) 2013 Andrea Coiutti & Simone De Gregori
- *		 Tsunamp Team
- *      http://www.tsunamp.com
+ * PlayerUI Copyright (C) 2013 Andrea Coiutti & Simone De Gregori
+ * Tsunamp Team
+ * http://www.tsunamp.com
  *
  *  This Program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -23,7 +23,6 @@
  */
 
 // Common TCMODS
-// TC (Tim Curtis) 2014-12-23: initial
 $TCMODS_REL = "r21"; // Current release, used in path for theme change
 $TCMODS_CONSUMEMODE_ON = "1"; // Used for run-once fix for mpd consume mode sometimes being on after boot/reboot
 $TCMODS_CLOCKRAD_RETRY = 3; // Num times to retry the stop cmd
@@ -41,7 +40,7 @@ $lock = fopen('/run/player_wrk.pid', 'c+');
 if (!flock($lock, LOCK_EX | LOCK_NB)) {
 	die('already running');
 }
- 
+
 switch ($pid = pcntl_fork()) {
 	case -1:
 		die('unable to fork');
@@ -54,11 +53,11 @@ switch ($pid = pcntl_fork()) {
 		fflush($lock);
 		exit;
 }
- 
+
 if (posix_setsid() === -1) {
 	die('could not setsid');
 }
- 
+
 fclose(STDIN);
 fclose(STDOUT);
 fclose(STDERR);
@@ -167,7 +166,7 @@ if (isset($_SESSION['playerid']) && $_SESSION['playerid'] == '') {
 			}
 		}
 	}
-	
+
 	sysCmd('service networking restart');
 
 	// reset sourcecfg to defaults
@@ -301,24 +300,9 @@ if (isset($_SESSION['djmount']) && $_SESSION['djmount'] == 1) {
 	sysCmd('/usr/bin/minidlna -f /run/minidlna.conf');
 }
 
-// check /etc/network/interfaces integrity
-hashCFG('check_net',$db);
-
-// check /etc/mpd.conf integrity
-hashCFG('check_mpd',$db);
-
-// check /etc/auto.nas integrity
-// hashCFG('check_source',$db);
 
 // unlock session files
 playerSession('unlock',$db,'','');
-
-// Cmediafix startup check
-if (isset($_SESSION['cmediafix']) && $_SESSION['cmediafix'] == 1) {
-	$mpd = openMpdSocket('localhost', 6600) ;
-	sendMpdCommand($mpd,'cmediafix');
-	closeMpdSocket($mpd);
-} 
 
 // Shairport (Airplay receiver service)
 if (isset($_SESSION['shairport']) && $_SESSION['shairport'] == 1) {
@@ -340,19 +324,19 @@ if (isset($_SESSION['shairport']) && $_SESSION['shairport'] == 1) {
 	// TC (Tim Curtis) 2014-08-23: set shairport friendly name
 	$cmd = '/usr/local/bin/shairport -a "Moode" -w -B "mpc stop" -o alsa -- -d "hw:"'.$device.'",0" > /dev/null 2>&1 &';
 	sysCmd($cmd);
-} 
+}
 
 // DLNA server
 if (isset($_SESSION['djmount']) && $_SESSION['djmount'] == 1) {
 	$cmd = 'djmount -o allow_other,nonempty,iocharset=utf-8 /mnt/UPNP > /dev/null 2>&1 &';
 	sysCmd($cmd);
-} 
+}
 
 // UPnP renderer
 if (isset($_SESSION['upnpmpdcli']) && $_SESSION['upnpmpdcli'] == 1) {
 	$cmd = '/etc/init.d/upmpdcli start > /dev/null 2>&1 &';
 	sysCmd($cmd);
-} 
+}
 // TC (Tim Curtis) 2014-12-23: read tcmods.conf file for clock radio settings
 $_tcmods_conf = _parseTcmodsConf(shell_exec('cat /var/www/tcmods.conf'));
 $clock_radio_starttime = $_tcmods_conf['clock_radio_starttime'];
@@ -363,7 +347,7 @@ $_tcmods_conf['sys_kernel_ver'] = strtok(shell_exec('uname -r'),"\n");
 $_tcmods_conf['sys_processor_arch'] = strtok(shell_exec('uname -m'),"\n");
 $_ver_str = explode(": ", strtok(shell_exec('dpkg-query -p mpd | grep Version'),"\n"));
 $_tcmods_conf['sys_mpd_ver'] = $_ver_str[1];
-$rtn = _updTcmodsConf($_tcmods_conf); 
+$rtn = _updTcmodsConf($_tcmods_conf);
 // store in DB and $_SESSION[kernelver], $_SESSION[procarch] vars
 playerSession('write',$db,'kernelver',$_tcmods_conf['sys_kernel_ver']);
 playerSession('write',$db,'procarch',$_tcmods_conf['sys_processor_arch']);
@@ -373,9 +357,9 @@ playerSession('write',$db,'procarch',$_tcmods_conf['sys_processor_arch']);
 // TC (Tim Curtis) 2015-03-21: add test for audio device to determine which type of unmute to run
 // TC (Tim Curtis) 2015-06-26: add IQaudIO Pi-DigiAMP+
 // TC (Tim Curtis) 2015-06-26: remove test for procarch, not needed
-if ($_SESSION['i2s'] == 'IQaudIO Pi-AMP+') {	
+if ($_SESSION['i2s'] == 'IQaudIO Pi-AMP+') {
 	sysCmd("/var/www/command/unmute.sh pi-ampplus");
-} else if ($_SESSION['i2s'] == 'IQaudIO Pi-DigiAMP+') {	
+} else if ($_SESSION['i2s'] == 'IQaudIO Pi-DigiAMP+') {
 	sysCmd("/var/www/command/unmute.sh pi-digiampplus");
 } else {
 	sysCmd("/var/www/command/unmute.sh default");
@@ -400,7 +384,7 @@ if (substr($rtn[0], 0, 6 ) == 'amixer') {
 while (1) {
 	sleep(5); // TC (Tim Curtis) 2015-05-30: change to 5 sec sleep (orig 7 sec)
 	session_start();
-	
+
 	// TC (Tim Curtis) 2014-10-31: start with consume mode off, only runs once after player start
 	if ($TCMODS_CONSUMEMODE_ON == "1") {
 		$TCMODS_CONSUMEMODE_ON = "0";
@@ -410,10 +394,10 @@ while (1) {
 	}
 
 	// TC (Tim Curtis) 2014-12-23: check clock radio for scheduled playback
-	if ($_tcmods_conf['clock_radio_enabled'] == "Yes") {		
+	if ($_tcmods_conf['clock_radio_enabled'] == "Yes") {
 		$current_time = date("hi A");
 		if ($current_time == $clock_radio_starttime) {
-			$clock_radio_starttime = ''; 
+			$clock_radio_starttime = '';
 			$mpd = openMpdSocket('localhost', 6600);
 			// TC (Tim Curtis) 2015-06-26: Original code
 			//sendMpdCommand($mpd,'setvol '.$_tcmods_conf['clock_radio_volume']);
@@ -431,7 +415,7 @@ while (1) {
 					$level = round($level * $maxLevel); // round up
 				}
 			}
-			
+
 			// TC (Tim Curtis) 2015-07-31: match code in player_lib.js setVolume()
 			if ($level < 0) {$level = 0;} // negative values occure when curveFactor > 56
 
@@ -454,7 +438,7 @@ while (1) {
 				$clock_radio_stoptime = '';
 				$TCMODS_CLOCKRAD_RETRY = 3;
 			} else {
-				--$TCMODS_CLOCKRAD_RETRY; // decrement				
+				--$TCMODS_CLOCKRAD_RETRY; // decrement
 			}
 			// shutdown requested
 			if ($_tcmods_conf['clock_radio_shutdown'] == "Yes") {
@@ -480,7 +464,7 @@ while (1) {
 			if (!isset($currentsong['Title'])) {
 				$title = "Streaming source";
 			} else {
-				$title = $currentsong['Title']; 
+				$title = $currentsong['Title'];
 				$searchStr = str_replace('-', ' ', $title);
 				$searchStr = str_replace('&', ' ', $searchStr);
 				$searchStr = preg_replace('!\s+!', '+', $searchStr);
@@ -497,30 +481,30 @@ while (1) {
 			} else {
 				$album = $result[0]['name'];
 			}
-		// SONG FILE OR UPNP SONG URL	
+		// SONG FILE OR UPNP SONG URL
 		} else {
 			if (!isset($currentsong['Title'])) { // use file name
 				$filename = basename($currentsong['file']); // filename.ext
 				$pos = strrpos($filename, ".");
 				if ($pos === false) {
-					$title = $filename;  // UPnP filenames have no .ext 
+					$title = $filename;  // UPnP filenames have no .ext
 				} else {
 					$title = substr($filename, 0, $pos); // filename
 				}
 			} else {
-				$title = $currentsong['Title']; // use title 
+				$title = $currentsong['Title']; // use title
 			}
 			if (!isset($currentsong['Artist'])) {
 				$artist = "Unknown artist";
 			} else {
 				$artist = $currentsong['Artist'];
-			}                
+			}
 			if (!isset($currentsong['Album'])) {
 				$album = "Unknown album";
 			} else {
 				$album = $currentsong['Album'];
-			}                
-			
+			}
+
 			// search string
 			if ($artist == "Unknown artist" && $album == "Unknown album") {
 				$searchStr = $title;
@@ -529,7 +513,7 @@ while (1) {
 			} else if ($album == "Unknown album") {
 				$searchStr = $artist."+".$title;
 			} else {
-				$searchStr = $artist."+".$album;				
+				$searchStr = $artist."+".$album;
 			}
 		}
 		// SEARCH URL AND TERMS
@@ -547,7 +531,7 @@ while (1) {
 			$_tcmods_conf = _parseTcmodsConf(shell_exec('cat /var/www/tcmods.conf')); // re-read to get most current data
 			$_tcmods_conf['play_history_currentsong'] = $title;
 			$rtn = _updTcmodsConf($_tcmods_conf);
-			
+
 			// Update playback history log
 			$history_item = "<li class=\"playhistory-item\"><div>".date("Y-m-d H:i").$searchUrl.$title."</div><span>".$artist." - ".$album."</span></li>";
 			//ORIGINAL $history_item = "<li class=\"playhistory-item\"><div>".date("Y-m-d H:i").$searchUrl.$title_log."</div><span>".$artist.", ".$album."</span></li>";
@@ -558,7 +542,7 @@ while (1) {
 	// Monitor loop
 	if ($_SESSION['w_active'] == 1 && $_SESSION['w_lock'] == 0) {
 		$_SESSION['w_lock'] = 1;
-		
+
 		// switch command queue for predefined jobs
 		switch($_SESSION['w_queue']) {
 			case 'reboot':
@@ -579,16 +563,6 @@ while (1) {
 				break;
 			case 'syschmod':
 				wrk_syschmod();
-				break;
-			case 'backup':
-				$_SESSION[$_SESSION['w_jobID']] = wrk_backup();
-				break;
-			case 'totalbackup':
-				$_SESSION[$_SESSION['w_jobID']] = wrk_backup('dev');
-				break;
-			case 'restore':
-				$path = "/run/".$_SESSION['w_queueargs'];
-				wrk_restore($path);
 				break;
 			case 'orionprofile':
 				if ($_SESSION['dev'] == 1) {
@@ -634,7 +608,7 @@ while (1) {
 				break;
 			case 'mpdcfg':
 				// TC (Tim Curtis) 2015-06-26: add kernel version, i2s args
-				// TC (Tim Curtis) 2015-06-26: use getKernelVer() 
+				// TC (Tim Curtis) 2015-06-26: use getKernelVer()  
 				wrk_mpdconf('/etc', $db, getKernelVer($_SESSION['kernelver']), $_SESSION['i2s']);
 				// update hash
 				$hash = md5_file('/etc/mpd.conf');
@@ -694,7 +668,7 @@ while (1) {
 				// Remove any existing dtoverlay line(s)
 				sysCmd('sed -i /dtoverlay/d /boot/config.txt');
 				// Set i2s driver
-				// TC (Tim Curtis) 2015-06-26: use getKernelVer()  
+				// TC (Tim Curtis) 2015-06-26: use getKernelVer()
 				$kernelver = getKernelVer($_SESSION['kernelver']);
 				if ($kernelver == '3.18.5+' || $kernelver == '3.18.11+' || $kernelver == '3.18.14+') {
 					_setI2sDtoverlay($db, $_SESSION['w_queueargs']); // Dtoverlay (/boot/config.txt)
@@ -704,7 +678,7 @@ while (1) {
 				break;
 			// TC (Tim Curtis) 2015-02-25: process kernel select request
 			case 'kernelver':
-				// TC (Tim Curtis) 2015-06-26: use getKernelVer()  
+				// TC (Tim Curtis) 2015-06-26: use getKernelVer()
 				$cmd = "/var/www/tcmods/".$TCMODS_REL."/cmds/tcmods.sh install-kernel ".getKernelVer($_SESSION['w_queueargs']);
 				$rtn = sysCmd($cmd);
 				// debug
@@ -739,24 +713,11 @@ while (1) {
 			// TC (Tim Curtis) 2015-04-29: handle PCM volume change
 			case 'pcm_volume':
 				// TC (Tim Curtis) 2015-06-26: set simple mixer name based on kernel version and i2s vs USB
-				
-				//$kernelver = getKernelVer($_SESSION['kernelver']);
 				$mixername = getMixerName(getKernelVer($_SESSION['kernelver']), $_SESSION['i2s']);
-				/*
-				if ($kernelver == '3.18.5+' || $kernelver == '3.18.11+' || $kernelver == '3.18.14+') {
-					if ($_SESSION['i2s'] != 'I2S Off') {
-						$mixername = 'Digital'; // i2s device 
-					} else {
-						$mixername = 'PCM'; // USB device 
-					}
-				} else {
-					$mixername = 'PCM'; // i2s and USB devices
-				}
-				*/
 				$cmd = "/var/www/tcmods/".$TCMODS_REL."/cmds/tcmods.sh set-pcmvol ".$mixername." ".$_SESSION['w_queueargs'];
 				$rtn = sysCmd($cmd);
 				break;
-				
+
 			// TC (Tim Curtis) 2015-05-30: add clear system and playback history logs
 			case 'clearsyslogs':
 				$cmd = "/var/www/tcmods/".$TCMODS_REL."/cmds/utility.sh clear-logs";
@@ -771,7 +732,7 @@ while (1) {
 				$cmd = "/var/www/tcmods/".$TCMODS_REL."/cmds/resizefs.sh start";
 				$rtn = sysCmd($cmd);
 				break;
-				
+
 		} // end switch
 
 		// reset locking and command queue
@@ -785,5 +746,3 @@ while (1) {
 	session_write_close();
 }
 // --- END WORKER MAIN LOOP --- //
-
-?>
