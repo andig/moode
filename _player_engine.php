@@ -34,14 +34,7 @@ $status = _parseStatusResponse(MpdStatus($mpd));
 
 // Check for CMediaFix
 if (isset($_SESSION['cmediafix']) && $_SESSION['cmediafix'] == 1) {
-	$_SESSION['lastbitdepth'] = $status['audio'];
-}
-
-// Check for Ramplay
-if (isset($_SESSION['ramplay']) && $_SESSION['ramplay'] == 1) {
-	// Record "lastsongid" in PHP SESSION
-	$_SESSION['lastsongid'] = $status['songid'];
-	$_SESSION['nextsongid'] = $status['nextsongid'];
+	$_SESSION['lastbitdepth'] = $status['
 }
 
 // Register player state in session
@@ -75,16 +68,6 @@ if (isset($_SESSION['cmediafix']) && $_SESSION['cmediafix'] == 1 && $status['sta
 	if ($_SESSION['lastbitdepth'] != $status['audio']) {
 		sendMpdCommand($mpd,'cmediafix');
 	}
-}
-
-// Ramplay
-if (isset($_SESSION['ramplay']) && $_SESSION['ramplay'] == 1) {
-	// copio il pezzo in /dev/shm
-	$path = rp_copyFile($status['nextsongid'],$mpd);
-	// lancio update mdp locazione ramplay
-	rp_updateFolder($mpd);
-	// lancio addandplay canzone
-	rp_addPlay($path,$mpd,$status['playlistlength']);
 }
 
 closeMpdSocket($mpd);
