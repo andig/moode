@@ -74,12 +74,20 @@ function chainMpdCommands($sock, $commands) {
 	return $res;
 }
 
+function mpdStatus($sock) {
+	return execMpdCommand($sock, "status");
+}
+
+function monitorMpdState($sock) {
+	execMpdCommand($sock, "idle");
+	return _parseStatusResponse(mpdStatus($sock));
+}
+
 function playAll($sock, $json) {
 	$commands = array();
 
 	foreach ($json as $song) {
-		$path = $song["file"];
-		array_push($commands, "add \"".html_entity_decode($path)."\"");
+		array_push($commands, 'add "' . html_entity_decode($song["file"]) . '"');
 	}
 
 	return chainMpdCommands($sock, $commands);
@@ -89,8 +97,7 @@ function playAllReplace($sock, $json) {
 	$commands = array("clear");
 
 	foreach ($json as $song) {
-		$path = $song["file"];
-		array_push($commands, "add \"".html_entity_decode($path)."\"");
+		array_push($commands, 'add "' . html_entity_decode($song["file"]) . '"');
 	}
 
 	array_push($commands, "play");
@@ -101,24 +108,14 @@ function enqueueAll($sock, $json) {
 	$commands = array();
 
 	foreach ($json as $song) {
-		$path = $song["file"];
-		array_push($commands, "add \"".html_entity_decode($path)."\"");
+		array_push($commands, 'add "' . html_entity_decode($song["file"]) . '"');
 	}
 
 	return chainMpdCommands($sock, $commands);
 }
 
-function mpdStatus($sock) {
-	return execMpdCommand($sock, "status");
-}
-
-function monitorMpdState($sock) {
-	execMpdCommand($sock, "idle");
-	return _parseStatusResponse(mpdStatus($sock));
-}
-
 function getTrackInfo($sock, $songID) {
-	$resp = execMpdCommand($sock, "playlistinfo ".$songID);
+	$resp = execMpdCommand($sock, "playlistinfo " . $songID);
 	return _parseFileListResponse($resp);
 }
 
@@ -127,12 +124,12 @@ function getPlayQueue($sock) {
 }
 
 function listPlayList($sock, $plname) {
-	$resp = execMpdCommand($sock, "listplaylist "." \"".$plname."\"");
+	$resp = execMpdCommand($sock, 'listplaylist "' . $plname . '"');
 	return _parseFileListResponse($resp);
 }
 
 function removePlayList($sock, $plname) {
-	$resp = execMpdCommand($sock, "rm "." \"".$plname."\"");
+	$resp = execMpdCommand($sock, 'rm "' . $plname . '"');
 	return $resp;
 }
 
@@ -143,9 +140,9 @@ function remTrackQueue($sock, $songpos) {
 
 function addQueue($sock, $path) {
 	$ext = parseFileStr($path, '.');
-	$cmd = ($ext == 'm3u' OR $ext == 'pls' OR strpos($path, '/') === false) ? 'load' : 'add';
+	$cmd = ($ext == 'm3u' || $ext == 'pls' || strpos($path, '/') === false) ? 'load' : 'add';
 
-	$resp = execMpdCommand($sock, $cmd . '"' . html_entity_decode($path) . '"');
+	$resp = execMpdCommand($sock, $cmd . ' "' . html_entity_decode($path) . '"');
 	return $resp;
 }
 
@@ -642,7 +639,7 @@ function waitWorker($sleeptime, $section = null) {
 		switch ($section) {
 			case 'sources':
 			$mpd = openMpdSocket('localhost', 6600);
-			sendMpdCommand($mpd, 'update');
+			execMpdCommand($mpd, 'update');
 			closeMpdSocket($mpd);
 			break;
 		}
