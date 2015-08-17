@@ -887,14 +887,5 @@ if (isset($_SESSION['notify']) && $_SESSION['notify'] != '') {
 }
 ?>
 
-<!-- Debug footer -->
-<div id="debug">
-	<pre>
-		<?php
-		debug_footer($db);
-		?>
-	</pre>
-</div>
-
 </body>
 </html>
