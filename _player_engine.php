@@ -30,7 +30,7 @@ if (!$mpd) {
 }
 
 // Fetch MPD status
-$status = _parseStatusResponse(MpdStatus($mpd));
+$status = _parseStatusResponse(mpdStatus($mpd));
 
 // Register player state in session
 $_SESSION['state'] = $status['state'];
