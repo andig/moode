@@ -1,4 +1,4 @@
-<?php 
+<?php
 /**
  *  This Program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -23,7 +23,7 @@
 
 require_once dirname(__FILE__) . '/inc/connection.php';
 
-playerSession('open',$db,'',''); 
+playerSession('open',$db,'','');
 
 if (!$mpd) {
 	die('Error: connection to MPD failed');
@@ -37,22 +37,25 @@ $_SESSION['state'] = $status['state'];
 session_write_close(); // Unlock SESSION file
 
 // Check and compare GUI state with Backend state
-// MPD idle timeout loop, monitorMpdState() waits until something changes in MPD then returns status
+// MPD idle timeout loop, mpdMonitorState() waits until something changes in MPD then returns status
 if ($_GET['state'] == $status['state']) {
-	$status = monitorMpdState($mpd);
+	$status = mpdMonitorState($mpd);
 }
 
-$curTrack = getTrackInfo($mpd,$status['song']);
+// get track info for currently playing track
+$track = mpdQueueTrackInfo($mpd, $status['song']);
 
-if (isset($curTrack[0]['Title'])) {
-	$status['currentartist'] = $curTrack[0]['Artist'];
-	$status['currentsong'] = $curTrack[0]['Title'];
-	$status['currentalbum'] = $curTrack[0]['Album'];
-	$status['fileext'] = parseFileStr($curTrack[0]['file'],'.');
+if (isset($track[0]['Title'])) {
+	$status['fileext'] = parseFileStr($track[0]['file'], '.');
+
+	$status['currentartist'] = $track[0]['Artist'];
+	$status['currentsong'] = $track[0]['Title'];
+	$status['currentalbum'] = $track[0]['Album'];
 }
 else {
-	$path = parseFileStr($curTrack[0]['file'],'/');
-	$status['fileext'] = parseFileStr($curTrack[0]['file'],'.');
+	$path = parseFileStr($track[0]['file'], '/');
+	$status['fileext'] = parseFileStr($track[0]['file'], '.');
+
 	$status['currentartist'] = "";
 	$status['currentsong'] = $song;
 	$status['currentalbum'] = "path: ".$path;
@@ -60,4 +63,5 @@ else {
 
 closeMpdSocket($mpd);
 
+header('Content-type: application/json');
 echo json_encode($status);

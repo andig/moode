@@ -80,50 +80,57 @@ function mpdStatus($sock) {
 	return execMpdCommand($sock, "status");
 }
 
-function monitorMpdState($sock) {
+function mpdMonitorState($sock) {
 	execMpdCommand($sock, "idle");
 	return _parseStatusResponse(mpdStatus($sock));
 }
 
-function enqueueAll($sock, $json) {
-	$commands = array();
-
-	foreach ($json as $song) {
-		array_push($commands, 'add "' . html_entity_decode($song["file"]) . '"');
-	}
-
-	return chainMpdCommands($sock, $commands);
-}
-
-function getTrackInfo($sock, $songID) {
-	$resp = execMpdCommand($sock, "playlistinfo " . $songID);
+/*
+ * Current playlist functions
+ * http://www.musicpd.org/doc/protocol/queue.html
+ */
+function mpdQueueInfo($sock) {
+	$resp = execMpdCommand($sock, "playlistinfo");
 	return _parseFileListResponse($resp);
 }
 
-function getPlayQueue($sock) {
-	return getTrackInfo($sock, '');
-}
-
-function listPlayList($sock, $plname) {
-	$resp = execMpdCommand($sock, 'listplaylist "' . $plname . '"');
+function mpdQueueTrackInfo($sock, $id) {
+	$resp = execMpdCommand($sock, "playlistinfo " . $id);
 	return _parseFileListResponse($resp);
 }
 
-function removePlayList($sock, $plname) {
-	$resp = execMpdCommand($sock, 'rm "' . $plname . '"');
+function mpdQueueRemoveTrack($sock, $id) {
+	$resp = execMpdCommand($sock, "delete " . $id);
 	return $resp;
 }
 
-function remTrackQueue($sock, $songpos) {
-	$resp = execMpdCommand($sock, "delete " . $songpos);
-	return $resp;
-}
-
-function addQueue($sock, $path) {
+function mpdQueueAdd($sock, $path) {
 	$ext = parseFileStr($path, '.');
 	$cmd = ($ext == 'm3u' || $ext == 'pls' || strpos($path, '/') === false) ? 'load' : 'add';
 
 	$resp = execMpdCommand($sock, $cmd . ' "' . html_entity_decode($path) . '"');
+	return $resp;
+}
+
+function mpdQueueAddMultiple($sock, $songs) {
+	$commands = array();
+	foreach ($songs as $song) {
+		array_push($commands, 'add "' . html_entity_decode($song) . '"');
+	}
+	return chainMpdCommands($sock, $commands);
+}
+
+/*
+ * Stored playlist functions
+ * http://www.musicpd.org/doc/protocol/playlist_files.html
+ */
+function mpdListPlayList($sock, $plname) {
+	$resp = execMpdCommand($sock, 'listplaylist "' . $plname . '"');
+	return _parseFileListResponse($resp);
+}
+
+function mpdRemovePlayList($sock, $plname) {
+	$resp = execMpdCommand($sock, 'rm "' . $plname . '"');
 	return $resp;
 }
 
@@ -172,11 +179,11 @@ function _loadDirForLib($sock, &$lib, $debug_flags) {
 				$libCount++;
 // if ($libCount > 1000) return $libCount;
 				$item = array();
-			}
+			} 
 
 			if ($debug_flags[1] == "y") {
 				libLog("_loadDirForLib() item= ".$libCount.", file= ".$val);
-			}
+			} 
 		}
 
 		if ($debug_flags[2] == "y") {
@@ -347,14 +354,9 @@ function _parseFileListResponse($resp) {
 	}
 
 	$res = array();
-	$plistFile = "";
 	$cnt = -1;
 
 	foreach (explode("\n", $resp) as $line) {
-		// skip lines without :
-		if (false === strpos($line, ': ')) {
-			continue;
-		}
 		list ($key, $val) = explode(": ", $line, 2);
 
 		// TC (Tim Curtis) 2014-09-17, remove OR playlist in original stmt below
@@ -368,25 +370,22 @@ function _parseFileListResponse($resp) {
 			// record directory index for further processing
 			$dirCounter++;
 			$res[$cnt]["directory"] = $val;
-		// - differentiate saved playlists from WEBRADIO playlist files
 		}
+		// - differentiate saved playlists from WEBRADIO playlist files
 		elseif ("playlist" == $key) {
+			$cnt++;
 			if ( substr($val, 0, 8 ) == "WEBRADIO") {
-				$cnt++;
 				$res[$cnt]["file"] = $val;
 				$res[$cnt]["fileext"] = parseFileStr($val, '.');
-			} 
+			}
 			else {
-				$cnt++;
 				$res[$cnt]["playlist"] = $val;
-			} 
+			}
 		}
 		else {
 			$res[$cnt][$key] = $val;
 			$res[$cnt]["Time2"] = songTime($res[$cnt]["Time"]);
 		}
-
-		$plistLine = strtok("\n");
 	}
 
 	// reverse MPD list output

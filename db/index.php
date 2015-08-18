@@ -85,26 +85,26 @@ switch ($cmd) {
 		break;
 
 	// - list contents of saved playlist
-	// - delete saved playlist
 	case 'listsavedpl':
 		if (null !== $path) {
-			$res = listPlayList($mpd, $path);
+			$res = mpdListPlayList($mpd, $path);
 		}
 		break;
 
+	// - delete saved playlist
 	case 'deletesavedpl':
 		if (null !== $path) {
-			$res = removePlayList($mpd, $path);
+			$res = mpdRemovePlayList($mpd, $path);
 		}
 		break;
 
 	case 'playlist':
-		$res = getPlayQueue($mpd);
+		$res = mpdQueueInfo($mpd);
 		break;
 
 	case 'add':
 		if (null !== $path) {
-			$res = addQueue($mpd, $path);
+			$res = mpdQueueAdd($mpd, $path);
 		}
 		break;
 
@@ -112,7 +112,7 @@ switch ($cmd) {
 		if (null !== $path) {
 			$status = _parseStatusResponse(mpdStatus($mpd));
 			$pos = $status['playlistlength'] ;
-			addQueue($mpd, $path);
+			mpdQueueAdd($mpd, $path);
 			$res = execMpdCommand($mpd, 'play '.$pos);
 		}
 		break;
@@ -120,7 +120,7 @@ switch ($cmd) {
 	case 'addreplaceplay':
 		if (null !== $path) {
 			$res = execMpdCommand($mpd, 'clear');
-			addQueue($mpd, $path);
+			mpdQueueAdd($mpd, $path);
 			$res = execMpdCommand($mpd, 'play');
 		}
 		break;
@@ -133,11 +133,10 @@ switch ($cmd) {
 
 	case 'trackremove':
 		if (isset($_GET['songid']) && $_GET['songid'] != '') {
-			$res = remTrackQueue($mpd,$_GET['songid']);
+			$res = mpdQueueRemoveTrack($mpd,$_GET['songid']);
 		}
 		break;
 
-	// TC (Tim Curtis) 2014-12-23
 	// - move playlist tracks
 	case 'trackmove':
 		if (isset($_GET['songid']) && $_GET['songid'] != '') {
@@ -168,31 +167,37 @@ switch ($cmd) {
 
 	case 'addall':
 		if (null !== $path) {
-			$res = enqueueAll($mpd, $path);
+			$res = mpdQueueAddMultiple($mpd, array_column($path, 'file')); // nested array
 		}
 		break;
 
-	// TC (Tim Curtis) 2014-09-17
 	// - added code to set the playlist song pos for play
 	case 'playall':
 		if (null !== $path) {
 			$status = _parseStatusResponse(mpdStatus($mpd));
 			$pos = $status['playlistlength'] ;
 
-			$res = enqueueAll($mpd, $path);
+			$res = mpdQueueAddMultiple($mpd, array_column($path, 'file')); // nested array
 			execMpdCommand($mpd, 'play ' . $pos);
 		}
 		break;
 
-	// TC (Tim Curtis) 2014-09-17
 	// - library panel Add/replace/playall btn
 	case 'addallreplaceplay':
 		if (null !== $path) {
 			execMpdCommand($mpd, 'clear');
-			$res = enqueueAll($mpd, $path);
+			$res = mpdQueueAddMultiple($mpd, array_column($path, 'file')); // nested array
 			execMpdCommand($mpd, 'play');
 		}
 		break;
+
+	case 'currentsong':
+		$res = _parseMpdCurrentSong(execMpdCommand($mpd, 'currentsong'));
+		break;
+
+	default:
+		// execute any mpd command
+		$res = execMpdCommand($mpd, $cmd);
 }
 
 closeMpdSocket($mpd);
