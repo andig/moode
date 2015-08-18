@@ -463,7 +463,7 @@ jQuery(document).ready(function($) { 'use strict';
 	$('#pl-controls').on('click', '#pl-btnSave', function(event) {
 		var plname = $("#pl-saveName").val();
 		if (plname) {
-			sendPLCmd('savepl&plname=' + plname);
+			sendMpdCmd('savepl&plname=' + plname);
 			M.notify('savepl');
 		} else {
 			M.notify('needplname');
@@ -751,7 +751,7 @@ jQuery(document).ready(function($) { 'use strict';
 		// Format for single or multiple, endpos not inclusive so must be bumped for multiple
 		begpos == endpos ? cmd = 'trackremove&songid=' + begpos : cmd = 'trackremove&songid=' + begpos + ':' + (endpos + 1);
 		M.notify('remove');
-		sendPLCmd(cmd);
+		sendMpdCmd(cmd);
 	});
 
 	// TC (Tim Curtis) 2015-01-27: speed btns on delete modal
@@ -773,7 +773,7 @@ jQuery(document).ready(function($) { 'use strict';
 		// Move begpos newpos or move begpos:endpos newpos
 		begpos == endpos ? cmd = 'trackmove&songid=' + begpos + '&newpos=' + newpos : cmd = 'trackmove&songid=' + begpos + ':' + (endpos + 1) + '&newpos=' + newpos;
 		M.notify('move');
-		sendPLCmd(cmd);
+		sendMpdCmd(cmd);
 	});
 	// TC (Tim Curtis) 2015-01-27: speed btns on move modal
 	$('#btn-move-setpos-top').click(function() {

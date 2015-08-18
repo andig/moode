@@ -72,7 +72,7 @@ M.notify = function(cmd, msg) {
 		themechange: 'Theme color changed, select Menu/Refresh to activate'
 	};
 
-	if (typeof map[cmd] === undefined) {
+	if (map[cmd] === undefined) {
 		console.error('[notify] Unknown cmd ' + cmd);
 	}
 
@@ -247,7 +247,9 @@ M.getDB = function(cmd, path, browsemode, uplevel) {
  */
 M.sendMpdCmd = function(cmd) {
 	M.log("[M.sendMpdCmd]");
-	return $.getJSON('command/?cmd=' + cmd);
+	return $.getJSON('db/?cmd=' + cmd).done(function(json) {
+		M.log(json);
+	});
 };
 
 /**
@@ -255,7 +257,7 @@ M.sendMpdCmd = function(cmd) {
  */
 M.mpdCurrentSong = function() {
 	M.log("[M.mpdCurrentSong]");
-	return $.getJSON('command/?cmd=currentsong').done(function(json) {
+	return M.sendMpdCmd('currentsong').done(function(json) {
 		M.log("[M.mpdCurrentSong]", json);
 		MPDCS.json = json;
 
@@ -263,37 +265,36 @@ M.mpdCurrentSong = function() {
 		MPDCS.coverurl = MPDCS.defaultcover;
 
 		// TC (Tim Curtis) 2015-07-31: updated logic
-		if (typeof MPDCS.json.file !== undefined) {
+		if (MPDCS.json.file !== undefined) {
 			// RADIO STATION
-			if (typeof MPDCS.json.Name !== undefined || MPDCS.json.file.substr(0, 4) == "http" && typeof(MPDCS.json.Artist) === undefined) {
+			if (MPDCS.json.Name !== undefined || MPDCS.json.file.substr(0, 4) == "http" && MPDCS.json.Artist === undefined) {
 				MPDCS.artist = 'Radio Station';
-				MPDCS.title = (typeof(MPDCS.json.Title) === undefined) ? MPDCS.json.file : MPDCS.json.Title;
+				MPDCS.title = MPDCS.json.Title || MPDCS.json.file;
 
 				var obj = getRadioInfo(MPDCS.json.file);
 				if (obj === null) { // station not in db
-					MPDCS.album = (typeof(MPDCS.json.Name) === undefined) ? "Unknown station name" : MPDCS.json.Name;
+					MPDCS.album = MPDCS.json.Name || "Unknown Station";
 					MPDCS.coverurl = MPDCS.webradiocover; // default radio cover
-				} else {
+				}
+				else {
 					MPDCS.album = (obj.name.substr(0, 4) == "Soma") ? MPDCS.json.Name : obj.name; // use transmitted name for Soma stations
 					MPDCS.coverurl = (obj.logo == "local") ? MPDCS.stnlogoroot + obj.name + ".png" : obj.logo;
 				}
 			}
 			// SONG FILE OR UPNP SONG URL
 			else {
-				MPDCS.artist = (typeof(MPDCS.json.Artist) === undefined) ? "Unknown artist" : MPDCS.json.Artist;
-				MPDCS.album = (typeof(MPDCS.json.Album) === undefined) ? "Unknown album" : MPDCS.json.Album;
+				MPDCS.artist = MPDCS.json.Artist || "Unknown Artist";
+				MPDCS.album = MPDCS.json.Album || "Unknown Album";
 				// UPnP song url
 				if (MPDCS.json.file.substr(0, 4) == "http") {
-					MPDCS.title = (typeof(MPDCS.json.Title) === undefined) ? MPDCS.json.file : MPDCS.json.Title;
+					MPDCS.title = MPDCS.json.Title || MPDCS.json.file;
 					MPDCS.coverurl = makeUPNPCoverURL();
 				}
 				// song file
 				else {
-					if (typeof(MPDCS.json.Title) === undefined) { // use file name
-						var pos = MPDCS.json.file.lastIndexOf(".");
-						var filename = MPDCS.json.file.slice(0, pos);
-						pos = filename.lastIndexOf("/");
-						MPDCS.title = filename.slice(pos + 1);
+					if (MPDCS.json.Title === undefined) { // use file name
+						var file = MPDCS.json.file.split('/').pop(); // file portion
+						MPDCS.title = file.slice(0, file.lastIndexOf("."));
 					}
 					else {
 						MPDCS.title = MPDCS.json.Title; // use title
@@ -302,6 +303,8 @@ M.mpdCurrentSong = function() {
 				}
 			}
 		}
+
+		return MPDCS;
 	})
 	.fail(function() {
 		console.error('Error: mpdCurrentSong() no data returned');
