@@ -18,67 +18,7 @@
  *	Tsunamp Team
  *	http://www.tsunamp.com
  *
- *	UI-design/JS code by: 	Andrea Coiutti (aka ACX)
- *	PHP/JS code by:			Simone De Gregori (aka Orion)
- * 
- *	file:					_header.php
- * 	version:				1.1
- *
- *  RaspyFi Project (C) 2013 Michelangelo Guarise (OS image build/customization)
- *  RaspyFi Logo design (C) 2013 Daniele Busciantella Ricci
- *
- *	TCMODS Edition 
- *
- *	TC (Tim Curtis) 2014-08-23, r1.0
- *	- change title
- *	- custom css for modal overrides
- *	- changes to menu
- *	- new left side header btns
- *
- *	TC (Tim Curtis) 2014-09-17, r1.1
- *	- new favicons for desktop and mobile
- *
- *	TC (Tim Curtis) 2014-12-23, r1.3 
- *  - remove class php ami from menu items, fixes the "persistent menu item highlight" bug (?)
- *  - add menu link for Audio info modal popup 
- *  - change menu item "Library" to "Sources"
- *	- remove stop button
- *	- add btn for 2nd volume control modal popup for small screens
- *	- toolbar hide/show button
- *	- reduced padding on toolbar and volume header btns
- *	- set vol and toolbar btns to default hidden, hide/show state controlled in code
- *	- menu item for clock radio modal
- *	- shovel & broom
- *
- *	TC (Tim Curtis) 2015-01-27, r1.5
- *	- menu item for tcmods config editor
- *	- shovel & broom
- *
- *	TC (Tim Curtis) 2015-02-25, r1.6
- *	- launch About modal via click handler in scripts-playback.js
- *
- *	TC (Tim Curtis) 2015-03-21, r1.7
- *	- change browser title
- *	- change v1 to v2 favicons
- *	- change Menu/TCMODS to Menu/Customize
- *
- *	TC (Tim Curtis) 2015-04-29, r1.8
- *	- change playback next and prev icons from "icon-step-" to "icon-"
- *	- change 'previous' to 'prev' for previous track button
- *	- remove power off button, not really used much
- *	- move toolbar button to left side for new layout
- *	- comment out Playlist tab since new Playback panel has integrated playlist
- *
- *	TC (Tim Curtis) 2015-05-30, r1.9
- *	- add Refresh pick to menu for reloading web page from server
- *	- add Playback history pick to menu for viewing the Playback history log
- *
- *	TC (Tim Curtis) 2015-06-26, r2.0
- *	- replace individual menu items for config pages with a single link to config-modal
- *
- *	TC (Tim Curtis) 2015-07-31, r2.1
- *	- add playback-page-cycle button to cycle through knobs, albumart when UI is vertical
- *
+ * Rewrite by Tim Curtis and Andreas Goetz
  */
 -->
 
@@ -119,7 +59,7 @@
 	<meta name="msapplication-TileImage" content="/v2-mstile-144x144.png">
 </head>
 
-<body class="<?php echo $sezione ?>">
+<body class="<?php echo $sezione; ?>">
 
 <div id="menu-top" class="ui-header ui-bar-f ui-header-fixed slidedown" data-position="fixed" data-role="header" role="banner">
 	<div class="dropdown">
