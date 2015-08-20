@@ -124,10 +124,10 @@ if (isset($_POST) && !empty($_POST)) {
 	if (isset($_POST['netconf']) && !empty($_POST['netconf'])) {
 		// tell worker to write new MPD config
 		if (workerQueueTask("netcfgman", $_POST['netconf'])) {
-			uiNotify('Network config', 'Network config modified');
+			uiSetNotification('Network config', 'Network config modified');
 		}
 		else {
-			uiNotify('Job failed', 'Background worker is busy');
+			uiSetNotification('Job failed', 'Background worker is busy');
 		}
 	}
 
@@ -136,13 +136,13 @@ if (isset($_POST) && !empty($_POST)) {
 
 	// create job for background worker
 	if (workerQueueTask('netcfg', $wlan0.$eth0)) {
-		uiNotify('Network config', (isset($_GET['reset']) && $_GET['reset'] == 1)
+		uiSetNotification('Network config', (isset($_GET['reset']) && $_GET['reset'] == 1)
 			? 'Network config reset'
 			: 'Network config modified'
 		);
 	}
 	else {
-		uiNotify('Job failed', 'Background worker is busy');
+		uiSetNotification('Job failed', 'Background worker is busy');
 	}
 	// unlock session file
 	playerSession('unlock');

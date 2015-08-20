@@ -39,10 +39,10 @@ if (isset($_POST['reset']) && $_POST['reset'] == 1) {
 	}
 	// Tell worker to write new MPD config
 	if (workerQueueTask('mpdcfg')) {
-		uiNotify('MPD config reset', 'Restarting MPD server...');
+		uiSetNotification('MPD config reset', 'Restarting MPD server...');
 	}
 	else {
-		uiNotify('Job failed', 'Background worker is busy');
+		uiSetNotification('Job failed', 'Background worker is busy');
 	}
 
 	unset($_POST);
@@ -51,10 +51,10 @@ if (isset($_POST['reset']) && $_POST['reset'] == 1) {
 if (isset($_POST['mpdrestart']) && $_POST['mpdrestart'] == 1) {
 	// Tell worker to write new MPD config
 	if (workerQueueTask('mpdcfg')) {
-		uiNotify('MPD restart', 'MPD restarted');
+		uiSetNotification('MPD restart', 'MPD restarted');
 	}
 	else {
-		uiNotify('Job failed', 'Background worker is busy');
+		uiSetNotification('Job failed', 'Background worker is busy');
 	}
 
 	unset($_POST);
@@ -67,10 +67,10 @@ if (isset($_POST['conf']) && !empty($_POST['conf'])) {
 	}
 	// Tell worker to write new MPD config
 	if (workerQueueTask('mpdcfg')) {
-		uiNotify('MPD config modified', 'Restarting MPD server...');
+		uiSetNotification('MPD config modified', 'Restarting MPD server...');
 	}
 	else {
-		uiNotify('Job failed', 'Background worker is busy');
+		uiSetNotification('Job failed', 'Background worker is busy');
 	}
 }
 
@@ -78,10 +78,10 @@ if (isset($_POST['conf']) && !empty($_POST['conf'])) {
 if (isset($_POST['mpdconf']) && !empty($_POST['mpdconf'])) {
 	// tell worker to write new MPD config
 	if (workerQueueTask('mpdcfgman', $_POST['mpdconf'])) {
-		uiNotify('MPD config modified', 'Restarting MPD server...');
+		uiSetNotification('MPD config modified', 'Restarting MPD server...');
 	}
 	else {
-		uiNotify('Job Failed', 'Background worker is busy');
+		uiSetNotification('Job Failed', 'Background worker is busy');
 	}
 }
 

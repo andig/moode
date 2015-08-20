@@ -155,10 +155,12 @@ if (isset($_SESSION['playerid']) && $_SESSION['playerid'] == '') {
 		$ip_wlan0 = sysCmd($cmd);
 		if (!empty($ip_wlan0[0])) {
 			$_SESSION['netconf']['wlan0']['ip'] = $ip_wlan0[0];
-		} else {
+		}
+		else {
 			if (wrk_checkStrSysfile('/proc/net/wireless', 'wlan0')) {
 				$_SESSION['netconf']['wlan0']['ip'] = '--- NO IP ASSIGNED ---';
-			} else {
+			}
+			else {
 				$_SESSION['netconf']['wlan0']['ip'] = '--- NO INTERFACE PRESENT ---';
 			}
 		}
@@ -175,12 +177,9 @@ if (isset($_SESSION['playerid']) && $_SESSION['playerid'] == '') {
 	foreach($mpdconfdefault as $element) {
 		cfgdb_update('cfg_mpd', $dbh, $element['param'], $element['value_default']);
 	}
+
 	// tell worker to write new MPD config
 	wrk_mpdconf('/etc', $db);
-
-	// update hash
-	$hash = md5_file('/etc/mpd.conf');
-	playerSession('write', $db, 'mpdconfhash', $hash);
 	sysCmd('service mpd restart');
 	$dbh = null;
 
@@ -196,10 +195,6 @@ if (isset($_SESSION['playerid']) && $_SESSION['playerid'] == '') {
 	sysCmd("echo 'manual' > /etc/init/nmbd.override");
 	sysCmd("echo 'manual' > /etc/init/mpd.override");
 
-	// system ENV files check and replace
-	// TC (Tim Curtis) 2015-07-31: shovel & broom remove
-	//wrk_sysEnvCheck($arch,1);
-
 	// stop services
 	sysCmd('service minidlna stop');
 	//sysCmd('service minidlna ntp'); // TC (Tim Curtis) 2015-04-29: bug?
@@ -211,7 +206,8 @@ if (isset($_SESSION['playerid']) && $_SESSION['playerid'] == '') {
 // --- END PLAYER FIRST INSTALLATION PROCESS --- //
 
 // --- NORMAL STARTUP --- //
-} else {
+}
+else {
 
 	// TC (Tim Curtis) 2015-07-31: shovel & broom change to /etc/samba/smb.conf instead of _OS_SETTINGS/etc/...
 	sysCmd('/usr/sbin/smbd -D --configfile=/var/www/etc/samba/smb.conf');
@@ -297,10 +293,12 @@ if (isset($_SESSION['shairport']) && $_SESSION['shairport'] == 1) {
 	foreach ($mpdcfg as $cfg) {
 		if ($cfg['param'] == 'audio_output_format' && $cfg['value_player'] == 'disabled'){
 			$output .= '';
-		} else if ($cfg['param'] == 'device') {
+		}
+		else if ($cfg['param'] == 'device') {
 			$device = $cfg['value_player'];
 			var_export($device);
-		} else {
+		}
+		else {
 			$output .= $cfg['param']." \t\"".$cfg['value_player']."\"\n";
 		}
 	}
@@ -343,9 +341,11 @@ playerSession('write', $db, 'procarch', $_tcmods_conf['sys_processor_arch']);
 // TC (Tim Curtis) 2015-06-26: remove test for procarch, not needed
 if ($_SESSION['i2s'] == 'IQaudIO Pi-AMP+') {
 	sysCmd("/var/www/command/unmute.sh pi-ampplus");
-} else if ($_SESSION['i2s'] == 'IQaudIO Pi-DigiAMP+') {
+}
+else if ($_SESSION['i2s'] == 'IQaudIO Pi-DigiAMP+') {
 	sysCmd("/var/www/command/unmute.sh pi-digiampplus");
-} else {
+}
+else {
 	sysCmd("/var/www/command/unmute.sh default");
 }
 
@@ -357,7 +357,8 @@ $cmd = "/var/www/tcmods/".$TCMODS_REL."/cmds/tcmods.sh get-pcmvol ".$mixername;
 $rtn = sysCmd($cmd);
 if (substr($rtn[0], 0, 6 ) == 'amixer') {
 	playerSession('write', $db, 'pcm_volume', 'none');
-} else {
+}
+else {
 	$rtn[0] = str_replace("%", "", $rtn[0]);
 	playerSession('write', $db, 'pcm_volume', $rtn[0]);
 }
@@ -411,7 +412,8 @@ while (1) {
 
 			execMpdCommand($mpd, 'play '.$_tcmods_conf['clock_radio_playitem']);
 			closeMpdSocket($mpd);
-		} else if ($current_time == $clock_radio_stoptime) {
+		}
+		else if ($current_time == $clock_radio_stoptime) {
 			//$_tcmods_conf['clock_radio_stoptime'] = '';
 			$mpd = openMpdSocket('localhost', 6600);
 			execMpdCommand($mpd, 'stop');
@@ -420,7 +422,8 @@ while (1) {
 			if ($TCMODS_CLOCKRAD_RETRY == 0) {
 				$clock_radio_stoptime = '';
 				$TCMODS_CLOCKRAD_RETRY = 3;
-			} else {
+			}
+			else {
 				--$TCMODS_CLOCKRAD_RETRY; // decrement
 			}
 			// shutdown requested
@@ -445,7 +448,8 @@ while (1) {
 		if (isset($currentsong['Name']) || (substr($currentsong['file'], 0, 4) == "http" && !isset($currentsong['Artist']))) {
 			if (!isset($currentsong['Title'])) {
 				$title = "Streaming source";
-			} else {
+			}
+			else {
 				$title = $currentsong['Title'];
 				$searchStr = str_replace('-', ' ', $title);
 				$searchStr = str_replace('&', ' ', $searchStr);
@@ -454,55 +458,47 @@ while (1) {
 			$artist = "<i class=\"icon-microphone\"></i>";
 			$dbh = cfgdb_connect($db);
 			$result = cfgdb_read('cfg_radio', $dbh, $currentsong['file']);
-			if ($result[0] == null) {  // station not in db
-				if (!isset($currentsong['Name'])) {
-					$album = "Unknown station";
-				} else {
-					$album = $currentsong['Name'];
-				}
-			} else {
+
+			if (0 == count($result)) {  // station not in db
+				$album = isset($currentsong['Name'])
+					? $currentsong['Name']
+					: "Unknown station";
+			}
+			else {
 				$album = $result[0]['name'];
 			}
 		// SONG FILE OR UPNP SONG URL
 		}
 		else {
-			if (!isset($currentsong['Title'])) { // use file name
-				$filename = basename($currentsong['file']); // filename.ext
-				$pos = strrpos($filename, ".");
-				if ($pos === false) {
-					$title = $filename;  // UPnP filenames have no .ext
-				} else {
-					$title = substr($filename, 0, $pos); // filename
-				}
-			} else {
-				$title = $currentsong['Title']; // use title
-			}
-			if (!isset($currentsong['Artist'])) {
-				$artist = "Unknown artist";
-			} else {
-				$artist = $currentsong['Artist'];
-			}
-			if (!isset($currentsong['Album'])) {
-				$album = "Unknown album";
-			} else {
-				$album = $currentsong['Album'];
-			}
+			$title = (isset($currentsong['Title']))
+				? $currentsong['Title']
+				: pathinfo($currentsong['file'], PATHINFO_FILENAME);
+			$artist = isset($currentsong['Artist'])
+				? $currentsong['Artist']
+				: "Unknown artist";
+			$album = isset($currentsong['Album'])
+				? $currentsong['Album']
+				: "Unknown album";
 
 			// search string
 			if ($artist == "Unknown artist" && $album == "Unknown album") {
 				$searchStr = $title;
-			} else if ($artist == "Unknown artist") {
+			}
+			else if ($artist == "Unknown artist") {
 				$searchStr = $album."+".$title;
-			} else if ($album == "Unknown album") {
+			}
+			else if ($album == "Unknown album") {
 				$searchStr = $artist."+".$title;
-			} else {
+			}
+			else {
 				$searchStr = $artist."+".$album;
 			}
 		}
 		// SEARCH URL AND TERMS
 		if ($title == "Streaming source") {
 			$searchUrl = "<span class=\"playhistory-link\"><i class=\"icon-external-link\"></i></span>";
-		} else {
+		}
+		else {
 			$searchEngine = "http://www.google.com/search?q=";
 			$searchUrl = "<a href=\"".$searchEngine.$searchStr."\" class=\"playhistory-link\" target=\"_blank\"><i class=\"icon-external-link-sign\"></i></a>";
 		}
@@ -583,30 +579,24 @@ while (1) {
 				$ip_wlan0 = sysCmd($cmd);
 					if (!empty($ip_wlan0[0])) {
 						$_SESSION['netconf']['wlan0']['ip'] = $ip_wlan0[0];
-					} else {
-						if (wrk_checkStrSysfile('/proc/net/wireless', 'wlan0')) {
-							$_SESSION['netconf']['wlan0']['ip'] = '--- NO IP ASSIGNED ---';
-						} else {
-							$_SESSION['netconf']['wlan0']['ip'] = '--- NO INTERFACE PRESENT ---';
-						}
+					}
+					else {
+						$_SESSION['netconf']['wlan0']['ip'] = wrk_checkStrSysfile('/proc/net/wireless', 'wlan0')
+							? '--- NO IP ASSIGNED ---'
+							: '--- NO INTERFACE PRESENT ---';
 					}
 				}
 				sysCmd('service networking restart');
 				break;
 
 			case 'netcfgman':
-				$file = '/etc/network/interfaces';
-				$fp = fopen($file, 'w');
-				fwrite($fp, $_SESSION['w_queueargs']);
-				fclose($fp);
+				file_put_contents('/etc/network/interfaces', $_SESSION['w_queueargs']);
 				break;
+
 			case 'mpdcfg':
 				// TC (Tim Curtis) 2015-06-26: add kernel version, i2s args
 				// TC (Tim Curtis) 2015-06-26: use getKernelVer()  
 				wrk_mpdconf('/etc', $db, getKernelVer($_SESSION['kernelver']), $_SESSION['i2s']);
-				// update hash
-				$hash = md5_file('/etc/mpd.conf');
-				playerSession('write', $db, 'mpdconfhash', $hash);
 				sysCmd('killall mpd');
 				sysCmd('service mpd start');
 				break;
@@ -669,7 +659,8 @@ while (1) {
 				$kernelver = getKernelVer($_SESSION['kernelver']);
 				if ($kernelver == '3.18.5+' || $kernelver == '3.18.11+' || $kernelver == '3.18.14+') {
 					_setI2sDtoverlay($db, $_SESSION['w_queueargs']); // Dtoverlay (/boot/config.txt)
-				} else {
+				}
+				else {
 					_setI2sModules($db, $_SESSION['w_queueargs']); // Modules (/etc/modules)
 				}
 				break;

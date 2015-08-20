@@ -62,11 +62,11 @@ session_start();
 if (isset($_POST['update_i2s_device'])) {
 	if (isset($_POST['i2s']) && $_POST['i2s'] != $_SESSION['i2s']) {
 		if (workerQueueTask('i2sdriver', $_POST['i2s'])) {
-			uiNotify('Setting change', "I2S device has been changed, REBOOT for setting to take effect.", 5);
+			uiSetNotification('Setting change', "I2S device has been changed, REBOOT for setting to take effect.", 5);
 
 			// TC (Tim Curtis) 2015-03-21: Adjust message depending on selected device
 			if ($_POST['i2s'] == "IQaudIO Pi-AMP+") {
-				uiNotify('', "<br><br>This device REQUIRES hardware volume control. After rebooting, set MPD Volume control to Hardware.");
+				uiSetNotification('', "<br><br>This device REQUIRES hardware volume control. After rebooting, set MPD Volume control to Hardware.");
 			}
 			elseif (
 				$_POST['i2s'] == "HiFiBerry DAC+" ||
@@ -75,7 +75,7 @@ if (isset($_POST['update_i2s_device'])) {
 				$_POST['i2s'] == "IQaudIO Pi-DAC+" ||
 				$_POST['i2s'] == "RaspyPlay4")
 			{
-				uiNotify('', "<br><br>This device supports hardware volume control. After rebooting, optionally set MPD Volume control to Hardware.");
+				uiSetNotification('', "<br><br>This device supports hardware volume control. After rebooting, optionally set MPD Volume control to Hardware.");
 			}
 			// TC (Tim Curtis) 2015-04-29: update cfg_engine table, moved from player_wrk.php, fixes field not updating when page echos back
 			playerSession('write',$db,'i2s',$_POST['i2s']);
@@ -92,7 +92,7 @@ if (isset($_POST['update_i2s_device'])) {
 if (isset($_POST['update_kernel_version'])) {
 	if (isset($_POST['kernelver']) && $_POST['kernelver'] != $_SESSION['kernelver']) {
 		if (workerQueueTask('kernelver', $_POST['kernelver'])) {
-			uiNotify('Kernel change', "Version ".$_POST['kernelver']." install initiated...<br><br>The process can take 5+ minutes to<br>complete after which the CONNECTING<br>screen will appear and the system will<br>be POWERED OFF.", 600);
+			uiSetNotification('Kernel change', "Version ".$_POST['kernelver']." install initiated...<br><br>The process can take 5+ minutes to<br>complete after which the CONNECTING<br>screen will appear and the system will<br>be POWERED OFF.", 600);
 			// TC (Tim Curtis) 2015-04-29: update cfg_engine table, added, fixes field not updating when page echos back
 			playerSession('write',$db,'kernelver',$_POST['kernelver']);
 			playerSession('unlock');
@@ -106,7 +106,7 @@ if (isset($_POST['update_kernel_version'])) {
 if (isset($_POST['update_time_zone'])) {
 	if (isset($_POST['timezone']) && $_POST['timezone'] != $_SESSION['timezone']) {
 		if (workerQueueTask('timezone', $_POST['timezone'])) {
-			uiNotify('Setting change', "Timezone ".$_POST['timezone']." has been set.", 4);
+			uiSetNotification('Setting change', "Timezone ".$_POST['timezone']." has been set.", 4);
 			// TC (Tim Curtis) 2015-04-29: update cfg_engine table, moved from player_wrk.php, fixes field not updating when page echos back
 			playerSession('write',$db,'timezone',$_POST['timezone']);
 			playerSession('unlock');
@@ -119,7 +119,7 @@ if (isset($_POST['update_time_zone'])) {
 if (isset($_POST['update_latency_setting'])) {
 	if (isset($_POST['orionprofile']) && $_POST['orionprofile'] != $_SESSION['orionprofile']) {
 		if (workerQueueTask('orionprofile', $_POST['orionprofile'])) {
-			uiNotify('Setting change', 'Kernel latency setting has been changed to: '.$_POST['orionprofile'].', REBOOT for setting to take effect.', 4);
+			uiSetNotification('Setting change', 'Kernel latency setting has been changed to: '.$_POST['orionprofile'].', REBOOT for setting to take effect.', 4);
 			playerSession('unlock');
 		}
 		else {
@@ -141,7 +141,7 @@ if (isset($_POST['shairport']) && $_POST['shairport'] != $_SESSION['shairport'])
 	if ($_POST['shairport'] == 1 OR $_POST['shairport'] == 0) {
 		playerSession('write',$db,'shairport',$_POST['shairport']);
 	}
-	uiNotify('Setting change', ($_POST['shairport'] == 1)
+	uiSetNotification('Setting change', ($_POST['shairport'] == 1)
 		? 'Airplay receiver enabled, REBOOT for setting to take effect.'
 		: 'Airplay receiver disabled, REBOOT for setting to take effect.',
 	4);
@@ -153,7 +153,7 @@ if (isset($_POST['upnpmpdcli']) && $_POST['upnpmpdcli'] != $_SESSION['upnpmpdcli
 	if ($_POST['upnpmpdcli'] == 1 OR $_POST['upnpmpdcli'] == 0) {
 		playerSession('write',$db,'upnpmpdcli',$_POST['upnpmpdcli']);
 	}
-	uiNotify('Setting change', ($_POST['upnpmpdcli'] == 1)
+	uiSetNotification('Setting change', ($_POST['upnpmpdcli'] == 1)
 		? 'UPnP renderer enabled, REBOOT for setting to take effect.'
 		: 'UPnP renderer disabled, REBOOT for setting to take effect.',
 	4);
@@ -164,7 +164,7 @@ if (isset($_POST['djmount']) && $_POST['djmount'] != $_SESSION['djmount']) {
 	if ($_POST['djmount'] == 1 OR $_POST['djmount'] == 0) {
 		playerSession('write',$db,'djmount',$_POST['djmount']);
 	}
-	uiNotify('Setting change', ($_POST['djmount'] == 1)
+	uiSetNotification('Setting change', ($_POST['djmount'] == 1)
 		? 'DLNA server enabled, REBOOT for setting to take effect.'
 		: 'DLNA server disabled, REBOOT for setting to take effect.',
 	4);
@@ -175,11 +175,11 @@ if (isset($_POST['djmount']) && $_POST['djmount'] != $_SESSION['djmount']) {
 if (isset($_POST['update_host_name'])) {
 	if (isset($_POST['host_name']) && $_POST['host_name'] != $_SESSION['host_name']) {
 		if (preg_match("/[^A-Za-z0-9-]/", $_POST['host_name']) == 1) {
-			uiNotify('Invalid input', "Host name can only contain A-Z, a-z, 0-9 or hyphen (-).", 4);
+			uiSetNotification('Invalid input', "Host name can only contain A-Z, a-z, 0-9 or hyphen (-).", 4);
 		}
 		else {
 			if (workerQueueTask('host_name', "\"".$_SESSION['host_name']."\" "."\"".$_POST['host_name']."\"") {
-				uiNotify('Setting change', "Host name has been changed, REBOOT for setting to take effect.", 4);
+				uiSetNotification('Setting change', "Host name has been changed, REBOOT for setting to take effect.", 4);
 				playerSession('write',$db,'host_name',$_POST['host_name']);
 			}
 			else {
@@ -192,7 +192,7 @@ if (isset($_POST['update_host_name'])) {
 if (isset($_POST['update_browser_title'])) {
 	if (isset($_POST['browser_title']) && $_POST['browser_title'] != $_SESSION['browser_title']) {
 		if (workerQueueTask('browser_title', "\"".$_SESSION['browser_title']."\" "."\"".$_POST['browser_title']."\"")) {
-			uiNotify('Setting change', "Browser title has been changed, REBOOT for setting to take effect.", 4);
+			uiSetNotification('Setting change', "Browser title has been changed, REBOOT for setting to take effect.", 4);
 			playerSession('write',$db,'browser_title',$_POST['browser_title']);
 			playerSession('unlock');
 		}
@@ -204,7 +204,7 @@ if (isset($_POST['update_browser_title'])) {
 if (isset($_POST['update_airplay_name'])) {
 	if (isset($_POST['airplay_name']) && $_POST['airplay_name'] != $_SESSION['airplay_name']) {
 		if (workerQueueTask('airplay_name', "\"".$_SESSION['airplay_name']."\" "."\"".$_POST['airplay_name']."\"")) {
-			uiNotify('Setting change', "Airplay receiver name has been changed, REBOOT for setting to take effect.", 4);
+			uiSetNotification('Setting change', "Airplay receiver name has been changed, REBOOT for setting to take effect.", 4);
 			playerSession('write',$db,'airplay_name',$_POST['airplay_name']);
 			playerSession('unlock');
 		}
@@ -217,7 +217,7 @@ if (isset($_POST['update_airplay_name'])) {
 if (isset($_POST['update_upnp_name'])) {
 	if (isset($_POST['upnp_name']) && $_POST['upnp_name'] != $_SESSION['upnp_name']) {
 		if (workerQueueTask('upnp_name', "\"".$_SESSION['upnp_name']."\" "."\"".$_POST['upnp_name']."\"")) {
-			uiNotify('Setting change', "UPnP renderer name has been changed, REBOOT for setting to take effect.", 4);
+			uiSetNotification('Setting change', "UPnP renderer name has been changed, REBOOT for setting to take effect.", 4);
 			playerSession('write',$db,'upnp_name',$_POST['upnp_name']);
 			playerSession('unlock');
 		}
@@ -230,7 +230,7 @@ if (isset($_POST['update_upnp_name'])) {
 if (isset($_POST['update_dlna_name'])) {
 	if (isset($_POST['dlna_name']) && $_POST['dlna_name'] != $_SESSION['dlna_name']) {
 		if (workerQueueTask('dlna_name', "\"".$_SESSION['dlna_name']."\" "."\"".$_POST['dlna_name']."\"")) {
-			uiNotify('Setting change', "DLNA server name has been changed, REBOOT for setting to take effect.", 4);
+			uiSetNotification('Setting change', "DLNA server name has been changed, REBOOT for setting to take effect.", 4);
 			playerSession('write',$db,'dlna_name',$_POST['dlna_name']);
 			playerSession('unlock');
 		}
@@ -245,7 +245,7 @@ if (isset($_POST['update_dlna_name'])) {
 if (isset($_POST['update_pcm_volume'])) {
 	if (isset($_POST['pcm_volume'])) {
 		if (workerQueueTask('pcm_volume', $_POST['pcm_volume'])) {
-			uiNotify('Setting change', "PCM volume has been set.", 4);
+			uiSetNotification('Setting change', "PCM volume has been set.", 4);
 			playerSession('write',$db,'pcm_volume',$_POST['pcm_volume']);
 			playerSession('unlock');
 		}
@@ -259,7 +259,7 @@ if (isset($_POST['update_pcm_volume'])) {
 if (isset($_POST['update_clear_syslogs'])) {
 	if ($_POST['clearsyslogs'] == 1) {
 		if (workerQueueTask('clearsyslogs')) {
-			uiNotify('Log maintenance', "System logs have been cleared.", 4);
+			uiSetNotification('Log maintenance', "System logs have been cleared.", 4);
 			playerSession('unlock');
 		}
 		else {
@@ -270,7 +270,7 @@ if (isset($_POST['update_clear_syslogs'])) {
 if (isset($_POST['update_clear_playhistory'])) {
 	if ($_POST['clearplayhistory'] == 1) {
 		if (workerQueueTask('clearplayhistory')) {
-			uiNotify('Log maintenance', "Playback history log hase been cleared.", 4);
+			uiSetNotification('Log maintenance', "Playback history log hase been cleared.", 4);
 			playerSession('unlock');
 		}
 		else {
@@ -283,7 +283,7 @@ if (isset($_POST['update_clear_playhistory'])) {
 if (isset($_POST['update_expand_sdcard'])) {
 	if ($_POST['expandsdcard'] == 1) {
 		if (workerQueueTask('expandsdcard')) {
-			uiNotify('Expand SD Card Storage', "Storage expansion request has been queued. REBOOT has been initiated.", 6);
+			uiSetNotification('Expand SD Card Storage', "Storage expansion request has been queued. REBOOT has been initiated.", 6);
 			playerSession('unlock');
 		}
 		else {
@@ -410,7 +410,7 @@ $tpl = "settings.html";
 $sezione = basename(__FILE__, '.php');
 include('_header.php');
 
-// TC (Tim Curtis) 2015-02-25: dont wait if kernel select so page returns and ui_notify message appears
+// TC (Tim Curtis) 2015-02-25: dont wait if kernel select so page returns and uiShowNotification message appears
 // TC (Tim Curtis) 2015-02-25: use notify title as the check since its not cleared by worker (player_wrk.php)
 if (!isset($_SESSION['notify']['title']) ||
 	isset($_SESSION['notify']['title']) && $_SESSION['notify']['title'] !== 'Kernel change')
