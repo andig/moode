@@ -752,7 +752,7 @@ function _parseMpdConf($dbh) {
 }
 
 // /var/www/tcmods.conf
-function getTcmodsConf($resp) {
+function getTcmodsConf() {
 	if (false === ($conf = file_get_contents('/var/www/tcmods.conf'))) {
 		die('Failed to read tcmods.conf');
 	}
