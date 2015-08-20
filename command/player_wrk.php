@@ -79,9 +79,6 @@ sysCmd('chmod 777 /run');
 // reset DB permission
 sysCmd('chmod -R 777 /var/www/db');
 
-// initialize CLI session
-session_save_path('/run');
-
 // load session
 playerSession('open', $db, '', '');
 
@@ -292,6 +289,7 @@ playerSession('unlock', $db, '', '');
 
 // Shairport (Airplay receiver service)
 if (isset($_SESSION['shairport']) && $_SESSION['shairport'] == 1) {
+	$output = '';
 	$dbh = cfgdb_connect($db);
 	$query_cfg = "SELECT param,value_player FROM cfg_mpd WHERE value_player!=''";
 	$mpdcfg = sdbquery($query_cfg, $dbh);
@@ -368,8 +366,11 @@ if (substr($rtn[0], 0, 6 ) == 'amixer') {
 
 // --- WORKER MAIN LOOP --- //
 while (1) {
-	sleep(5); // TC (Tim Curtis) 2015-05-30: change to 5 sec sleep (orig 7 sec)
 	session_start();
+
+	if (!count($_SESSION)) {
+		logWorker('[daemon] session ' . session_id() . ' empty');
+	}
 
 	// TC (Tim Curtis) 2014-10-31: start with consume mode off, only runs once after player start
 	if ($TCMODS_CONSUMEMODE_ON == "1") {
@@ -463,7 +464,8 @@ while (1) {
 				$album = $result[0]['name'];
 			}
 		// SONG FILE OR UPNP SONG URL
-		} else {
+		}
+		else {
 			if (!isset($currentsong['Title'])) { // use file name
 				$filename = basename($currentsong['file']); // filename.ext
 				$pos = strrpos($filename, ".");
@@ -521,8 +523,12 @@ while (1) {
 	}
 
 	// Monitor loop
-	if ($_SESSION['w_active'] == 1 && $_SESSION['w_lock'] == 0) {
+	if (isset($_SESSION['w_active']) && $_SESSION['w_active'] == 1 &&
+		isset($_SESSION['w_lock']) && $_SESSION['w_lock'] == 0)
+	{
 		$_SESSION['w_lock'] = 1;
+
+		logWorker("[daemon] Task active: " . $_SESSION['w_queue']);
 
 		// switch command queue for predefined jobs
 		switch($_SESSION['w_queue']) {
@@ -716,6 +722,8 @@ while (1) {
 
 		} // end switch
 
+		logWorker("[daemon] Task done");
+
 		// reset locking and command queue
 		$_SESSION['w_queue'] = '';
 		$_SESSION['w_queueargs'] = '';
@@ -725,5 +733,6 @@ while (1) {
 	}
 
 	session_write_close();
+	sleep(5);
 }
 // --- END WORKER MAIN LOOP --- //

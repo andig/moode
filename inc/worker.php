@@ -21,35 +21,34 @@
  * Rewrite by Tim Curtis and Andreas Goetz
  */
 
-// search a string in a file and replace with another string the whole line.
-function wrk_replaceTextLine($file,$pos_start,$pos_stop,$strfind,$strrepl) {
-	$fileData = file($file);
-	$newArray = array();
-	foreach($fileData as $line) {
-		// find the line that starts with $strfind (search offset $pos_start / $pos_stop)
-		if (substr($line, $pos_start, $pos_stop) == $strfind OR substr($line, $pos_start++, $pos_stop) == $strfind) {
-			// replace presentation_url with current IP address
-			$line = $strrepl."\n";
-		}
-		$newArray[] = $line;
-	}
-	return $newArray;
+function workerIsFree() {
+	return !(isset($_SESSION['w_lock']) && isset($_SESSION['w_queue']))
+		|| $_SESSION['w_lock'] !== 1 && $_SESSION['w_queue'] == '';
 }
 
-function wrk_jobID() {
-	$jobID = md5(uniqid(rand(), true));
-	return "job_".$jobID;
+function workerQueueTask($task, $parameters = null) {
+	if (!workerIsFree()) {
+		return false;
+	}
+
+	$_SESSION['w_queue'] = $task;
+	$_SESSION['w_active'] = 1;
+	$_SESSION['w_queueargs'] = $parameters;
+
+	return true;
+}
+
+function uiNotify($title, $msg, $duration = 2) {
+	$_SESSION['notify'] = array(
+		'title' => $title,
+		'msg' => $msg,
+		'duration' => $duration
+	);
 }
 
 function wrk_checkStrSysfile($sysfile,$searchstr) {
 	$file = stripcslashes(file_get_contents($sysfile));
-	// debug
-	//error_log(">>>>> wrk_checkStrSysfile(".$sysfile.",".$searchstr.") >>>>> ",0);
-	if (strpos($file, $searchstr)) {
-		return true;
-	} else {
-		return false;
-	}
+	return (strpos($file, $searchstr)) ? true : false;
 }
 
 function wrk_mpdconf($outpath, $db, $kernelver, $i2s) {
@@ -72,13 +71,15 @@ function wrk_mpdconf($outpath, $db, $kernelver, $i2s) {
 	foreach ($mpdcfg as $cfg) {
 		if ($cfg['param'] == 'audio_output_format' && $cfg['value_player'] == 'disabled'){
 			$output .= '';
-		} else if ($cfg['param'] == 'dsd_usb') {
+		}
+		else if ($cfg['param'] == 'dsd_usb') {
 			$dsd = $cfg['value_player'];
-		} else if ($cfg['param'] == 'device') {
+		}
+		else if ($cfg['param'] == 'device') {
 			$device = $cfg['value_player'];
 			var_export($device);
-			// $output .= '';
-		} else if ($cfg['param'] == 'mixer_type') {
+		}
+		else if ($cfg['param'] == 'mixer_type') {
 			// store volume mixer type in tcmods.conf
 			$_tcmods_conf = _parseTcmodsConf(shell_exec('cat /var/www/tcmods.conf')); // read in conf file
 			if ($_tcmods_conf['volume_mixer_type'] != $cfg['value_player']) {
@@ -89,10 +90,12 @@ function wrk_mpdconf($outpath, $db, $kernelver, $i2s) {
 			// get volume mixer control name
 			if ($cfg['value_player'] == 'hardware' ) {
 				$hwmixer['control'] = getMixerName($kernelver, $i2s);
-			} else {
+			}
+			else {
 				$output .= $cfg['param']." \"".$cfg['value_player']."\"\n";
 			}
-		} else {
+		}
+		else {
 			$output .= $cfg['param']." \"".$cfg['value_player']."\"\n";
 		}
 	}
@@ -129,20 +132,19 @@ function wrk_mpdconf($outpath, $db, $kernelver, $i2s) {
 	fclose($fh);
 }
 
-function wrk_sourcemount($db,$action,$id) {
+function wrk_sourcemount($db,$action,$id = null) {
+	$return = null;
+
 	switch ($action) {
 		case 'mount':
 			$dbh = cfgdb_connect($db);
 			$mp = cfgdb_read('cfg_source',$dbh,'',$id);
 			sysCmd("mkdir \"/mnt/NAS/".$mp[0]['name']."\"");
-			if ($mp[0]['type'] == 'cifs') {
+			$mountstr = ($mp[0]['type'] == 'cifs')
 				// smb/cifs mount
-				// TC (Tim Curtis) 2015-02-25: add single quotes around cifs mount password in case special chars like ; are used in pwd
-				$mountstr = "mount -t cifs \"//".$mp[0]['address']."/".$mp[0]['remotedir']."\" -o username=".$mp[0]['username'].",password='".$mp[0]['password']."',rsize=".$mp[0]['rsize'].",wsize=".$mp[0]['wsize'].",iocharset=".$mp[0]['charset'].",".$mp[0]['options']." \"/mnt/NAS/".$mp[0]['name']."\"";
-			} else {
-				// nfs mount
-				$mountstr = "mount -t nfs -o ".$mp[0]['options']." \"".$mp[0]['address'].":/".$mp[0]['remotedir']."\" \"/mnt/NAS/".$mp[0]['name']."\"";
-			}
+				? "mount -t cifs \"//".$mp[0]['address']."/".$mp[0]['remotedir']."\" -o username=".$mp[0]['username'].",password='".$mp[0]['password']."',rsize=".$mp[0]['rsize'].",wsize=".$mp[0]['wsize'].",iocharset=".$mp[0]['charset'].",".$mp[0]['options']." \"/mnt/NAS/".$mp[0]['name']."\""
+				: "mount -t nfs -o ".$mp[0]['options']." \"".$mp[0]['address'].":/".$mp[0]['remotedir']."\" \"/mnt/NAS/".$mp[0]['name']."\"";
+
 			// debug
 			error_log(">>>>> mount string >>>>> ".$mountstr,0);
 			$sysoutput = sysCmd($mountstr);
@@ -153,7 +155,8 @@ function wrk_sourcemount($db,$action,$id) {
 					cfgdb_update('cfg_source',$dbh,'',$mp[0]);
 				}
 				$return = 1;
-			} else {
+			}
+			else {
 				sysCmd("rmdir \"/mnt/NAS/".$mp[0]['name']."\"");
 				$mp[0]['error'] = implode("\n",$sysoutput);
 				cfgdb_update('cfg_source',$dbh,'',$mp[0]);
@@ -186,11 +189,7 @@ function wrk_sourcecfg($db,$queueargs) {
 					sysCmd("umount -f \"/mnt/NAS/".$mp['name']."\"");
 					sysCmd("rmdir \"/mnt/NAS/".$mp['name']."\"");
 				}
-			if (cfgdb_delete('cfg_source',$dbh)) {
-				$return = 1;
-			} else {
-				$return = 0;
-			}
+			$return = (cfgdb_delete('cfg_source',$dbh)) ? 1 : 0;
 			$dbh = null;
 			break;
 
@@ -203,7 +202,8 @@ function wrk_sourcecfg($db,$queueargs) {
 				if ($key == 'error') {
 					$values .= "'".SQLite3::escapeString($value)."'";
 					error_log(">>>>> values on line 1014 >>>>> ".$values, 0);
-				} else {
+				}
+				else {
 					$values .= "'".SQLite3::escapeString($value)."',";
 					error_log(">>>>> values on line 1016 >>>>> ".$values, 0);
 				}
@@ -213,11 +213,7 @@ function wrk_sourcecfg($db,$queueargs) {
 			cfgdb_write('cfg_source',$dbh,$values);
 			$newmountID = $dbh->lastInsertId();
 			$dbh = null;
-			if (wrk_sourcemount($db,'mount',$newmountID)) {
-				$return = 1;
-			} else {
-				$return = 0;
-			}
+			$return = (wrk_sourcemount($db,'mount',$newmountID)) ? 1 : 0;
 			break;
 
 		case 'edit':
@@ -229,11 +225,7 @@ function wrk_sourcecfg($db,$queueargs) {
 				sysCmd("rmdir \"/mnt/NAS/".$mp[0]['name']."\"");
 				sysCmd("mkdir \"/mnt/NAS/".$queueargs['mount']['name']."\"");
 			}
-			if (wrk_sourcemount($db,'mount',$queueargs['mount']['id'])) {
-				$return = 1;
-			} else {
-				$return = 0;
-			}
+			$return = (wrk_sourcemount($db,'mount',$queueargs['mount']['id'])) ? 1 : 0;
 			error_log(">>>>> wrk_sourcecfg(edit) exit status = >>>>> ".$return, 0);
 			$dbh = null;
 			break;
@@ -243,11 +235,7 @@ function wrk_sourcecfg($db,$queueargs) {
 			$mp = cfgdb_read('cfg_source',$dbh,'',$queueargs['mount']['id']);
 			sysCmd("umount -f \"/mnt/NAS/".$mp[0]['name']."\"");
 			sysCmd("rmdir \"/mnt/NAS/".$mp[0]['name']."\"");
-			if (cfgdb_delete('cfg_source',$dbh,$queueargs['mount']['id'])) {
-				$return = 1;
-			} else {
-				$return = 0;
-			}
+			$return = (cfgdb_delete('cfg_source',$dbh,$queueargs['mount']['id'])) ? 1 : 0;
 			$dbh = null;
 			break;
 	}
@@ -349,7 +337,6 @@ function wrk_setHwPlatform($db) {
 }
 
 function wrk_playerID($arch) {
-	// $playerid = $arch.md5(uniqid(rand(), true)).md5(uniqid(rand(), true));
 	$playerid = $arch.md5_file('/sys/class/net/eth0/address');
 	return $playerid;
 }

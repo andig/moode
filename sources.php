@@ -1,4 +1,4 @@
-<?php 
+<?php
 /**
  *  This Program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -27,44 +27,32 @@ require_once dirname(__FILE__) . '/inc/worker.php';
 // open player session
 playerSession('open',$db,'','');
 
+session_start();
+
 // handle (reset)
 if (isset($_POST['reset']) && $_POST['reset'] == 1) {
 	// tell worker to write new MPD config
-	if ($_SESSION['w_lock'] != 1 && $_SESSION['w_queue'] == '') {
-		session_start();
-		$_SESSION['w_queue'] = "sourcecfgman";
-		$_SESSION['w_queueargs']  = 'sourcecfgreset';
-		$_SESSION['w_active'] = 1;
-		// set UI notify
-		$_SESSION['notify']['title'] = 'Auto.nas modified';
-		$_SESSION['notify']['msg'] = 'Remount shares in progress...';
-		session_write_close();
-	} else {
-		session_start();
-		$_SESSION['notify']['title'] = 'Job failed';
-		$_SESSION['notify']['msg'] = 'Background worker is busy';
-		session_write_close();
+	if (workerQueueTask('sourcecfgman', 'sourcecfgreset')) {
+		uiNotify('Auto.nas modified', 'Remount shares in progress...');
+	}
+	else {
+		uiNotify('Job failed', 'Background worker is busy');
 	}
 	unset($_POST);
 }
 
 if (isset($_POST['updatempd'])) {
 	if ($mpd) {
-		session_start();
 		execMpdCommand($mpd,'update');
-		$_SESSION['notify']['title'] = 'Database update';
-		$_SESSION['notify']['msg'] = 'MPD database update initiated...';
-		session_write_close();
-	} else {
-		session_start();
-		$_SESSION['notify']['title'] = 'Error';
-		$_SESSION['notify']['msg'] = 'Cannot connect to MPD';
-		session_write_close();
+		uiNotify('Database update', 'MPD database update initiated...');
+	}
+	else {
+		uiNotify('Error', 'Cannot connect to MPD');
 	}
 }
 
 // handle POST
-if(isset($_POST['mount']) && !empty($_POST['mount'])) {
+if (isset($_POST['mount']) && !empty($_POST['mount'])) {
 	// convert slashes for remotedir path
 	$_POST['mount']['remotedir'] = str_replace('\\', '/', $_POST['mount']['remotedir']);
 
@@ -78,52 +66,36 @@ if(isset($_POST['mount']) && !empty($_POST['mount'])) {
 
 	// TC (Tim Curtis) 2015-02-25: remove cifs noatime option, not supported on kernel 3.12.26+ / MPD 0.19.1, causes mount to fail with errors
 	if ($_POST['mount']['options'] == '') {
-		if ($_POST['mount']['type'] == 'cifs') {
-			$_POST['mount']['options'] = "cache=strict,ro,dir_mode=0777,file_mode=0777";
-		} else {
-			$_POST['mount']['options'] = "nfsvers=3,ro,noatime";
-		}
+		$_POST['mount']['options'] = ($_POST['mount']['type'] == 'cifs')
+			? "cache=strict,ro,dir_mode=0777,file_mode=0777"
+			: "nfsvers=3,ro,noatime";
 	}
+
 	// activate worker
 	if (isset($_POST['delete']) && $_POST['delete'] == 1) {
 		// delete an existing entry
-		if ($_SESSION['w_lock'] != 1 && $_SESSION['w_queue'] == '') {
-			session_start();
-			$_SESSION['w_queue'] = 'sourcecfg';
-			$_POST['mount']['action'] = 'delete';
-			$_SESSION['w_queueargs'] = $_POST;
-			$_SESSION['w_active'] = 1;
-			// set UI notify
-			$_SESSION['notify']['title'] = 'Mount point deleted';
-			$_SESSION['notify']['msg'] = 'MPD database update initiated...';
-			session_write_close();
-		} else {
-			session_start();
-			$_SESSION['notify']['title'] = 'Job failed';
-			$_SESSION['notify']['msg'] = 'Background worker is busy';
-			session_write_close();
+		$_POST['mount']['action'] = 'delete';
+		if (workerQueueTask('sourcecfg', $_POST)) {
+			uiNotify('Mount point deleted', 'MPD database update initiated...');
 		}
-	} else {
-		if ($_SESSION['w_lock'] != 1 && $_SESSION['w_queue'] == '') {
-			session_start();
-			$_SESSION['w_queue'] = 'sourcecfg';
-			$_SESSION['w_queueargs']  = $_POST;
-			$_SESSION['w_active'] = 1;
-			// set UI notify
-			$_SESSION['notify']['title'] = 'Mount point modified';
-			$_SESSION['notify']['msg'] = 'MPD database update initiated...';
-			session_write_close();
-		} else {
-			session_start();
-			$_SESSION['notify']['title'] = 'Job failed';
-			$_SESSION['notify']['msg'] = 'Background worker is busy';
-			session_write_close();
-		} 
+		else {
+			uiNotify('Job failed', 'Background worker is busy');
+		}
+	}
+	else {
+		if (workerQueueTask('sourcecfg', $_POST)) {
+			uiNotify('Mount point modified', 'MPD database update initiated...');
+		}
+		else {
+			uiNotify('Job failed', 'Background worker is busy');
+		}
 	}
 }
 
+session_write_close();
+
 // wait for worker output if $_SESSION['w_active'] = 1
-waitWorker(5,'sources');
+waitWorker(5, 'sources');
 
 $dbh = cfgdb_connect($db);
 $source = cfgdb_read('cfg_source',$dbh);
@@ -132,28 +104,26 @@ $dbh = null;
 $tpl = "sources.html";
 // unlock session files
 playerSession('unlock',$db,'','');
+
 foreach ($source as $mp) {
-	if (wrk_checkStrSysfile('/proc/mounts',$mp['name']) ) {
-		$icon = "<i class='icon-ok green sx'></i>";
-	} else {
-		$icon = "<i class='icon-remove red sx'></i>";
-	}
-	// TC (Tim Curtis) 2014-12-23: remove btn-block so l/r margins will be present 
+	$icon = wrk_checkStrSysfile('/proc/mounts',$mp['name'])
+		? "<i class='icon-ok green sx'></i>"
+		: "<i class='icon-remove red sx'></i>";
+	// TC (Tim Curtis) 2014-12-23: remove btn-block so l/r margins will be present
 	// TC (Tim Curtis) 2015-04-29: streamlined button format for small screens
 	// TC (Tim Curtis) 2015-06-26: change width from 220px to 240px
 	$_mounts .= "<p><a href=\"sources.php?p=edit&id=".$mp['id']."\" class='btn btn-large' style='width: 240px;'> ".$icon." ".$mp['name']." (".$mp['address'].") </a></p>";
-	//$_mounts .= "<p><a href=\"sources.php?p=edit&id=".$mp['id']."\" class='btn btn-large'> ".$icon." NAS/".$mp['name']."&nbsp;&nbsp;&nbsp;&nbsp;//".$mp['address']."/".$mp['remotedir']." </a></p>";
 }
 ?>
 
 <?php
 $sezione = basename(__FILE__, '.php');
-include('_header.php'); 
+include('_header.php');
 ?>
 
-<!-- 
+<!--
 TC (Tim Curtis) 2014-11-30
-- remove trailing ! in 1st content line causing code to be grayed out in editor 
+- remove trailing ! in 1st content line causing code to be grayed out in editor
 -->
 <!-- content -->
 <?php
@@ -170,8 +140,8 @@ if (isset($_GET['p']) && !empty($_GET['p'])) {
 				$_rsize = $mount['rsize'];
 				$_wsize = $mount['wsize'];
 				// mount type select
-				$_source_select['type'] .= "<option value=\"cifs\" ".(($mount['type'] == 'cifs') ? "selected" : "")." >SMB/CIFS</option>\n";	
-				$_source_select['type'] .= "<option value=\"nfs\" ".(($mount['type'] == 'nfs') ? "selected" : "")." >NFS</option>\n";	
+				$_source_select['type'] .= "<option value=\"cifs\" ".(($mount['type'] == 'cifs') ? "selected" : "")." >SMB/CIFS</option>\n";
+				$_source_select['type'] .= "<option value=\"nfs\" ".(($mount['type'] == 'nfs') ? "selected" : "")." >NFS</option>\n";
 				$_charset = $mount['charset'];
 				$_options = $mount['options'];
 				$_error = $mount['error'];
@@ -183,16 +153,17 @@ if (isset($_GET['p']) && !empty($_GET['p'])) {
 		// TC (Tim Curtis) 2015-04-29: update title wording
 		$_title = 'Edit source';
 		$_action = 'edit';
-	} else {
+	}
+	else {
 		$_title = 'Configure new source';
 		$_hide = 'hide';
 		$_hideerror = 'hide';
 		$_action = 'add';
-		$_source_select['type'] .= "<option value=\"cifs\">SMB/CIFS</option>\n";	
-		$_source_select['type'] .= "<option value=\"nfs\">NFS</option>\n";	
+		$_source_select['type'] .= "<option value=\"cifs\">SMB/CIFS</option>\n";
+		$_source_select['type'] .= "<option value=\"nfs\">NFS</option>\n";
 	}
 	$tpl = 'source.html';
-} 
+}
 
 eval("echoTemplate(\"".getTemplate("templates/$tpl")."\");");
 ?>

@@ -29,22 +29,13 @@ playerSession('unlock',$db,'','');
 
 // set template
 $tpl = "index_new.html";
-?>
 
-<?php
+
 $sezione = basename(__FILE__, '.php');
-$_section = $sezione;
 include('_header.php');
-?>
 
-<!--
-TC (Tim Curtis) 2014-11-30
-- remove trailing ! in 1st content line causing code to be grayed out in editor
--->
-<!-- content -->
-<?php
+
 eval("echoTemplate(\"".getTemplate("templates/$tpl")."\");");
-?>
-<!-- content -->
 
-<?php include('_footer.php'); ?>
+
+include('_footer.php');

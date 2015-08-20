@@ -608,24 +608,6 @@ function recursiveDelete($str){
 	}
 }
 
-function waitWorker($sleeptime, $section = null) {
-	if ($_SESSION['w_active'] == 1) {
-		do {
-			sleep($sleeptime);
-			session_start();
-			session_write_close();
-		} while ($_SESSION['w_active'] != 0);
-
-		switch ($section) {
-			case 'sources':
-			$mpd = openMpdSocket('localhost', 6600);
-			execMpdCommand($mpd, 'update');
-			closeMpdSocket($mpd);
-			break;
-		}
-	}
-}
-
 // TC (Tim Curtis) 2014-12-23: add delay: 2000 (2 secs)
 // TC (Tim Curtis) 2015-02-25: add optional delay duration arg
 function ui_notify($notify) {
@@ -1032,4 +1014,41 @@ function getMixerName($kernelver, $i2s) {
 	}
 
 	return $mixername;
+}
+
+function waitWorker($sleeptime, $section = null) {
+	logWorker('[client] waitWorker ' . session_id());
+	logWorker($_SESSION);
+
+	$wait = 0;
+
+	if ($_SESSION['w_active'] == 1) {
+		do {
+			sleep($sleeptime);
+			logWorker('[client] waitWorker (' . $wait++ . ')');
+			logWorker('$_SESSION[w_active]' . $_SESSION['w_active']);
+			session_start();
+			session_write_close();
+		}
+		while ($_SESSION['w_active'] != 0);
+
+		switch ($section) {
+			case 'sources':
+				$mpd = openMpdSocket('localhost', 6600);
+				execMpdCommand($mpd, 'update');
+				closeMpdSocket($mpd);
+				break;
+		}
+	}
+}
+
+function logWorker($o) {
+	if (false !== ($f = @fopen('/var/log/worker.log', 'a'))) {
+		if (in_array(gettype($o), array("array", "object"))) {
+			$o = print_r($o, true);
+		}
+
+		fwrite($f, $o . "\n");
+		fclose($f);
+	}
 }

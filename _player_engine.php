@@ -42,26 +42,25 @@ if ($_GET['state'] == $status['state']) {
 	$status = mpdMonitorState($mpd);
 }
 
+$status['x_status'] = $status;
+$status['x_currentsong'] = _parseMpdCurrentSong(execMpdCommand($mpd, 'currentsong'));
+$status['x_playlistinfo'] = _parseFileListResponse(execMpdCommand($mpd, "playlistinfo " . $status['song']));
+
 // get track info for currently playing track
-$track = mpdQueueTrackInfo($mpd, $status['song']);
+$queue = mpdQueueTrackInfo($mpd, $status['song']);
 
-if (isset($track[0]['Title'])) {
-	$status['fileext'] = parseFileStr($track[0]['file'], '.');
+if (isset($queue[0])) {
+	$track = $queue[0];
 
-	$status['currentartist'] = $track[0]['Artist'];
-	$status['currentsong'] = $track[0]['Title'];
-	$status['currentalbum'] = $track[0]['Album'];
-}
-else {
-	$path = parseFileStr($track[0]['file'], '/');
-	$status['fileext'] = parseFileStr($track[0]['file'], '.');
+	// parseFileStr($track['file'], '.');
+	$status['fileext'] = pathinfo($track['file'], PATHINFO_EXTENSION);
 
-	$status['currentartist'] = "";
-	$status['currentsong'] = $song;
-	$status['currentalbum'] = "path: ".$path;
+	$status['currentartist'] = isset($track['Artist']) ? $track['Artist'] : '';
+	$status['currentsong'] = isset($track['Title']) ? $track['Title'] : '';
+	$status['currentalbum'] = isset($track['Album']) ? $track['Album'] : '';
 }
 
 closeMpdSocket($mpd);
 
 header('Content-type: application/json');
-echo json_encode($status);
+echo json_encode($status, JSON_PRETTY_PRINT);

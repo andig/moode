@@ -1,4 +1,4 @@
-<?php 
+<?php
 /**
  *  This Program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -28,96 +28,65 @@ require_once dirname(__FILE__) . '/inc/worker.php';
 playerSession('open',$db,'','');
 
 $dbh = cfgdb_connect($db);
-session_write_close();
-?>
 
-<?php
+
 // Handle reset
 if (isset($_POST['reset']) && $_POST['reset'] == 1) {
 	$mpdconfdefault = cfgdb_read('',$dbh,'mpdconfdefault');
-	
+
 	foreach($mpdconfdefault as $element) {
 		cfgdb_update('cfg_mpd',$dbh,$element['param'],$element['value_default']);
 	}
 	// Tell worker to write new MPD config
-	if ($_SESSION['w_lock'] != 1 && $_SESSION['w_queue'] == '') {
-		session_start();
-		$_SESSION['w_queue'] = "mpdcfg";
-		$_SESSION['w_active'] = 1;
-		// Set UI notify
-		$_SESSION['notify']['title'] = 'MPD config reset';
-		$_SESSION['notify']['msg'] = 'Restarting MPD server...';
-		session_write_close();
-	} else {
-		session_start();
-		$_SESSION['notify']['title'] = 'Job failed';
-		$_SESSION['notify']['msg'] = 'Background worker is busy';
-		session_write_close();
+	if (workerQueueTask('mpdcfg')) {
+		uiNotify('MPD config reset', 'Restarting MPD server...');
 	}
-	
+	else {
+		uiNotify('Job failed', 'Background worker is busy');
+	}
+
 	unset($_POST);
 }
 // Handle restart (same as process for mpdcfg)
 if (isset($_POST['mpdrestart']) && $_POST['mpdrestart'] == 1) {
 	// Tell worker to write new MPD config
-	if ($_SESSION['w_lock'] != 1 && $_SESSION['w_queue'] == '') {
-		session_start();
-		$_SESSION['w_queue'] = "mpdcfg";
-		$_SESSION['w_active'] = 1;
-		// Set UI notify
-		$_SESSION['notify']['msg'] = 'MPD restarted';
-		session_write_close();
-	} else {
-		session_start();
-		$_SESSION['notify']['title'] = 'Job failed';
-		$_SESSION['notify']['msg'] = 'Background worker is busy';
-		session_write_close();
+	if (workerQueueTask('mpdcfg')) {
+		uiNotify('MPD restart', 'MPD restarted');
 	}
-	
+	else {
+		uiNotify('Job failed', 'Background worker is busy');
+	}
+
 	unset($_POST);
 }
 
 // Handle POST
-if(isset($_POST['conf']) && !empty($_POST['conf'])) {
+if (isset($_POST['conf']) && !empty($_POST['conf'])) {
 	foreach ($_POST['conf'] as $key => $value) {
 		cfgdb_update('cfg_mpd',$dbh,$key,$value);
 	}
 	// Tell worker to write new MPD config
-	if ($_SESSION['w_lock'] != 1 && $_SESSION['w_queue'] == '') {
-		session_start();
-		$_SESSION['w_queue'] = "mpdcfg";
-		$_SESSION['w_active'] = 1;
-		// Set UI notify
-		$_SESSION['notify']['title'] = 'MPD config modified';
-		$_SESSION['notify']['msg'] = 'Restarting MPD server...';
-		session_write_close();
-	} else {
-		session_start();
-		$_SESSION['notify']['title'] = 'Job failed';
-		$_SESSION['notify']['msg'] = 'Background worker is busy';
-		session_write_close();
+	if (workerQueueTask('mpdcfg')) {
+		uiNotify('MPD config modified', 'Restarting MPD server...');
+	}
+	else {
+		uiNotify('Job failed', 'Background worker is busy');
 	}
 }
-	
+
 // Handle manual config
-if(isset($_POST['mpdconf']) && !empty($_POST['mpdconf'])) {
+if (isset($_POST['mpdconf']) && !empty($_POST['mpdconf'])) {
 	// tell worker to write new MPD config
-	if ($_SESSION['w_lock'] != 1 && $_SESSION['w_queue'] == '') {
-		session_start();
-		$_SESSION['w_queue'] = "mpdcfgman";
-		$_SESSION['w_queueargs'] = $_POST['mpdconf'];
-		$_SESSION['w_active'] = 1;
-		// Set UI notify
-		$_SESSION['notify']['title'] = 'MPD config modified';
-		$_SESSION['notify']['msg'] = 'Restarting MPD server...';
-		session_write_close();
-	} else {
-		session_start();
-		$_SESSION['notify']['title'] = 'Job Failed';
-		$_SESSION['notify']['msg'] = 'Background worker is busy';
-		session_write_close();
+	if (workerQueueTask('mpdcfgman', $_POST['mpdconf'])) {
+		uiNotify('MPD config modified', 'Restarting MPD server...');
+	}
+	else {
+		uiNotify('Job Failed', 'Background worker is busy');
 	}
 }
+
+session_write_close();
+
 
 // Wait for worker output if $_SESSION['w_active'] = 1
 waitWorker(1);
@@ -154,6 +123,9 @@ function getDeviceName($file) {
 	$dev = rtrim(@file_get_contents($file));
 
 	switch ($dev) {
+		case "":
+			// no device
+			return "";
 		case "DAC":
 		case "CODEC":
 		case "Interf":
@@ -166,6 +138,7 @@ function getDeviceName($file) {
 			return "On-board audio device";
 			break;
 		default:
+			// default device
 			return "I2S audio device";
 	}
 }
@@ -272,14 +245,15 @@ if (wrk_checkStrSysfile('/proc/asound/card0/pcm0p/info','bcm2835')) {
 	$_audioout .= "<option value=\"hdmi\">HDMI</option>\n";
 	$_audioout .= "</select>\n";
 	$_audioout .= "<span class=\"help-block\">Select MPD Audio output interface</span>\n";
-} else {
+}
+else {
 	$_audioout .= "<input class=\"input-large\" class=\"input-large\" type=\"text\" id=\"port\" name=\"\" value=\"USB Audio\" data-trigger=\"change\" disabled>\n";
 }
 ?>
 
-<?php
+<?php 
 $sezione = basename(__FILE__, '.php');
-include('_header.php'); 
+include('_header.php');
 ?>
 
 <!-- TC (Tim Curtis) 2014-11-30: remove trailing ! in 1st content line causing code to be grayed out in editor -->

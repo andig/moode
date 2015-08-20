@@ -18,76 +18,57 @@
  */
 
 require_once dirname(__FILE__) . '/inc/connection.php';
+require_once dirname(__FILE__) . '/inc/worker.php';
 
 playerSession('open',$db,'','');
 playerSession('unlock',$db,'','');
 $dbh = cfgdb_connect($db);
-session_write_close();
+
+
+//session_write_close();
+session_start();
 
 
 if (isset($_POST['syscmd'])) {
 	switch ($_POST['syscmd']) {
 		// Power off and reboot
 		case 'poweroff':
-			if ($_SESSION['w_lock'] != 1 && $_SESSION['w_queue'] == '') {
-				// start / respawn session
-				session_start();
-				$_SESSION['w_queue'] = "poweroff";
-				$_SESSION['w_active'] = 1;
-				// Set UI notify
-				$_SESSION['notify']['title'] = 'Shutdown';
-				$_SESSION['notify']['msg'] = 'System shutdown initiated...';
-			} else {
+			if (workerQueueTask("poweroff")) {
+				uiNotify('Shutdown', 'System shutdown initiated...');
+			}
+			else {
 				echo "Background worker is busy";
 			}
-			// Unlock session file
-			playerSession('unlock');
 			// Set template html
 			$tpl = "poweroff.html";
 			break;
 
 		case 'reboot':
-			if ($_SESSION['w_lock'] != 1 && $_SESSION['w_queue'] == '') {
-				// Start / respawn session
-				session_start();
-				$_SESSION['w_queue'] = "reboot";
-				$_SESSION['w_active'] = 1;
-				// Set UI notify
-				$_SESSION['notify']['title'] = 'Reboot';
-				$_SESSION['notify']['msg'] = 'System reboot initiated...';
-			} else {
+			if (workerQueueTask("reboot")) {
+				uiNotify('Reboot', 'System reboot initiated...');
+			}
+			else {
 				echo "Background worker is busy";
 			}
-			// Unlock session file
-			playerSession('unlock');
 			// Set template html
 			$tpl = "reboot.html";
 			break;
+
 		// TC (Tim Curtis) 2014-12-23: reload clock radio settings from conf file
 		case 'reloadclockradio':
-			if ($_SESSION['w_lock'] != 1 && $_SESSION['w_queue'] == '') {
-				// Start / respawn session
-				session_start();
-				$_SESSION['w_queue'] = "reloadclockradio";
-				$_SESSION['w_active'] = 1;
-			} else {
+			if (workerQueueTask("reloadclockradio")) {
+			}
+			else {
 				echo "Background worker is busy";
 			}
-			// Unlock session file
-			playerSession('unlock');
 			break;
 		// TC (Tim Curtis) 2015-05-30: reload tcmods config settings
 		case 'reloadtcmodsconf':
-			if ($_SESSION['w_lock'] != 1 && $_SESSION['w_queue'] == '') {
-				// Start / respawn session
-				session_start();
-				$_SESSION['w_queue'] = "reloadtcmodsconf";
-				$_SESSION['w_active'] = 1;
-			} else {
+			if (workerQueueTask("reloadtcmodsconf")) {
+			}
+			else {
 				echo "Background worker is busy";
 			}
-			// Unlock session file
-			playerSession('unlock');
 			break;
 	}
 
@@ -101,25 +82,15 @@ if (isset($_POST['syscmd'])) {
 		// waitWorker(1);
 		eval("echoTemplate(\"".getTemplate("templates/$tpl")."\");");
 	}
-
-// TC (Tim Curtis) 2014-11-30: read contents of tcmods.conf
-// TC (Tim Curtis) 2014-11-30: return mpd status
-// TC (Tim Curtis) 2014-12-23: update contents of tcmods.conf
-// TC (Tim Curtis) 2014-12-23: read contents of radio station file
-// TC (Tim Curtis) 2015-01-27: query cfg_logourl for station logo url
-// TC (Tim Curtis) 2015-01-27: add search_autofocus_enabled
-// TC (Tim Curtis) 2015-02-25: move updatetcmconf code to _updTcmodsConf() function in player_lib.php
-// TC (Tim Curtis) 2015-03-21: query cfg_audiodev for audio device description
-// TC (Tim Curtis) 2015-05-30: add play history read
-// TC (Tim Curtis) 2015-05-30: add get upnp coverart url
-// TC (Tim Curtis) 2015-07-31: add get radio station info
-} else if (isset($_GET['cmd']) && $_GET['cmd'] != '') {
+}
+else if (isset($_GET['cmd']) && $_GET['cmd'] != '') {
 	$cmd = $_GET['cmd'];
 	switch ($cmd) {
 		case 'getaudiodevdesc':
 			$result = cfgdb_read('cfg_audiodev', $dbh, $_POST['audiodev']);
 			echo json_encode($result[0]);
 			break;
+
 		case 'getradioinfo':
 			$result = cfgdb_read('cfg_radio', $dbh, $_POST['station']);
 			echo json_encode($result[0]);
@@ -160,15 +131,12 @@ if (isset($_POST['syscmd'])) {
 			$cmd = "sudo ".$_POST['alsacmd']." ".$mixername." ".$_POST['volumelevel'].$_POST['scale'];
 			$rtn = sysCmd($cmd);
 			echo json_encode($rtn[0]);
-
-			// debug
-			//error_log("setalsavolume cmd= <".$cmd.">", 0);
-			//error_log("setalsavolume rtn= <".$rtn[0].">", 0);
 			break;
 
 	} // End switch
 
-} else {
+}
+else {
 	// Show audio information
 	// Audio Info header btn href has no value= element which is how we get here
 
@@ -185,7 +153,8 @@ if (isset($_POST['syscmd'])) {
 		$audioinfo_hwparams_format .= " kHz";
 		$audioinfo_hwparams_calcrate = $_hwparams['calcrate'];
 		$audioinfo_hwparams_calcrate .= " mbps";
-	} else {
+	}
+	else {
 		$audioinfo_hwparams_format = '';
 		$audioinfo_hwparams_calcrate = '0 bps';
 	}
@@ -193,7 +162,8 @@ if (isset($_POST['syscmd'])) {
 	// INPUT INFO: mpd currentsong and status cmds
 	if (!$mpd) {
         $audioinfo_mpdstatus = 'Error Connecting to MPD daemon';
-	} else {
+	}
+	else {
 		// mpd currentsong
 		$res = execMpdCommand($mpd, 'currentsong');
 		$_mpdcurrentsong = _parseMpdCurrentSong($res);
@@ -209,7 +179,8 @@ if (isset($_POST['syscmd'])) {
 		$audioinfo_mpdstatus_format .= $_mpdstatus['audio_sample_depth'];
 		if ($_mpdstatus['audio_sample_depth'] == "dsd") {
 			$audioinfo_mpdstatus_format .= ", ";
-		} else {
+		}
+		else {
 			$audioinfo_mpdstatus_format .= " bit, ";
 		}
 		$audioinfo_mpdstatus_format .= $_mpdstatus['audio_sample_rate'];
@@ -217,7 +188,8 @@ if (isset($_POST['syscmd'])) {
 		// bit rate
 		$audioinfo_mpdstatus_bitrate .= $_mpdstatus['bitrate'];
 		$audioinfo_mpdstatus_bitrate .= " kbps";
-		} else {
+		}
+		else {
 			$audioinfo_mpdstatus_format = '';
 			$audioinfo_mpdstatus_bitrate .= "0 bps";
 		}
@@ -235,7 +207,8 @@ if (isset($_POST['syscmd'])) {
 		$audioinfo_mpdconf_format .= " bit, ";
 		$audioinfo_mpdconf_format .= $_mpdconf['audio_sample_rate'];
 		$audioinfo_mpdconf_format .= " kHz";
-	} else {
+	}
+	else {
 		$audioinfo_mpdconf_src = 'off';
 		$audioinfo_mpdconf_format = '';
 	}
@@ -249,7 +222,8 @@ if (isset($_POST['syscmd'])) {
 			else if ($_tcmodsconf['volume_curve_factor'] == 50) {$curve_slope = "More (+06) slope,";}
 			else if ($_tcmodsconf['volume_curve_factor'] == 44) {$curve_slope = "More (+12) slope,";}
 			else if ($_tcmodsconf['volume_curve_factor'] == 38) {$curve_slope = "More (+18) slope,";}
-		} else {
+		}
+		else {
 			$curve_type = "Linear curve";
 			$curve_slope = '';
 		}
@@ -277,7 +251,8 @@ if (isset($_POST['syscmd'])) {
 		$_cpufreq = $_cpufreq / 1000;
 		$systeminfo_cpufreq = number_format($_cpufreq,0,'.','');
 		$systeminfo_cpufreq .= " MHz";
-	} else {
+	}
+	else {
 		$_cpufreq = $_cpufreq / 1000000;
 		$systeminfo_cpufreq = number_format($_cpufreq,1,'.','');
 		$systeminfo_cpufreq .= " GHz";
@@ -285,9 +260,9 @@ if (isset($_POST['syscmd'])) {
 	// TC (Tim Curtis) 2015-02-25: processor architecture
 	$systeminfo_arch = trim(shell_exec('uname -m'));
 
-	// unlock session file
-	playerSession('unlock');
 	// Set template html
 	$tpl = "audioinfo.html";
 	eval("echoTemplate(\"".getTemplate("templates/$tpl")."\");");
 }
+
+playerSession('unlock');
