@@ -100,33 +100,19 @@ waitWorker(5, 'sources');
 $dbh = cfgdb_connect($db);
 $source = cfgdb_read('cfg_source',$dbh);
 $dbh = null;
-// set normal config template
-$tpl = "sources.html";
+
 // unlock session files
 playerSession('unlock',$db,'','');
 
+$_mounts = '';
 foreach ($source as $mp) {
 	$icon = wrk_checkStrSysfile('/proc/mounts',$mp['name'])
 		? "<i class='icon-ok green sx'></i>"
 		: "<i class='icon-remove red sx'></i>";
-	// TC (Tim Curtis) 2014-12-23: remove btn-block so l/r margins will be present
-	// TC (Tim Curtis) 2015-04-29: streamlined button format for small screens
-	// TC (Tim Curtis) 2015-06-26: change width from 220px to 240px
 	$_mounts .= "<p><a href=\"sources.php?p=edit&id=".$mp['id']."\" class='btn btn-large' style='width: 240px;'> ".$icon." ".$mp['name']." (".$mp['address'].") </a></p>";
 }
-?>
 
-<?php
-$sezione = basename(__FILE__, '.php');
-include('_header.php');
-?>
 
-<!--
-TC (Tim Curtis) 2014-11-30
-- remove trailing ! in 1st content line causing code to be grayed out in editor
--->
-<!-- content -->
-<?php
 if (isset($_GET['p']) && !empty($_GET['p'])) {
 	if (isset($_GET['id']) && !empty($_GET['id'])) {
 		$_id = $_GET['id'];
@@ -165,8 +151,10 @@ if (isset($_GET['p']) && !empty($_GET['p'])) {
 	$tpl = 'source.html';
 }
 
-eval("echoTemplate(\"".getTemplate("templates/$tpl")."\");");
-?>
-<!-- content -->
+$tpl = "sources.html";
 
-<?php include('_footer.php'); ?>
+$sezione = basename(__FILE__, '.php');
+include('_header.php');
+
+eval("echoTemplate(\"".getTemplate("templates/$tpl")."\");");
+include('_footer.php');

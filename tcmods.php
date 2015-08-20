@@ -99,8 +99,6 @@ else if (isset($_GET['cmd']) && $_GET['cmd'] != '') {
 		case 'getupnpcoverurl':
 			$cmd = "upexplorer --album-art \"".$_SESSION['upnp_name']."\"";
 			$rtn = sysCmd($cmd);
-			//error_log("getupnpcoverurl cmd= <".$cmd.">", 0); // debug
-			//error_log("getupnpcoverurl rtn= <".$rtn[0].">", 0); // debug
 			echo $rtn[0];
 			break;
 
@@ -145,14 +143,10 @@ else {
 	// TC (Tim Curtis) 2015-06-26: comment out to make room for Volume settings under DSP INFO
 	//$audioinfo_hwparams_status = $_hwparams['status'];
 	if ($_hwparams['status'] == 'active') {
-		$audioinfo_hwparams_format = $_hwparams['channels'];
-		$audioinfo_hwparams_format .= ", ";
-		$audioinfo_hwparams_format .= $_hwparams['format'];
-		$audioinfo_hwparams_format .= " bit, ";
-		$audioinfo_hwparams_format .= $_hwparams['rate'];
-		$audioinfo_hwparams_format .= " kHz";
-		$audioinfo_hwparams_calcrate = $_hwparams['calcrate'];
-		$audioinfo_hwparams_calcrate .= " mbps";
+		$audioinfo_hwparams_format = $_hwparams['channels'] . ", ";
+		$audioinfo_hwparams_format .= $_hwparams['format'] . " bit, ";
+		$audioinfo_hwparams_format .= $_hwparams['rate'] . " kHz";
+		$audioinfo_hwparams_calcrate = $_hwparams['calcrate'] . " mbps";
 	}
 	else {
 		$audioinfo_hwparams_format = '';
@@ -172,22 +166,14 @@ else {
 		// mpd status
 		$_mpdstatus = _parseStatusResponse(mpdStatus($mpd));
 		if ($_hwparams['status'] == 'active') {
-		// source format
-		$audioinfo_mpdstatus_format = $_mpdstatus['audio_channels'];
-		$audioinfo_mpdstatus_format .= ", ";
-		// TC (Tim Curtis) 2015-07-31: format when "dsd" (for dsf files)
-		$audioinfo_mpdstatus_format .= $_mpdstatus['audio_sample_depth'];
-		if ($_mpdstatus['audio_sample_depth'] == "dsd") {
-			$audioinfo_mpdstatus_format .= ", ";
-		}
-		else {
-			$audioinfo_mpdstatus_format .= " bit, ";
-		}
-		$audioinfo_mpdstatus_format .= $_mpdstatus['audio_sample_rate'];
-		$audioinfo_mpdstatus_format .= " kHz";
-		// bit rate
-		$audioinfo_mpdstatus_bitrate .= $_mpdstatus['bitrate'];
-		$audioinfo_mpdstatus_bitrate .= " kbps";
+			// source format
+			$audioinfo_mpdstatus_format = $_mpdstatus['audio_channels'] . ", ";
+			// TC (Tim Curtis) 2015-07-31: format when "dsd" (for dsf files)
+			$audioinfo_mpdstatus_format .= $_mpdstatus['audio_sample_depth'];
+			$audioinfo_mpdstatus_format .= ($_mpdstatus['audio_sample_depth'] == "dsd") ? ", " : " bit, ";
+			$audioinfo_mpdstatus_format .= $_mpdstatus['audio_sample_rate'] . " kHz";
+			// bit rate
+			$audioinfo_mpdstatus_bitrate .= $_mpdstatus['bitrate'] . " kbps";
 		}
 		else {
 			$audioinfo_mpdstatus_format = '';
