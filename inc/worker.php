@@ -38,14 +38,6 @@ function workerQueueTask($task, $parameters = null) {
 	return true;
 }
 
-function uiNotify($title, $msg, $duration = 2) {
-	$_SESSION['notify'] = array(
-		'title' => $title,
-		'msg' => $msg,
-		'duration' => $duration
-	);
-}
-
 function wrk_checkStrSysfile($sysfile,$searchstr) {
 	$file = stripcslashes(file_get_contents($sysfile));
 	return (strpos($file, $searchstr)) ? true : false;
@@ -81,7 +73,7 @@ function wrk_mpdconf($outpath, $db, $kernelver, $i2s) {
 		}
 		else if ($cfg['param'] == 'mixer_type') {
 			// store volume mixer type in tcmods.conf
-			$_tcmods_conf = _parseTcmodsConf(shell_exec('cat /var/www/tcmods.conf')); // read in conf file
+			$_tcmods_conf = getTcmodsConf();
 			if ($_tcmods_conf['volume_mixer_type'] != $cfg['value_player']) {
 				$_tcmods_conf['volume_mixer_type'] = $cfg['value_player'];
 				$rtn = _updTcmodsConf($_tcmods_conf); // update conf file

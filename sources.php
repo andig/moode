@@ -33,10 +33,10 @@ session_start();
 if (isset($_POST['reset']) && $_POST['reset'] == 1) {
 	// tell worker to write new MPD config
 	if (workerQueueTask('sourcecfgman', 'sourcecfgreset')) {
-		uiNotify('Auto.nas modified', 'Remount shares in progress...');
+		uiSetNotification('Auto.nas modified', 'Remount shares in progress...');
 	}
 	else {
-		uiNotify('Job failed', 'Background worker is busy');
+		uiSetNotification('Job failed', 'Background worker is busy');
 	}
 	unset($_POST);
 }
@@ -44,10 +44,10 @@ if (isset($_POST['reset']) && $_POST['reset'] == 1) {
 if (isset($_POST['updatempd'])) {
 	if ($mpd) {
 		execMpdCommand($mpd,'update');
-		uiNotify('Database update', 'MPD database update initiated...');
+		uiSetNotification('Database update', 'MPD database update initiated...');
 	}
 	else {
-		uiNotify('Error', 'Cannot connect to MPD');
+		uiSetNotification('Error', 'Cannot connect to MPD');
 	}
 }
 
@@ -76,18 +76,18 @@ if (isset($_POST['mount']) && !empty($_POST['mount'])) {
 		// delete an existing entry
 		$_POST['mount']['action'] = 'delete';
 		if (workerQueueTask('sourcecfg', $_POST)) {
-			uiNotify('Mount point deleted', 'MPD database update initiated...');
+			uiSetNotification('Mount point deleted', 'MPD database update initiated...');
 		}
 		else {
-			uiNotify('Job failed', 'Background worker is busy');
+			uiSetNotification('Job failed', 'Background worker is busy');
 		}
 	}
 	else {
 		if (workerQueueTask('sourcecfg', $_POST)) {
-			uiNotify('Mount point modified', 'MPD database update initiated...');
+			uiSetNotification('Mount point modified', 'MPD database update initiated...');
 		}
 		else {
-			uiNotify('Job failed', 'Background worker is busy');
+			uiSetNotification('Job failed', 'Background worker is busy');
 		}
 	}
 }

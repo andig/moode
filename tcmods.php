@@ -34,7 +34,7 @@ if (isset($_POST['syscmd'])) {
 		// Power off and reboot
 		case 'poweroff':
 			if (workerQueueTask("poweroff")) {
-				uiNotify('Shutdown', 'System shutdown initiated...');
+				uiSetNotification('Shutdown', 'System shutdown initiated...');
 			}
 			else {
 				echo "Background worker is busy";
@@ -45,7 +45,7 @@ if (isset($_POST['syscmd'])) {
 
 		case 'reboot':
 			if (workerQueueTask("reboot")) {
-				uiNotify('Reboot', 'System reboot initiated...');
+				uiSetNotification('Reboot', 'System reboot initiated...');
 			}
 			else {
 				echo "Background worker is busy";
@@ -62,6 +62,7 @@ if (isset($_POST['syscmd'])) {
 				echo "Background worker is busy";
 			}
 			break;
+
 		// TC (Tim Curtis) 2015-05-30: reload tcmods config settings
 		case 'reloadtcmodsconf':
 			if (workerQueueTask("reloadtcmodsconf")) {
@@ -76,11 +77,8 @@ if (isset($_POST['syscmd'])) {
 	if (!($_POST['syscmd'] == 'reloadclockradio' || $_POST['syscmd'] == 'reloadtcmodsconf')) {
 		$sezione = basename(__FILE__, '.php');
 		include('_header.php');
-		include('_footer.php');
-		// TC (Tim Curtis) 2014-08-23: waitworker(1) does not seem to be needed for pwroff/reboot actions
-		// wait for worker output if $_SESSION['w_active'] = 1
-		// waitWorker(1);
 		eval("echoTemplate(\"".getTemplate("templates/$tpl")."\");");
+		include('_footer.php');
 	}
 }
 else if (isset($_GET['cmd']) && $_GET['cmd'] != '') {
@@ -103,7 +101,7 @@ else if (isset($_GET['cmd']) && $_GET['cmd'] != '') {
 			break;
 
 		case 'readtcmconf':
-			echo json_encode(_parseTcmodsConf(shell_exec('cat /var/www/tcmods.conf')));
+			echo json_encode(getTcmodsConf());
 			break;
 
 		case 'updatetcmconf':
@@ -115,11 +113,12 @@ else if (isset($_GET['cmd']) && $_GET['cmd'] != '') {
 			break;
 
 		case 'readstationfile':
-			echo json_encode(_parseStationFile(shell_exec("cat \""."/var/lib/mpd/music/".$_POST['path']."\"")));
+			// misuse mpd function to split lines
+			echo json_encode(parseMpdKeyedResponse(file_get_contents('/var/lib/mpd/music/'.$_POST['path'])), '=');
 			break;
 
 		case 'readplayhistory':
-			echo json_encode(_parsePlayHistory(shell_exec('cat /var/www/playhistory.log')));
+			echo json_encode(explode("\n", file_get_contents('/var/www/playhistory.log')));
 			break;
 
 		// TC (Tim Curtis) 2015-06-26: TESTING ALSA-Direct volume control, requires www-data user in visudo
@@ -136,10 +135,8 @@ else if (isset($_GET['cmd']) && $_GET['cmd'] != '') {
 }
 else {
 	// Show audio information
-	// Audio Info header btn href has no value= element which is how we get here
+	$_hwparams = getHwParams();
 
-	// OUTPUT INFO: hw_params, actual audio output format sent to DAC
-	$_hwparams = _parseHwParams(shell_exec('cat /proc/asound/card0/pcm0p/sub0/hw_params'));
 	// TC (Tim Curtis) 2015-06-26: comment out to make room for Volume settings under DSP INFO
 	//$audioinfo_hwparams_status = $_hwparams['status'];
 	if ($_hwparams['status'] == 'active') {
@@ -183,16 +180,13 @@ else {
 
 	// DSP INFO: mpd.conf, configured SRC output format and converter
 	// TC (Tim Curtis) 2015-06-26: add Volume settings from tcmods.conf
-	$_tcmodsconf = _parseTcmodsConf(shell_exec('cat /var/www/tcmods.conf'));
+	$_tcmodsconf = getTcmodsConf();
 	$_mpdconf = _parseMpdConf($dbh);
 	if ($_mpdconf['audio_channels'] != '') {
 		$audioinfo_mpdconf_src = $_mpdconf['samplerate_converter'];
-		$audioinfo_mpdconf_format = $_mpdconf['audio_channels'];
-		$audioinfo_mpdconf_format .= ", ";
-		$audioinfo_mpdconf_format .= $_mpdconf['audio_sample_depth'];
-		$audioinfo_mpdconf_format .= " bit, ";
-		$audioinfo_mpdconf_format .= $_mpdconf['audio_sample_rate'];
-		$audioinfo_mpdconf_format .= " kHz";
+		$audioinfo_mpdconf_format = $_mpdconf['audio_channels'] . ", ";
+		$audioinfo_mpdconf_format .= $_mpdconf['audio_sample_depth'] . " bit, ";
+		$audioinfo_mpdconf_format .= $_mpdconf['audio_sample_rate'] . " kHz";
 	}
 	else {
 		$audioinfo_mpdconf_src = 'off';
@@ -214,14 +208,14 @@ else {
 			$curve_slope = '';
 		}
 		$audioinfo_tcmodsconf_volume = "Hardware, ".$curve_type.", ".$curve_slope." Vol-max ".$_tcmodsconf['volume_max_percent']."%";
-	} else if ($_tcmodsconf['volume_mixer_type'] == "software") {
+	}
+	else if ($_tcmodsconf['volume_mixer_type'] == "software") {
 		$audioinfo_tcmodsconf_volume = "Software (MPD 32 bit float with dither)";
 	}
 
 	// DEVICE INFO: tcmods.conf, audio device description (manually entered by user)
 	// TC (Tim Curtis) 2014-11-30: fix bug: change .= to =
 	// TC (Tim Curtis 2015-06-26: comment out, moved to DSP INFO section
-	//$_tcmodsconf = _parseTcmodsConf(shell_exec('cat /var/www/tcmods.conf'));
 	$audioinfo_tcmodsconf_device_name = $_tcmodsconf['audio_device_name'];
 	$audioinfo_tcmodsconf_device_dac = $_tcmodsconf['audio_device_dac'];
 	$audioinfo_tcmodsconf_device_arch = $_tcmodsconf['audio_device_arch'];

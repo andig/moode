@@ -268,15 +268,13 @@ function sysCmd($syscmd) {
 /**
  * Parse MPD response into key => value pairs
  */
-function parseMpdKeyedResponse($resp) {
+function parseMpdKeyedResponse($resp, $separator = ': ') {
 	$res = array();
 
 	foreach (explode("\n", $resp) as $line) {
-		// skip lines without :
-		if (strpos($line, ': ')) {
-			list ($key, $val) = explode(": ", $line, 2);
-			$res[$key] = $val;
-		}
+		// if (strpos($line, $separator)) { // skip lines without separator
+		list ($key, $val) = explode($separator, $line, 2);
+		$res[$key] = $val;
 	}
 
 	return $res;
@@ -608,40 +606,47 @@ function recursiveDelete($str){
 	}
 }
 
-// TC (Tim Curtis) 2014-12-23: add delay: 2000 (2 secs)
-// TC (Tim Curtis) 2015-02-25: add optional delay duration arg
-function ui_notify($notify) {
-	$output .= "<script>";
-	$output .= "jQuery(document).ready(function() {";
-	$output .= "$.pnotify.defaults.history = false;";
-	$output .= "$.pnotify({";
-	$output .= "title: '".$notify['title']."', ";
-	$output .= "text: '".$notify['msg']."', ";
-	$output .= "icon: 'icon-ok', ";
-	if (isset($notify['duration'])) {
-		$output .= "delay: ".strval($notify['duration'] * 1000).", ";
-	} else {
-		$output .= "delay: '2000', ";
-	}
-	$output .= "opacity: .9});";
-	$output .= "});";
-	$output .= "</script>";
-	echo $output;
+function uiSetNotification($title, $msg, $duration = 2) {
+	$_SESSION['notify'] = array(
+		'title' => $title,
+		'msg' => $msg,
+		'duration' => $duration
+	);
+}
+
+
+
+function uiShowNotification($notify) {
+	$str = <<<EOT
+<script>
+jQuery(document).ready(function() {
+	$.pnotify({
+		title: '%s',
+		text: '%s',
+		icon: 'icon-ok',
+		delay: '%d',
+		opacity: .9,
+		history: false
+	});
+});
+</script>
+EOT;
+
+	echo sprintf($str, $notify['title'], $notify['msg'], isset($notify['duration'])
+		? $notify['duration'] * 1000
+		: 2000
+	);
 }
 
 // OUTPUT: parse HW_PARAMS
-function _parseHwParams($resp) {
-	if (is_null($resp)) {
-		return 'Error, _parseHwParams response is null';
-	} else if ($resp != "closed\n") {
-		$tcArray = array();
-		$tcLine = strtok($resp, "\n");
-		$tcFile = "";
-		while ( $tcLine ) {
-			list ( $element, $value ) = explode(": ", $tcLine);
-			$tcArray[$element] = $value;
-			$tcLine = strtok("\n");
-		}
+function getHwParams($resp) {
+	if (false === ($resp = shell_exec('cat /proc/asound/card0/pcm0p/sub0/hw_params'))) {
+		die('Error, _parseHwParams response is null');
+	}
+
+	if ($resp != "closed\n") {
+		$tcArray = parseMpdKeyedResponse($resp, ': ');
+
 		// format sample rate, ex: "44100 (44100/1)"
 		// TC (Tim Curtis) 2015-06-26: add cases 22050, 32000, 384000
 		$rate = substr($tcArray['rate'], 0, strpos($tcArray['rate'], ' ('));
@@ -677,7 +682,8 @@ function _parseHwParams($resp) {
 
 		$tcArray['status'] = 'active';
 		$tcArray['calcrate'] = number_format((($_rate * $_bits * $_chans) / 1000000),3, '.', '');
-	} else {
+	}
+	else {
 		$tcArray['status'] = 'closed';
 		$tcArray['calcrate'] = '0 bps';
 	}
@@ -745,44 +751,16 @@ function _parseMpdConf($dbh) {
 	return $_mpd;
 }
 
-// DEVICE: parse /var/www/tcmods.conf
-function _parseTcmodsConf($resp) {
-	if (is_null($resp) ) {
-		return 'Error, _parseTcmodsConf response is null';
+// /var/www/tcmods.conf
+function getTcmodsConf($resp) {
+	if (false === ($conf = file_get_contents('/var/www/tcmods.conf'))) {
+		die('Failed to read tcmods.conf');
 	}
-	else {
-		$tcArray = array();
-		$tcLine = strtok($resp, "\n");
-		$tcFile = "";
-
-		while ( $tcLine ) {
-			list ( $element, $value ) = explode(": ", $tcLine);
-			$tcArray[$element] = $value;
-			$tcLine = strtok("\n");
-		}
-	}
-	return $tcArray;
+	// split config lines
+	$res = parseMpdKeyedResponse($conf, ": ");
+	return $res;
 }
 
-// TC (Tim Curtis) 2014-12-23
-// parse radio station file
-function _parseStationFile($resp) {
-	if (is_null($resp) ) {
-		return 'Error, _parseStationFile response is null';
-	}
-
-	$tcArray = array();
-	$tcLine = strtok($resp, "\n");
-	$tcFile = "";
-
-	while ( $tcLine ) {
-		list ( $element, $value ) = explode("=", $tcLine);
-		$tcArray[$element] = $value;
-		$tcLine = strtok("\n");
-	}
-
-	return $tcArray;
-}
 
 // TC (Tim Curtis) 2015-02-25: update tcmods.conf file
 // TC (Tim Curtis) 2015-04-29: add theme_color element
@@ -790,7 +768,6 @@ function _parseStationFile($resp) {
 // TC (Tim Curtis) 2015-06-26: add volume_ elements to tcmods.conf for logarithmic volume control and improved mute
 // TC (Tim Curtis) 2015-06-26: add albumart_lookup_method
 function _updTcmodsConf($tcmconf) {
-
 	$keys = array(
 		'albumart_lookup_method',
 		'audio_device_name',
@@ -827,34 +804,13 @@ function _updTcmodsConf($tcmconf) {
 		$data .= $key . ': ' . $tcmconf[$key]."\n";
 	}
 
-	// Open file for write, clears contents
-	$_file = '/var/www/tcmods.conf';
-	$handle = fopen($_file, 'w') or die('tcmods.php: file open failed on '.$_file); // creates file if none exists
-	fwrite($handle, $data);
-	fclose($handle);
+	if (false === file_put_contents('/var/www/tcmods.conf', $data)) {
+		die('Failed to write tcmods.conf');
+	}
 
 	return '_updTcmodsConf: update tcmods.conf complete';
 }
 
-
-// TC (Tim Curtis) 2015-05-30: parse play history log
-function _parsePlayHistory($resp) {
-	if (is_null($resp) ) {
-		return 'Error, _parsePlayHistory response is null';
-	}
-
-	$tcArray = array();
-	$tcLine = strtok($resp, "\n");
-	$i = 0;
-
-	while ( $tcLine ) {
-		$tcArray[$i] = $tcLine;
-		$i++;
-		$tcLine = strtok("\n");
-	}
-
-	return $tcArray;
-}
 
 function getTemplate($template) {
 	return str_replace("\"", "\\\"",implode("",file($template)));
@@ -863,6 +819,7 @@ function getTemplate($template) {
 function echoTemplate($template) {
 	echo $template;
 }
+
 
 // TC (Tim Curtis) 2015-05-30: update play history log
 function _updatePlayHistory($currentsong) {

@@ -322,7 +322,7 @@ if (isset($_SESSION['upnpmpdcli']) && $_SESSION['upnpmpdcli'] == 1) {
 	sysCmd($cmd);
 }
 // TC (Tim Curtis) 2014-12-23: read tcmods.conf file for clock radio settings
-$_tcmods_conf = _parseTcmodsConf(shell_exec('cat /var/www/tcmods.conf'));
+$_tcmods_conf = getTcmodsConf();
 $clock_radio_starttime = $_tcmods_conf['clock_radio_starttime'];
 $clock_radio_stoptime = $_tcmods_conf['clock_radio_stoptime'];
 
@@ -388,7 +388,7 @@ while (1) {
 			$mpd = openMpdSocket('localhost', 6600);
 
 			// TC (Tim Curtis) 2015-06-26: new volume control with optional logarithmic mapping of knob 0-100 range to hardware range
-			$_tcmods_conf = _parseTcmodsConf(shell_exec('cat /var/www/tcmods.conf')); // read in conf file
+			$_tcmods_conf = getTcmodsConf(); // read in conf file
 			$level = $_tcmods_conf['clock_radio_volume'];
 
 			if ($_tcmods_conf['volume_mixer_type'] == "hardware" && $_tcmods_conf['volume_curve_logarithmic'] == "Yes") {
@@ -511,7 +511,7 @@ while (1) {
 		// TC (Tim Curtis) 2015-07-31: add $title not blank test
 		if ($title != '' && $title != $_tcmods_conf['play_history_currentsong']) {
 			// Update tcmods.conf file with curentsong
-			$_tcmods_conf = _parseTcmodsConf(shell_exec('cat /var/www/tcmods.conf')); // re-read to get most current data
+			$_tcmods_conf = getTcmodsConf(); // re-read to get most current data
 			$_tcmods_conf['play_history_currentsong'] = $title;
 			$rtn = _updTcmodsConf($_tcmods_conf);
 
@@ -536,21 +536,26 @@ while (1) {
 				$cmd = 'mpc stop && reboot';
 				sysCmd($cmd);
 				break;
+
 			case 'poweroff':
 				$cmd = 'mpc stop && poweroff';
 				sysCmd($cmd);
 				break;
+
 			case 'phprestart':
 				$cmd = 'service php5-fpm restart';
 				sysCmd($cmd);
 				break;
+
 			case 'workerrestart':
 				$cmd = 'killall player_wrk.php';
 				sysCmd($cmd);
 				break;
+
 			case 'syschmod':
 				wrk_syschmod();
 				break;
+
 			case 'orionprofile':
 				if ($_SESSION['dev'] == 1) {
 					$_SESSION['w_queueargs'] = 'dev';
@@ -558,6 +563,7 @@ while (1) {
 				$cmd = "/var/www/command/orion_optimize.sh ".$_SESSION['w_queueargs'];
 				sysCmd($cmd);
 				break;
+
 			case 'netcfg':
 				$file = '/etc/network/interfaces';
 				$fp = fopen($file, 'w');
@@ -587,6 +593,7 @@ while (1) {
 				}
 				sysCmd('service networking restart');
 				break;
+
 			case 'netcfgman':
 				$file = '/etc/network/interfaces';
 				$fp = fopen($file, 'w');
@@ -603,6 +610,7 @@ while (1) {
 				sysCmd('killall mpd');
 				sysCmd('service mpd start');
 				break;
+
 			case 'mpdcfgman':
 				// write mpd.conf file
 				$fh = fopen('/etc/mpd.conf', 'w');
@@ -611,6 +619,7 @@ while (1) {
 				sysCmd('killall mpd');
 				sysCmd('service mpd start');
 				break;
+
 			case 'sourcecfg':
 				wrk_sourcecfg($db, $_SESSION['w_queueargs']);
 				break;
@@ -636,16 +645,17 @@ while (1) {
 				$cmd = "/var/www/tcmods/".$TCMODS_REL."/cmds/tcmods.sh ".$_SESSION['w_queueargs']." ".$hexlight." ".$hexdark;
 				sysCmd($cmd);
 				 // reload tcmods.conf data
-				$_tcmods_conf = _parseTcmodsConf(shell_exec('cat /var/www/tcmods.conf'));
+				$_tcmods_conf = getTcmodsConf();
 				break;
 
 			// TC (Tim Curtis) 2015-05-30: reload tcmods config data
 			case 'reloadtcmodsconf':
-				$_tcmods_conf = _parseTcmodsConf(shell_exec('cat /var/www/tcmods.conf'));
+				$_tcmods_conf = getTcmodsConf();
 				break;
+
 			// TC (Tim Curtis) 2014-12-23: reload clock radio settings from conf file
 			case 'reloadclockradio':
-				$_tcmods_conf = _parseTcmodsConf(shell_exec('cat /var/www/tcmods.conf'));
+				$_tcmods_conf = getTcmodsConf();
 				$clock_radio_starttime = $_tcmods_conf['clock_radio_starttime'];
 				$clock_radio_stoptime = $_tcmods_conf['clock_radio_stoptime'];
 				break;
@@ -663,6 +673,7 @@ while (1) {
 					_setI2sModules($db, $_SESSION['w_queueargs']); // Modules (/etc/modules)
 				}
 				break;
+
 			// TC (Tim Curtis) 2015-02-25: process kernel select request
 			case 'kernelver':
 				// TC (Tim Curtis) 2015-06-26: use getKernelVer()
@@ -671,32 +682,39 @@ while (1) {
 				// debug
 				//error_log(">>>>> player_wrk.php: kernelver=".$_SESSION['w_queueargs']." sysCmd output=".$rtn[0]." >>>>>", 0);
 				break;
+
 			// TC (Tim Curtis) 2015-04-29: process timezone select request
 			case 'timezone':
 				$cmd = "/var/www/tcmods/".$TCMODS_REL."/cmds/tcmods.sh set-timezone ".$_SESSION['w_queueargs'];
 				$rtn = sysCmd($cmd);
 				break;
+
 			// TC (Tim Curtis) 2015-04-29: process host name change request
 			case 'host_name':
 				$cmd = "/var/www/tcmods/".$TCMODS_REL."/cmds/tcmods.sh chg-name host ".$_SESSION['w_queueargs'];
 				$rtn = sysCmd($cmd);
 				break;
+
 			case 'browser_title':
 				$cmd = "/var/www/tcmods/".$TCMODS_REL."/cmds/tcmods.sh chg-name browsertitle ".$_SESSION['w_queueargs'];
 				$rtn = sysCmd($cmd);
 				break;
+
 			case 'airplay_name':
 				$cmd = "/var/www/tcmods/".$TCMODS_REL."/cmds/tcmods.sh chg-name airplay ".$_SESSION['w_queueargs'];
 				$rtn = sysCmd($cmd);
 				break;
+
 			case 'upnp_name':
 				$cmd = "/var/www/tcmods/".$TCMODS_REL."/cmds/tcmods.sh chg-name upnp ".$_SESSION['w_queueargs'];
 				$rtn = sysCmd($cmd);
 				break;
+
 			case 'dlna_name':
 				$cmd = "/var/www/tcmods/".$TCMODS_REL."/cmds/tcmods.sh chg-name dlna ".$_SESSION['w_queueargs'];
 				$rtn = sysCmd($cmd);
 				break;
+
 			// TC (Tim Curtis) 2015-04-29: handle PCM volume change
 			case 'pcm_volume':
 				// TC (Tim Curtis) 2015-06-26: set simple mixer name based on kernel version and i2s vs USB
@@ -710,10 +728,12 @@ while (1) {
 				$cmd = "/var/www/tcmods/".$TCMODS_REL."/cmds/utility.sh clear-logs";
 				$rtn = sysCmd($cmd);
 				break;
+
 			case 'clearplayhistory':
 				$cmd = "/var/www/tcmods/".$TCMODS_REL."/cmds/utility.sh clear-playhistory";
 				$rtn = sysCmd($cmd);
 				break;
+
 			// TC (Tim Curtis) 2015-07-31: expand sd card storage
 			case 'expandsdcard':
 				$cmd = "/var/www/tcmods/".$TCMODS_REL."/cmds/resizefs.sh start";
