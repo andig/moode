@@ -178,7 +178,7 @@ if (isset($_POST['update_host_name'])) {
 			uiSetNotification('Invalid input', "Host name can only contain A-Z, a-z, 0-9 or hyphen (-).", 4);
 		}
 		else {
-			if (workerQueueTask('host_name', "\"".$_SESSION['host_name']."\" "."\"".$_POST['host_name']."\"") {
+			if (workerQueueTask('host_name', "\"".$_SESSION['host_name']."\" "."\"".$_POST['host_name']."\"")) {
 				uiSetNotification('Setting change', "Host name has been changed, REBOOT for setting to take effect.", 4);
 				playerSession('write',$db,'host_name',$_POST['host_name']);
 			}
