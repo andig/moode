@@ -973,7 +973,7 @@ function getMixerName($kernelver, $i2s) {
 	return $mixername;
 }
 
-function waitWorker($sleeptime, $section = null) {
+function waitWorker($sleeptime = 1, $mpdUpdate = false) {
 	logWorker('[client] waitWorker ' . session_id());
 	logWorker($_SESSION);
 
@@ -989,12 +989,11 @@ function waitWorker($sleeptime, $section = null) {
 		}
 		while ($_SESSION['w_active'] != 0);
 
-		switch ($section) {
-			case 'sources':
-				$mpd = openMpdSocket('localhost', 6600);
-				execMpdCommand($mpd, 'update');
-				closeMpdSocket($mpd);
-				break;
+		// update MPD db after worker finishes
+		if ($mpdUpdate) {
+			$mpd = openMpdSocket('localhost', 6600);
+			execMpdCommand($mpd, 'update');
+			closeMpdSocket($mpd);
 		}
 	}
 }

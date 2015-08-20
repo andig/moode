@@ -112,6 +112,7 @@ foreach ($source as $mp) {
 	$_mounts .= "<p><a href=\"sources.php?p=edit&id=".$mp['id']."\" class='btn btn-large' style='width: 240px;'> ".$icon." ".$mp['name']." (".$mp['address'].") </a></p>";
 }
 
+$tpl = "sources.html";
 
 if (isset($_GET['p']) && !empty($_GET['p'])) {
 	if (isset($_GET['id']) && !empty($_GET['id'])) {
@@ -151,10 +152,7 @@ if (isset($_GET['p']) && !empty($_GET['p'])) {
 	$tpl = 'source.html';
 }
 
-$tpl = "sources.html";
-
 $sezione = basename(__FILE__, '.php');
 include('_header.php');
-
 eval("echoTemplate(\"".getTemplate("templates/$tpl")."\");");
 include('_footer.php');

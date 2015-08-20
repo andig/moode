@@ -879,8 +879,7 @@
 <!-- Write backend response on UI Notify popup -->
 <?php
 if (isset($_SESSION['notify']) && $_SESSION['notify'] != '') {
-	sleep(1);
-	ui_notify($_SESSION['notify']);
+	uiShowNotification($_SESSION['notify']);
 	session_start();
 	$_SESSION['notify'] = '';
 	session_write_close();
