@@ -35,42 +35,47 @@ ini_set('display_errors', '1');
 ini_set('error_log', '/var/log/php_errors.log');
 $db = 'sqlite:/var/www/db/player.db';
 
-// --- DEMONIZE --- //
+// check if test mode
+$options = getopt('t', array('test'));
+$test = isset($options['t']) || isset($options['test']);
+
 $lock = fopen('/run/player_wrk.pid', 'c+');
 if (!flock($lock, LOCK_EX | LOCK_NB)) {
 	die('already running');
 }
 
-switch ($pid = pcntl_fork()) {
-	case -1:
-		die('unable to fork');
-	case 0: // This is the child process
-		break;
-	default: // Otherwise this is the parent process
-		fseek($lock, 0);
-		ftruncate($lock, 0);
-		fwrite($lock, $pid);
-		fflush($lock);
-		exit;
+// --- DEMONIZE --- only if not in test mode
+if (false === $test) {
+	switch ($pid = pcntl_fork()) {
+		case -1:
+			die('unable to fork');
+		case 0: // This is the child process
+			break;
+		default: // Otherwise this is the parent process
+			fseek($lock, 0);
+			ftruncate($lock, 0);
+			fwrite($lock, $pid);
+			fflush($lock);
+			exit;
+	}
+
+	if (posix_setsid() === -1) {
+		die('could not setsid');
+	}
+
+	fclose(STDIN);
+	fclose(STDOUT);
+	fclose(STDERR);
+
+	$stdIn = fopen('/dev/null', 'r'); // set fd/0
+	$stdOut = fopen('/dev/null', 'w'); // set fd/1
+	$stdErr = fopen('php://stdout', 'w'); // a hack to duplicate fd/1 to 2
+
+	pcntl_signal(SIGTSTP, SIG_IGN);
+	pcntl_signal(SIGTTOU, SIG_IGN);
+	pcntl_signal(SIGTTIN, SIG_IGN);
+	pcntl_signal(SIGHUP, SIG_IGN);
 }
-
-if (posix_setsid() === -1) {
-	die('could not setsid');
-}
-
-fclose(STDIN);
-fclose(STDOUT);
-fclose(STDERR);
-
-$stdIn = fopen('/dev/null', 'r'); // set fd/0
-$stdOut = fopen('/dev/null', 'w'); // set fd/1
-$stdErr = fopen('php://stdout', 'w'); // a hack to duplicate fd/1 to 2
-
-pcntl_signal(SIGTSTP, SIG_IGN);
-pcntl_signal(SIGTTOU, SIG_IGN);
-pcntl_signal(SIGTTIN, SIG_IGN);
-pcntl_signal(SIGHUP, SIG_IGN);
-// --- END DEMONIZE --- //
 
 // --- INITIALIZE ENVIRONMENT --- //
 // change /run and session files for correct session file locking
@@ -107,7 +112,6 @@ wrk_sourcemount($db, 'mountall');
 // start MPD daemon
 sysCmd("service mpd start");
 
-// TC (Tim Curtis) 2014-10-31
 // - set symlink for album art lookup
 sysCmd("ln -s /var/lib/mpd/music /var/www/coverroot");
 
@@ -200,19 +204,12 @@ if (isset($_SESSION['playerid']) && $_SESSION['playerid'] == '') {
 	//sysCmd('service minidlna ntp'); // TC (Tim Curtis) 2015-04-29: bug?
 	sysCmd('service samba stop');
 	sysCmd('service mpd stop');
-	// TC (Tim Curtis) 2015-07-31: shovel & broom change to /etc/samba/smb.conf instead of _OS_SETTINGS/etc/...
-	sysCmd('/usr/sbin/smbd -D --configfile=/var/www/etc/samba/smb.conf');
-	sysCmd('/usr/sbin/nmbd -D --configfile=/var/www/etc/samba/smb.conf');
 // --- END PLAYER FIRST INSTALLATION PROCESS --- //
-
-// --- NORMAL STARTUP --- //
 }
-else {
 
-	// TC (Tim Curtis) 2015-07-31: shovel & broom change to /etc/samba/smb.conf instead of _OS_SETTINGS/etc/...
-	sysCmd('/usr/sbin/smbd -D --configfile=/var/www/etc/samba/smb.conf');
-	sysCmd('/usr/sbin/nmbd -D --configfile=/var/www/etc/samba/smb.conf');
-}
+// TC (Tim Curtis) 2015-07-31: shovel & broom change to /etc/samba/smb.conf instead of _OS_SETTINGS/etc/...
+sysCmd('/usr/sbin/smbd -D --configfile=/var/www/etc/samba/smb.conf');
+sysCmd('/usr/sbin/nmbd -D --configfile=/var/www/etc/samba/smb.conf');
 
 // inizialize worker session vars
 //if (!isset($_SESSION['w_queue']) OR $_SESSION['w_queue'] == 'workerrestart') { $_SESSION['w_queue'] = ''; }
@@ -250,28 +247,12 @@ else {
 	$ip = $ip_fallback;
 }
 
-// Copy /etc/minidlna.conf to /run/minidlna.conf
-copy('/etc/minidlna.conf', '/run/minidlna.conf');
 
 // minidlna.conf
-// TC (Tim Curtis) 2015-04-29: bug? won't using port 80 conflict with the Player itself?
-// - a forum post suggests that this feature was never implemented and can be ignored...
-$file = '/run/minidlna.conf';
-$fileData = file($file);
-$newArray = array();
-foreach($fileData as $line) {
-  // find the line that starts with 'presentation_url"
-  if (substr($line, 0, 16) == 'presentation_url' OR substr($line, 1, 16) == 'presentation_url') {
-	// replace presentation_url with current IP address
-	$line = "presentation_url=http://".$ip.":80\n";
-  }
-  $newArray[] = $line;
-}
+$dlna = file_get_contents('/etc/minidlna.conf');
+$dlna = preg_replace('/^#?presentation_url.*$/', 'presentation_url=http://' . $ip . ':80', $dlna);
+file_put_contents('/etc/minidlna.conf', $dlna);
 
-// Commit changes to /run/minidlna.conf
-$fp = fopen($file, 'w');
-fwrite($fp, implode("", $newArray));
-fclose($fp);
 
 // Start minidlna service
 // TC (Tim Curtis) 2015-04-29: start minidlna only if its turned on in System config page
@@ -335,10 +316,6 @@ playerSession('write', $db, 'kernelver', $_tcmods_conf['sys_kernel_ver']);
 playerSession('write', $db, 'procarch', $_tcmods_conf['sys_processor_arch']);
 
 // Ensure audio output is unmuted
-// TC (Tim Curtis) 2015-01-27: moved from command/orion_optimize.sh
-// TC (Tim Curtis) 2015-03-21: add test for audio device to determine which type of unmute to run
-// TC (Tim Curtis) 2015-06-26: add IQaudIO Pi-DigiAMP+
-// TC (Tim Curtis) 2015-06-26: remove test for procarch, not needed
 if ($_SESSION['i2s'] == 'IQaudIO Pi-AMP+') {
 	sysCmd("/var/www/command/unmute.sh pi-ampplus");
 }
