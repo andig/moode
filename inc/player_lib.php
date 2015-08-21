@@ -272,9 +272,10 @@ function parseMpdKeyedResponse($resp, $separator = ': ') {
 	$res = array();
 
 	foreach (explode("\n", $resp) as $line) {
-		// if (strpos($line, $separator)) { // skip lines without separator
-		list ($key, $val) = explode($separator, $line, 2);
-		$res[$key] = $val;
+		if (strpos($line, $separator)) { // skip lines without separator
+			list ($key, $val) = explode($separator, $line, 2);
+			$res[$key] = $val;
+		}
 	}
 
 	return $res;
