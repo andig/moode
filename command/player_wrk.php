@@ -486,12 +486,9 @@ while (1) {
 		}
 	}
 
-	logWorker("[daemon] w_active " . $_SESSION['w_active']);
-	logWorker("[daemon] w_lock   " . $_SESSION['w_lock']);
-
 	// Monitor loop
 	if (false !== ($task = workerPopTask())) {
-		logWorker("[daemon] Task active: " . $_SESSION['w_queue']);
+		logWorker("[daemon] Task active: " . $task);
 
 		// switch command queue for predefined jobs
 		switch ($task) {
