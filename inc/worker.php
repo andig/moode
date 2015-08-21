@@ -21,21 +21,52 @@
  * Rewrite by Tim Curtis and Andreas Goetz
  */
 
+/**
+ * Check if worker available for next task
+ */
 function workerIsFree() {
 	return !(isset($_SESSION['w_lock']) && isset($_SESSION['w_queue']))
 		|| $_SESSION['w_lock'] !== 1 && $_SESSION['w_queue'] == '';
 }
 
-function workerQueueTask($task, $parameters = null) {
+/**
+ * Add task to queue
+ */
+function workerPushTask($task, $parameters = null) {
 	if (!workerIsFree()) {
 		return false;
 	}
 
-	$_SESSION['w_queue'] = $task;
 	$_SESSION['w_active'] = 1;
+	$_SESSION['w_queue'] = $task;
 	$_SESSION['w_queueargs'] = $parameters;
 
 	return true;
+}
+
+/**
+ * Get task from queue
+ */
+function workerPopTask() {
+	if ($task =
+		isset($_SESSION['w_active']) && $_SESSION['w_active'] == 1 &&
+		isset($_SESSION['w_lock']) && $_SESSION['w_lock'] == 0)
+	{
+		$_SESSION['w_lock'] = 1;		// lock queue
+		$task = $_SESSION['w_queue'];	// get task from queue
+	}
+
+	return $task;
+}
+
+/**
+ * Remove task from queue
+ */
+function workerFinishTask() {
+	$_SESSION['w_active'] = 0;			// mark worker inactive
+	$_SESSION['w_lock'] = 0;			// unlock queue
+	$_SESSION['w_queue'] = '';			// remove task from queue
+	$_SESSION['w_queueargs'] = '';		// remove task from queue
 }
 
 function wrk_checkStrSysfile($sysfile,$searchstr) {

@@ -123,7 +123,7 @@ if (isset($_POST) && !empty($_POST)) {
 	// handle manual config
 	if (isset($_POST['netconf']) && !empty($_POST['netconf'])) {
 		// tell worker to write new MPD config
-		if (workerQueueTask("netcfgman", $_POST['netconf'])) {
+		if (workerPushTask("netcfgman", $_POST['netconf'])) {
 			uiSetNotification('Network config', 'Network config modified');
 		}
 		else {
@@ -135,7 +135,7 @@ if (isset($_POST) && !empty($_POST)) {
 	$dbh = null;
 
 	// create job for background worker
-	if (workerQueueTask('netcfg', $wlan0.$eth0)) {
+	if (workerPushTask('netcfg', $wlan0.$eth0)) {
 		uiSetNotification('Network config', (isset($_GET['reset']) && $_GET['reset'] == 1)
 			? 'Network config reset'
 			: 'Network config modified'

@@ -33,7 +33,7 @@ if (isset($_POST['syscmd'])) {
 	switch ($_POST['syscmd']) {
 		// Power off and reboot
 		case 'poweroff':
-			if (workerQueueTask("poweroff")) {
+			if (workerPushTask("poweroff")) {
 				uiSetNotification('Shutdown', 'System shutdown initiated...');
 			}
 			else {
@@ -44,7 +44,7 @@ if (isset($_POST['syscmd'])) {
 			break;
 
 		case 'reboot':
-			if (workerQueueTask("reboot")) {
+			if (workerPushTask("reboot")) {
 				uiSetNotification('Reboot', 'System reboot initiated...');
 			}
 			else {
@@ -56,7 +56,7 @@ if (isset($_POST['syscmd'])) {
 
 		// TC (Tim Curtis) 2014-12-23: reload clock radio settings from conf file
 		case 'reloadclockradio':
-			if (workerQueueTask("reloadclockradio")) {
+			if (workerPushTask("reloadclockradio")) {
 			}
 			else {
 				echo "Background worker is busy";
@@ -65,7 +65,7 @@ if (isset($_POST['syscmd'])) {
 
 		// TC (Tim Curtis) 2015-05-30: reload tcmods config settings
 		case 'reloadtcmodsconf':
-			if (workerQueueTask("reloadtcmodsconf")) {
+			if (workerPushTask("reloadtcmodsconf")) {
 			}
 			else {
 				echo "Background worker is busy";

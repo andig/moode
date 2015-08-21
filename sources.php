@@ -32,7 +32,7 @@ session_start();
 // handle (reset)
 if (isset($_POST['reset']) && $_POST['reset'] == 1) {
 	// tell worker to write new MPD config
-	if (workerQueueTask('sourcecfgman', 'sourcecfgreset')) {
+	if (workerPushTask('sourcecfgman', 'sourcecfgreset')) {
 		uiSetNotification('Auto.nas modified', 'Remount shares in progress...');
 	}
 	else {
@@ -75,7 +75,7 @@ if (isset($_POST['mount']) && !empty($_POST['mount'])) {
 	if (isset($_POST['delete']) && $_POST['delete'] == 1) {
 		// delete an existing entry
 		$_POST['mount']['action'] = 'delete';
-		if (workerQueueTask('sourcecfg', $_POST)) {
+		if (workerPushTask('sourcecfg', $_POST)) {
 			uiSetNotification('Mount point deleted', 'MPD database update initiated...');
 		}
 		else {
@@ -83,7 +83,7 @@ if (isset($_POST['mount']) && !empty($_POST['mount'])) {
 		}
 	}
 	else {
-		if (workerQueueTask('sourcecfg', $_POST)) {
+		if (workerPushTask('sourcecfg', $_POST)) {
 			uiSetNotification('Mount point modified', 'MPD database update initiated...');
 		}
 		else {

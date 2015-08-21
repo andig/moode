@@ -38,7 +38,7 @@ if (isset($_POST['reset']) && $_POST['reset'] == 1) {
 		cfgdb_update('cfg_mpd',$dbh,$element['param'],$element['value_default']);
 	}
 	// Tell worker to write new MPD config
-	if (workerQueueTask('mpdcfg')) {
+	if (workerPushTask('mpdcfg')) {
 		uiSetNotification('MPD config reset', 'Restarting MPD server...');
 	}
 	else {
@@ -50,7 +50,7 @@ if (isset($_POST['reset']) && $_POST['reset'] == 1) {
 // Handle restart (same as process for mpdcfg)
 if (isset($_POST['mpdrestart']) && $_POST['mpdrestart'] == 1) {
 	// Tell worker to write new MPD config
-	if (workerQueueTask('mpdcfg')) {
+	if (workerPushTask('mpdcfg')) {
 		uiSetNotification('MPD restart', 'MPD restarted');
 	}
 	else {
@@ -66,7 +66,7 @@ if (isset($_POST['conf']) && !empty($_POST['conf'])) {
 		cfgdb_update('cfg_mpd',$dbh,$key,$value);
 	}
 	// Tell worker to write new MPD config
-	if (workerQueueTask('mpdcfg')) {
+	if (workerPushTask('mpdcfg')) {
 		uiSetNotification('MPD config modified', 'Restarting MPD server...');
 	}
 	else {
@@ -77,7 +77,7 @@ if (isset($_POST['conf']) && !empty($_POST['conf'])) {
 // Handle manual config
 if (isset($_POST['mpdconf']) && !empty($_POST['mpdconf'])) {
 	// tell worker to write new MPD config
-	if (workerQueueTask('mpdcfgman', $_POST['mpdconf'])) {
+	if (workerPushTask('mpdcfgman', $_POST['mpdconf'])) {
 		uiSetNotification('MPD config modified', 'Restarting MPD server...');
 	}
 	else {

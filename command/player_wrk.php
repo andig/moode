@@ -34,10 +34,11 @@ require_once dirname(__FILE__) . '/../inc/worker.php';
 ini_set('display_errors', '1');
 ini_set('error_log', '/var/log/php_errors.log');
 $db = 'sqlite:/var/www/db/player.db';
+error_reporting(E_ALL);
 
-// check if test mode
-$options = getopt('t', array('test'));
-$test = isset($options['t']) || isset($options['test']);
+// command line options
+$options = getopt('th', array('test', 'help'));
+$opt_test = isset($options['t']) || isset($options['test']);
 
 $lock = fopen('/run/player_wrk.pid', 'c+');
 if (!flock($lock, LOCK_EX | LOCK_NB)) {
@@ -45,7 +46,7 @@ if (!flock($lock, LOCK_EX | LOCK_NB)) {
 }
 
 // --- DEMONIZE --- only if not in test mode
-if (false === $test) {
+if (false === $opt_test) {
 	switch ($pid = pcntl_fork()) {
 		case -1:
 			die('unable to fork');
@@ -78,34 +79,15 @@ if (false === $test) {
 }
 
 // --- INITIALIZE ENVIRONMENT --- //
-// change /run and session files for correct session file locking
+// reset file permissions
 sysCmd('chmod 777 /run');
-
-// reset DB permission
-sysCmd('chmod -R 777 /var/www/db');
-
-// load session
-playerSession('open', $db, '', '');
-
-// reset session file permissions
 sysCmd('chmod 777 /run/sess*');
-
-// TC (Tim Curtis) 2014-11-30: reset WEBRADIO file permissions
 sysCmd('chmod 777 /var/lib/mpd/music/WEBRADIO/*.*');
-
-// TC (Tim Curtis) 2015-07-31: reset SDCARD dir permissions
 sysCmd('chmod 777 /var/lib/mpd/music/SDCARD');
-
-// TC (Tim Curtis) 2014-12-23
-// - reset tcmods.conf file permissions
 sysCmd('chmod 777 /var/www/tcmods.conf');
-
-// TC (Tim Curtis) 2015-05-30: reset playhistory.log file permissions
 sysCmd('chmod 777 /var/www/playhistory.log');
-
-// TC (Tim Curtis) 2015-06-26: reset liblog.txt file permissions
 sysCmd('chmod 777 /var/www/liblog.txt');
-
+sysCmd('chmod -R 777 /var/www/db');
 // mount all sources
 wrk_sourcemount($db, 'mountall');
 
@@ -114,6 +96,25 @@ sysCmd("service mpd start");
 
 // - set symlink for album art lookup
 sysCmd("ln -s /var/lib/mpd/music /var/www/coverroot");
+
+
+// load session
+playerSession('open', $db, '', '');
+
+// make sure session vars are set
+$vars = array('w_active', 'w_lock', 'w_queue', 'w_queueargs', 'debug', 'debugdata');
+foreach ($vars as $var) {
+	if (!isset($_SESSION[$var])) {
+		$_SESSION[$var] = '';
+	}
+}
+
+
+logWorker("[daemon] Startup");
+logWorker("[daemon] w_active    " . $_SESSION['w_active']);
+logWorker("[daemon] w_lock      " . $_SESSION['w_lock']);
+logWorker("[daemon] w_queue     " . $_SESSION['w_queue']);
+logWorker("[daemon] w_queueargs " . print_r($_SESSION['w_queueargs'],1));
 
 // check Architecture
 $arch = wrk_getHwPlatform();
@@ -211,18 +212,6 @@ if (isset($_SESSION['playerid']) && $_SESSION['playerid'] == '') {
 sysCmd('/usr/sbin/smbd -D --configfile=/var/www/etc/samba/smb.conf');
 sysCmd('/usr/sbin/nmbd -D --configfile=/var/www/etc/samba/smb.conf');
 
-// inizialize worker session vars
-//if (!isset($_SESSION['w_queue']) OR $_SESSION['w_queue'] == 'workerrestart') { $_SESSION['w_queue'] = ''; }
-$_SESSION['w_queue'] = '';
-$_SESSION['w_queueargs'] = '';
-$_SESSION['w_lock'] = 0;
-//if (!isset($_SESSION['w_active'])) { $_SESSION['w_active'] = 0; }
-$_SESSION['w_active'] = 0;
-$_SESSION['w_jobID'] = '';
-// inizialize debug
-$_SESSION['debug'] = 0;
-$_SESSION['debugdata'] = '';
-
 // initialize kernel profile
 if ($_SESSION['dev'] == 0) {
 	$cmd = "/var/www/command/orion_optimize.sh ".$_SESSION['orionprofile']." startup" ;
@@ -253,9 +242,7 @@ $dlna = file_get_contents('/etc/minidlna.conf');
 $dlna = preg_replace('/^#?presentation_url.*$/', 'presentation_url=http://' . $ip . ':80', $dlna);
 file_put_contents('/etc/minidlna.conf', $dlna);
 
-
 // Start minidlna service
-// TC (Tim Curtis) 2015-04-29: start minidlna only if its turned on in System config page
 if (isset($_SESSION['djmount']) && $_SESSION['djmount'] == 1) {
 	sysCmd('/usr/bin/minidlna -f /run/minidlna.conf');
 }
@@ -277,7 +264,6 @@ if (isset($_SESSION['shairport']) && $_SESSION['shairport'] == 1) {
 		}
 		else if ($cfg['param'] == 'device') {
 			$device = $cfg['value_player'];
-			var_export($device);
 		}
 		else {
 			$output .= $cfg['param']." \t\"".$cfg['value_player']."\"\n";
@@ -300,6 +286,7 @@ if (isset($_SESSION['upnpmpdcli']) && $_SESSION['upnpmpdcli'] == 1) {
 	$cmd = '/etc/init.d/upmpdcli start > /dev/null 2>&1 &';
 	sysCmd($cmd);
 }
+
 // TC (Tim Curtis) 2014-12-23: read tcmods.conf file for clock radio settings
 $_tcmods_conf = getTcmodsConf();
 $clock_radio_starttime = $_tcmods_conf['clock_radio_starttime'];
@@ -342,9 +329,13 @@ else {
 
 // --- END NORMAL STARTUP --- //
 
+session_write_close();
+
 // --- WORKER MAIN LOOP --- //
 while (1) {
 	session_start();
+
+	logWorker('[daemon] session_id ' . session_id());
 
 	if (!count($_SESSION)) {
 		logWorker('[daemon] session ' . session_id() . ' empty');
@@ -495,16 +486,15 @@ while (1) {
 		}
 	}
 
-	// Monitor loop
-	if (isset($_SESSION['w_active']) && $_SESSION['w_active'] == 1 &&
-		isset($_SESSION['w_lock']) && $_SESSION['w_lock'] == 0)
-	{
-		$_SESSION['w_lock'] = 1;
+	logWorker("[daemon] w_active " . $_SESSION['w_active']);
+	logWorker("[daemon] w_lock   " . $_SESSION['w_lock']);
 
+	// Monitor loop
+	if (false !== ($task = workerPopTask())) {
 		logWorker("[daemon] Task active: " . $_SESSION['w_queue']);
 
 		// switch command queue for predefined jobs
-		switch($_SESSION['w_queue']) {
+		switch ($task) {
 			case 'reboot':
 				$cmd = 'mpc stop && reboot';
 				sysCmd($cmd);
@@ -547,9 +537,7 @@ while (1) {
 				$netconf = $netconf.$_SESSION['w_queueargs'];
 				fwrite($fp, $netconf);
 				fclose($fp);
-				// update hash
-				$hash = md5_file('/etc/network/interfaces');
-				playerSession('write', $db, 'netconfhash', $hash);
+
 				// restart wlan0 interface
 				if (strpos($netconf, 'wlan0') != false) {
 				$cmd = "ip addr list wlan0 |grep \"inet \" |cut -d' ' -f6|cut -d/ -f1";
@@ -712,12 +700,10 @@ while (1) {
 
 		logWorker("[daemon] Task done");
 
-		// reset locking and command queue
-		$_SESSION['w_queue'] = '';
-		$_SESSION['w_queueargs'] = '';
-		$_SESSION['w_jobID'] = '';
-		$_SESSION['w_active'] = 0;
-		$_SESSION['w_lock'] = 0;
+		workerFinishTask();
+	}
+	else {
+		logWorker("[daemon] Sleeping");
 	}
 
 	session_write_close();
