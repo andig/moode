@@ -25,7 +25,7 @@
 require_once dirname(__FILE__) . '/config.inc';
 
 // player lib
-require_once dirname(__FILE__) . '/../inc/player_lib.php';
+require_once dirname(__FILE__) . '/../inc/player.php';
 
 // mpd socket/port
 $mpd = openMpdSocket(DAEMONIP, 6600);

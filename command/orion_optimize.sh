@@ -14,19 +14,7 @@
 #	Tsunamp Team
 #	http://www.tsunamp.com
 #
-#	UI-design/JS code by: 	Andrea Coiutti (aka ACX)
-#	PHP/JS code by:			Simone De Gregori (aka Orion)
-# 
-#	file:					orion_optimize.sh
-# 	version:				1.0
-#
-#	TCMODS Edition 
-#
-#	TC (Tim Curtis) 2015-01-27
-#	- add this header
-#	- remove unmute.sh (moved to player_wrk.php)
-#	- prune out some kernel profiles
-#	- shovel & broom	
+# Rewrite by Tim Curtis and Andreas Goetz
 #
 ######################################
 # Orion Tsunamp Optimize script v0.9 #

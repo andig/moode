@@ -28,7 +28,7 @@ $TCMODS_CONSUMEMODE_ON = "1"; // Used for run-once fix for mpd consume mode some
 $TCMODS_CLOCKRAD_RETRY = 3; // Num times to retry the stop cmd
 
 // Common include
-require_once dirname(__FILE__) . '/../inc/player_lib.php';
+require_once dirname(__FILE__) . '/../inc/player.php';
 require_once dirname(__FILE__) . '/../inc/worker.php';
 
 ini_set('display_errors', '1');
@@ -162,12 +162,9 @@ if (isset($_SESSION['playerid']) && $_SESSION['playerid'] == '') {
 			$_SESSION['netconf']['wlan0']['ip'] = $ip_wlan0[0];
 		}
 		else {
-			if (wrk_checkStrSysfile('/proc/net/wireless', 'wlan0')) {
-				$_SESSION['netconf']['wlan0']['ip'] = '--- NO IP ASSIGNED ---';
-			}
-			else {
-				$_SESSION['netconf']['wlan0']['ip'] = '--- NO INTERFACE PRESENT ---';
-			}
+			$_SESSION['netconf']['wlan0']['ip'] = wrk_checkStrSysfile('/proc/net/wireless', 'wlan0')
+				? '--- NO IP ASSIGNED ---'
+				: '--- NO INTERFACE PRESENT ---';
 		}
 	}
 
@@ -508,7 +505,7 @@ while (1) {
 				break;
 
 			case 'workerrestart':
-				$cmd = 'killall player_wrk.php';
+				$cmd = 'killall ' . pathinfo(__FILE__, PATHINFO_BASENAME);
 				sysCmd($cmd);
 				break;
 
@@ -632,8 +629,6 @@ while (1) {
 				// TC (Tim Curtis) 2015-06-26: use getKernelVer()
 				$cmd = "/var/www/tcmods/".$TCMODS_REL."/cmds/tcmods.sh install-kernel ".getKernelVer($_SESSION['w_queueargs']);
 				$rtn = sysCmd($cmd);
-				// debug
-				//error_log(">>>>> player_wrk.php: kernelver=".$_SESSION['w_queueargs']." sysCmd output=".$rtn[0]." >>>>>", 0);
 				break;
 
 			// TC (Tim Curtis) 2015-04-29: process timezone select request

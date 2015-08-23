@@ -14,16 +14,9 @@
 #	along with this software.  If not, see
 #	<http://www.gnu.org/licenses/>.
 #
-#	DESC: runs from player_wrk.php at player start to ensure output is unmuted
-# 
-#	TC (Tim Curtis) 2015-01-27, r1.5
-#		- add this header
-# 
-#	TC (Tim Curtis) 2015-03-21, r1.7
-#		- add input args and logic to handle default and other unmutes
-# 
-#	TC (Tim Curtis) 2015-06-26, r2.0
-#		- add unmute for IQaudIO Pi-DigiAMP+
+# Rewrite by Tim Curtis and Andreas Goetz
+#
+#	DESC: runs from daemon.php at player start to ensure output is unmuted
 #
 if [ -z "$1" ]; then
         echo "missing arg" >/var/www/unmute.log

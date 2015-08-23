@@ -77,7 +77,7 @@ if (isset($_POST['update_i2s_device'])) {
 			{
 				uiSetNotification('', "<br><br>This device supports hardware volume control. After rebooting, optionally set MPD Volume control to Hardware.");
 			}
-			// TC (Tim Curtis) 2015-04-29: update cfg_engine table, moved from player_wrk.php, fixes field not updating when page echos back
+			// TC (Tim Curtis) 2015-04-29: update cfg_engine table, moved from daemon.php, fixes field not updating when page echos back
 			playerSession('write',$db,'i2s',$_POST['i2s']);
 			playerSession('unlock');
 		}
@@ -107,7 +107,7 @@ if (isset($_POST['update_time_zone'])) {
 	if (isset($_POST['timezone']) && $_POST['timezone'] != $_SESSION['timezone']) {
 		if (workerPushTask('timezone', $_POST['timezone'])) {
 			uiSetNotification('Setting change', "Timezone ".$_POST['timezone']." has been set.", 4);
-			// TC (Tim Curtis) 2015-04-29: update cfg_engine table, moved from player_wrk.php, fixes field not updating when page echos back
+			// TC (Tim Curtis) 2015-04-29: update cfg_engine table, moved from daemon.php, fixes field not updating when page echos back
 			playerSession('write',$db,'timezone',$_POST['timezone']);
 			playerSession('unlock');
 		}
@@ -418,7 +418,7 @@ $sezione = basename(__FILE__, '.php');
 include('_header.php');
 
 // TC (Tim Curtis) 2015-02-25: dont wait if kernel select so page returns and uiShowNotification message appears
-// TC (Tim Curtis) 2015-02-25: use notify title as the check since its not cleared by worker (player_wrk.php)
+// TC (Tim Curtis) 2015-02-25: use notify title as the check since its not cleared by worker (daemon.php)
 if (!isset($_SESSION['notify']['title']) ||
 	isset($_SESSION['notify']['title']) && $_SESSION['notify']['title'] !== 'Kernel change')
 {
