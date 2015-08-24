@@ -47,13 +47,14 @@ function workerPushTask($task, $parameters = null) {
 /**
  * Get task from queue
  */
-function workerPopTask() {
+function workerPopTask($args) {
 	if ($task =
 		isset($_SESSION['w_active']) && $_SESSION['w_active'] == 1 &&
 		isset($_SESSION['w_lock']) && $_SESSION['w_lock'] == 0)
 	{
-		$_SESSION['w_lock'] = 1;		// lock queue
-		$task = $_SESSION['w_queue'];	// get task from queue
+		$_SESSION['w_lock'] = 1;			// lock queue
+		$task = $_SESSION['w_queue'];		// get task from queue
+		$args = $_SESSION['w_queueargs'];	// get args from queue
 	}
 
 	return $task;
@@ -288,16 +289,6 @@ function wrk_getHwPlatform(&$archName) {
 	return $arch;
 }
 
-function wrk_setHwPlatform() {
-	// register playerID into database
-	Session::update('playerid', wrk_playerID($arch));
-
-	// register platform into database
-	$arch = wrk_getHwPlatform($archName);
-	Session::update('hwplatformid', $arch);
-	Session::update('hwplatform', $RaspberryPi);
-}
-
 function wrk_playerID($arch) {
 	return $arch.md5_file('/sys/class/net/eth0/address');
 }
@@ -305,8 +296,6 @@ function wrk_playerID($arch) {
 function wrk_sysChmod() {
 	sysCmd('chmod -R 777 /var/www/db');
 	sysCmd('chmod a+x /var/www/command/orion_optimize.sh');
-	// TC (Tim Curtis) 2015-01-27
-	// - moved from /home/... dir
 	sysCmd('chmod a+x /var/www/command/unmute.sh');
 	sysCmd('chmod 777 /run');
 	sysCmd('chmod 777 /run/sess*');

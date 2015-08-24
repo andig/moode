@@ -22,8 +22,16 @@
  * Rewrite by Tim Curtis and Andreas Goetz
  */
 
+/*
+ * NOTE
+ *
+ * Due to http://stackoverflow.com/questions/32139840/why-cant-daemon-attach-to-php-session/32164649#32164649
+ * and https://bugs.php.net/bug.php?id=69582 all access to frontend session must be executed with matching uid.
+ *
+ * This is achieved using Session::wrap(callable, true). Inside the callable, root access is not longer available.
+ */
+
 // Common TCMODS
-$TCMODS_CONSUMEMODE_ON = "1"; // Used for run-once fix for mpd consume mode sometimes being on after boot/reboot
 $TCMODS_CLOCKRAD_RETRY = 3; // Num times to retry the stop cmd
 
 require_once dirname(__FILE__) . '/../inc/config.inc';
@@ -75,6 +83,7 @@ if (false === $opt_test) {
 
 // --- INITIALIZE ENVIRONMENT --- //
 // reset file permissions
+// TODO can this be moved to wrk_sysChmod?
 sysCmd('chmod 777 /run');
 sysCmd('chmod 777 /run/sess*');
 sysCmd('chmod 777 ' . MPD_LIB . 'WEBRADIO/*.*');
@@ -83,58 +92,64 @@ sysCmd('chmod 777 /var/www/tcmods.conf');
 sysCmd('chmod 777 /var/www/playhistory.log');
 sysCmd('chmod 777 /var/www/liblog.txt');
 sysCmd('chmod -R 777 /var/www/db');
+
 // mount all sources
 wrk_sourcemount('mountall');
 
-// start MPD daemon
+// start MPD daemon with consume mode off
 sysCmd("service mpd start");
+$mpd = openMpdSocket(MPD_HOST, 6600);
+sendMpdCommand($mpd, 'consume 0');
+closeMpdSocket($mpd);
 
 // - set symlink for album art lookup
 sysCmd("ln -s /var/lib/mpd/music /var/www/coverroot");
 
 
 // load session
-Session::open();
-
-// make sure session vars are set
-$vars = array('w_active', 'w_lock', 'w_queue', 'w_queueargs', 'debug', 'debugdata');
-foreach ($vars as $var) {
-	if (!isset($_SESSION[$var])) {
-		$_SESSION[$var] = '';
+Session::wrap(function() {
+	// make sure session vars are set
+	$vars = array('w_active', 'w_lock', 'w_queue', 'w_queueargs', 'debug', 'debugdata');
+	foreach ($vars as $var) {
+		if (!isset($_SESSION[$var])) {
+			$_SESSION[$var] = '';
+		}
 	}
-}
 
+	logWorker("[daemon] Startup");
+	logWorker("[daemon] " . print_r($_SESSION,1));
 
-logWorker("[daemon] Startup");
-logWorker("[daemon] w_active    " . $_SESSION['w_active']);
-logWorker("[daemon] w_lock      " . $_SESSION['w_lock']);
-logWorker("[daemon] w_queue     " . $_SESSION['w_queue']);
-logWorker("[daemon] w_queueargs " . print_r($_SESSION['w_queueargs'],1));
-
-// check Architecture
-$arch = wrk_getHwPlatform($foo);
-if ($arch != $_SESSION['hwplatformid']) {
-	// reset playerID if architectureID not match. This condition "fire" another first-install process
-	Session::update('playerid', '');
-}
-// --- END INITIALIZE ENVIRONMENT --- //
+	// check Architecture
+	$arch = wrk_getHwPlatform($foo);
+	if ($arch != $_SESSION['hwplatformid']) {
+		// reset playerID if architectureID not match. This condition "fire" another first-install process
+		Session::update('playerid', '');
+	}
+}, true);
 
 // --- PLAYER FIRST INSTALLATION PROCESS --- //
 if (isset($_SESSION['playerid']) && $_SESSION['playerid'] == '') {
-	// register HW architectureID and playerID
-	wrk_setHwPlatform();
-
 	// re-init session
-	Session::destroy();
-	Session::open();
+	Session::wrap(function() {
+		Session::destroy();
+
+		// get architecture
+		$arch = wrk_getHwPlatform($archName);
+
+		// register playerID into database
+		Session::update('playerid', wrk_playerID($arch));
+
+		// register platform into database
+		Session::update('hwplatformid', $arch);
+		Session::update('hwplatform', $archName);
+	}, true);
 
 	// reset ENV parameters
 	wrk_sysChmod();
 
 	// reset netconf to defaults
-	$value = array('ssid' => '', 'encryption' => '', 'password' => '');
 	ConfigDB::connect();
-	ConfigDB::update('cfg_wifisec', '', $value);
+	ConfigDB::update('cfg_wifisec', '', array('ssid' => '', 'encryption' => '', 'password' => ''));
 
 	$netconf = <<<EOD
 auto lo
@@ -147,6 +162,8 @@ iface eth0 inet dhcp
 #iface wlan0 inet dhcp
 EOD;
 	file_put_contents('/etc/network/interfaces', $netconf);
+/*
+	// TODO wlan0 not present in netconf
 
 	// restart wlan0 interface
 	if (strpos($netconf, 'wlan0') != false) {
@@ -161,7 +178,7 @@ EOD;
 				: '--- NO INTERFACE PRESENT ---';
 		}
 	}
-
+*/
 	sysCmd('service networking restart');
 
 	// reset sourcecfg to defaults
@@ -178,7 +195,6 @@ EOD;
 	wrk_mpdconf();
 	sysCmd('service mpd restart');
 
-
 	// disable minidlna / samba / MPD startup
 	sysCmd("update-rc.d -f minidlna remove");
 	sysCmd("update-rc.d -f ntp remove");
@@ -193,7 +209,6 @@ EOD;
 
 	// stop services
 	sysCmd('service minidlna stop');
-	//sysCmd('service minidlna ntp'); // TC (Tim Curtis) 2015-04-29: bug?
 	sysCmd('service samba stop');
 	sysCmd('service mpd stop');
 // --- END PLAYER FIRST INSTALLATION PROCESS --- //
@@ -205,8 +220,7 @@ sysCmd('/usr/sbin/nmbd -D --configfile=/var/www/etc/samba/smb.conf');
 
 // initialize kernel profile
 if ($_SESSION['dev'] == 0) {
-	$cmd = "/var/www/command/orion_optimize.sh ".$_SESSION['orionprofile']." startup" ;
-	sysCmd($cmd);
+	sysCmd("/var/www/command/orion_optimize.sh ".$_SESSION['orionprofile']." startup");
 }
 
 // check current eth0 / wlan0 IP Address
@@ -214,19 +228,21 @@ $ip_eth0 = sysCmd("ip addr list eth0 |grep \"inet \" |cut -d' ' -f6|cut -d/ -f1"
 $ip_wlan0 = sysCmd("ip addr list wlan0 |grep \"inet \" |cut -d' ' -f6|cut -d/ -f1");
 $ip_fallback = "192.168.10.110";
 
-// check IP for minidlna assignment and add to session
-if (isset($ip_eth0) && !empty($ip_eth0)) {
-	$ip = $ip_eth0[0];
-	$_SESSION['netconf']['eth0']['ip'] = $ip;
-}
-elseif (isset($ip_wlan0) && !empty($ip_wlan0)) {
-	$ip = $ip_wlan0[0];
-	$_SESSION['netconf']['wlan0']['ip'] = $ip;
-}
-else {
-	$ip = $ip_fallback;
-}
-
+// add ip address to session
+Session::wrap(function() use ($ip, $ip_eth0, $ip_wlan0, $ip_fallback) {
+	// check IP for minidlna assignment and add to session
+	if (isset($ip_eth0) && !empty($ip_eth0)) {
+		$ip = $ip_eth0[0];
+		$_SESSION['netconf']['eth0']['ip'] = $ip;
+	}
+	elseif (isset($ip_wlan0) && !empty($ip_wlan0)) {
+		$ip = $ip_wlan0[0];
+		$_SESSION['netconf']['wlan0']['ip'] = $ip;
+	}
+	else {
+		$ip = $ip_fallback;
+	}
+});
 
 // minidlna.conf
 $dlna = file_get_contents('/etc/minidlna.conf');
@@ -239,8 +255,6 @@ if (isset($_SESSION['djmount']) && $_SESSION['djmount'] == 1) {
 }
 
 
-// unlock session files
-Session::close();
 
 // Shairport (Airplay receiver service)
 if (isset($_SESSION['shairport']) && $_SESSION['shairport'] == 1) {
@@ -259,22 +273,19 @@ if (isset($_SESSION['shairport']) && $_SESSION['shairport'] == 1) {
 			$output .= $cfg['param']." \t\"".$cfg['value_player']."\"\n";
 		}
 	}
+
 	// Start Shairport
-	// TC (Tim Curtis) 2014-08-23: set shairport friendly name
-	$cmd = '/usr/local/bin/shairport -a "Moode" -w -B "mpc stop" -o alsa -- -d "hw:"'.$device.'",0" > /dev/null 2>&1 &';
-	sysCmd($cmd);
+	sysCmd('/usr/local/bin/shairport -a "Moode" -w -B "mpc stop" -o alsa -- -d "hw:"'.$device.'",0" > /dev/null 2>&1 &');
 }
 
 // DLNA server
 if (isset($_SESSION['djmount']) && $_SESSION['djmount'] == 1) {
-	$cmd = 'djmount -o allow_other,nonempty,iocharset=utf-8 /mnt/UPNP > /dev/null 2>&1 &';
-	sysCmd($cmd);
+	sysCmd('djmount -o allow_other,nonempty,iocharset=utf-8 /mnt/UPNP > /dev/null 2>&1 &');
 }
 
 // UPnP renderer
 if (isset($_SESSION['upnpmpdcli']) && $_SESSION['upnpmpdcli'] == 1) {
-	$cmd = '/etc/init.d/upmpdcli start > /dev/null 2>&1 &';
-	sysCmd($cmd);
+	sysCmd('/etc/init.d/upmpdcli start > /dev/null 2>&1 &');
 }
 
 // TC (Tim Curtis) 2014-12-23: read tcmods.conf file for clock radio settings
@@ -287,16 +298,13 @@ $_tcmods_conf['sys_kernel_ver'] = strtok(shell_exec('uname -r'),"\n");
 $_tcmods_conf['sys_processor_arch'] = strtok(shell_exec('uname -m'),"\n");
 $_ver_str = explode(": ", strtok(shell_exec('dpkg-query -p mpd | grep Version'),"\n"));
 $_tcmods_conf['sys_mpd_ver'] = $_ver_str[1];
-$rtn = _updTcmodsConf($_tcmods_conf);
-// store in DB and $_SESSION[kernelver], $_SESSION[procarch] vars
-Session::update('kernelver', $_tcmods_conf['sys_kernel_ver']);
-Session::update('procarch', $_tcmods_conf['sys_processor_arch']);
+_updTcmodsConf($_tcmods_conf);
 
 // Ensure audio output is unmuted
 if ($_SESSION['i2s'] == 'IQaudIO Pi-AMP+') {
 	sysCmd("/var/www/command/unmute.sh pi-ampplus");
 }
-else if ($_SESSION['i2s'] == 'IQaudIO Pi-DigiAMP+') {
+elseif ($_SESSION['i2s'] == 'IQaudIO Pi-DigiAMP+') {
 	sysCmd("/var/www/command/unmute.sh pi-digiampplus");
 }
 else {
@@ -306,37 +314,24 @@ else {
 // TC (Tim Curtis) 2015-04-29: store PCM (alsamixer) volume, picked up by settings.php ALSA volume field
 // TC (Tim Curtis) 2015-06-26: set simple mixer name based on kernel version and i2s vs USB
 $mixername = getMixerName(getKernelVer($_SESSION['kernelver']), $_SESSION['i2s']);
+$rtn = "/var/www/tcmods/".TCMODS_RELEASE."/cmds/tcmods.sh get-pcmvol ".$mixername;
+$volume = (substr($rtn[0], 0, 6) == 'amixer') ? 'none' : str_replace("%", "", $rtn[0]);
 
-$cmd = "/var/www/tcmods/".TCMODS_RELEASE."/cmds/tcmods.sh get-pcmvol ".$mixername;
-$rtn = sysCmd($cmd);
-if (substr($rtn[0], 0, 6 ) == 'amixer') {
-	Session::update('pcm_volume', 'none');
-}
-else {
-	$rtn[0] = str_replace("%", "", $rtn[0]);
-	Session::update('pcm_volume', $rtn[0]);
-}
+// update session and db
+Session::wrap(function() use ($_tcmods_conf, $volume) {
+	Session::update('kernelver', $_tcmods_conf['sys_kernel_ver']);
+	Session::update('procarch', $_tcmods_conf['sys_processor_arch']);
+
+	Session::update('pcm_volume', $volume);
+}, true);
 
 // --- END NORMAL STARTUP --- //
 
-session_write_close();
 
 // --- WORKER MAIN LOOP --- //
 while (1) {
-	session_start();
-
-	logWorker('[daemon] session_id ' . session_id());
-
 	if (!count($_SESSION)) {
 		logWorker('[daemon] session ' . session_id() . ' empty');
-	}
-
-	// TC (Tim Curtis) 2014-10-31: start with consume mode off, only runs once after player start
-	if ($TCMODS_CONSUMEMODE_ON == "1") {
-		$TCMODS_CONSUMEMODE_ON = "0";
-		$mpd = openMpdSocket(MPD_HOST, 6600);
-		sendMpdCommand($mpd, 'consume 0');
-		closeMpdSocket($mpd);
 	}
 
 	// TC (Tim Curtis) 2014-12-23: check clock radio for scheduled playback
@@ -371,7 +366,7 @@ while (1) {
 			execMpdCommand($mpd, 'play '.$_tcmods_conf['clock_radio_playitem']);
 			closeMpdSocket($mpd);
 		}
-		else if ($current_time == $clock_radio_stoptime) {
+		elseif ($current_time == $clock_radio_stoptime) {
 			//$_tcmods_conf['clock_radio_stoptime'] = '';
 			$mpd = openMpdSocket(MPD_HOST, 6600);
 			execMpdCommand($mpd, 'stop');
@@ -476,30 +471,34 @@ while (1) {
 		}
 	}
 
+	// getting task requires write access to session
+	Session::wrap(function() use ($task, $args) {
+		$task = workerPopTask($args);
+	}, true);
+
 	// Monitor loop
-	if (false !== ($task = workerPopTask())) {
+	if (false !== $task) {
 		logWorker("[daemon] Task active: " . $task);
+		if (isset($args)) {
+			logWorker("[daemon] Task args: " . print_r($args,1));
+		}
 
 		// switch command queue for predefined jobs
 		switch ($task) {
 			case 'reboot':
-				$cmd = 'mpc stop && reboot';
-				sysCmd($cmd);
+				sysCmd('mpc stop && reboot');
 				break;
 
 			case 'poweroff':
-				$cmd = 'mpc stop && poweroff';
-				sysCmd($cmd);
+				sysCmd('mpc stop && poweroff');
 				break;
 
 			case 'phprestart':
-				$cmd = 'service php5-fpm restart';
-				sysCmd($cmd);
+				sysCmd('service php5-fpm restart');
 				break;
 
 			case 'workerrestart':
-				$cmd = 'killall ' . pathinfo(__FILE__, PATHINFO_BASENAME);
-				sysCmd($cmd);
+				sysCmd('killall ' . pathinfo(__FILE__, PATHINFO_BASENAME));
 				break;
 
 			case 'syschmod':
@@ -510,44 +509,38 @@ while (1) {
 				if ($_SESSION['dev'] == 1) {
 					$_SESSION['w_queueargs'] = 'dev';
 				}
-				$cmd = "/var/www/command/orion_optimize.sh ".$_SESSION['w_queueargs'];
-				sysCmd($cmd);
+				sysCmd("/var/www/command/orion_optimize.sh " . $args);
 				break;
 
 			case 'netcfg':
-				$file = '/etc/network/interfaces';
-				$fp = fopen($file, 'w');
 				$netconf = "auto lo\n";
 				$netconf .= "iface lo inet loopback\n";
-				//$netconf .= "\n";
-				//$netconf .= "auto eth0\n";
-				$netconf = $netconf.$_SESSION['w_queueargs'];
-				fwrite($fp, $netconf);
-				fclose($fp);
+				file_put_contents('/etc/network/interfaces', $netconf . $args);
 
 				// restart wlan0 interface
 				if (strpos($netconf, 'wlan0') != false) {
-				$cmd = "ip addr list wlan0 |grep \"inet \" |cut -d' ' -f6|cut -d/ -f1";
-				$ip_wlan0 = sysCmd($cmd);
+					$ip_wlan0 = sysCmd("ip addr list wlan0 |grep \"inet \" |cut -d' ' -f6|cut -d/ -f1");
 					if (!empty($ip_wlan0[0])) {
-						$_SESSION['netconf']['wlan0']['ip'] = $ip_wlan0[0];
+						$ip = $ip_wlan0[0];
 					}
 					else {
-						$_SESSION['netconf']['wlan0']['ip'] = wrk_checkStrSysfile('/proc/net/wireless', 'wlan0')
+						$ip = wrk_checkStrSysfile('/proc/net/wireless', 'wlan0')
 							? '--- NO IP ASSIGNED ---'
 							: '--- NO INTERFACE PRESENT ---';
 					}
+					// update session
+					Session::wrap(function() use ($ip) {
+						$_SESSION['netconf']['wlan0']['ip'] = $ip;
+					}, true);
 				}
 				sysCmd('service networking restart');
 				break;
 
 			case 'netcfgman':
-				file_put_contents('/etc/network/interfaces', $_SESSION['w_queueargs']);
+				file_put_contents('/etc/network/interfaces', $args);
 				break;
 
 			case 'mpdcfg':
-				// TC (Tim Curtis) 2015-06-26: add kernel version, i2s args
-				// TC (Tim Curtis) 2015-06-26: use getKernelVer()  
 				wrk_mpdconf(getKernelVer($_SESSION['kernelver']), $_SESSION['i2s']);
 				sysCmd('killall mpd');
 				sysCmd('service mpd start');
@@ -555,38 +548,32 @@ while (1) {
 
 			case 'mpdcfgman':
 				// write mpd.conf file
-				$fh = fopen('/etc/mpd.conf', 'w');
-				fwrite($fh, $_SESSION['w_queueargs']);
-				fclose($fh);
+				file_put_contents('/etc/mpd.conf', $args);
 				sysCmd('killall mpd');
 				sysCmd('service mpd start');
 				break;
 
 			case 'sourcecfg':
-				wrk_sourcecfg($_SESSION['w_queueargs']);
+				wrk_sourcecfg($args);
 				break;
 
 			// TC (Tim Curtis) 2014-08-23: process theme change requests
-			// TC (Tim Curtis) 2015-04-29: streamline theme change code
-			// TC (Tim Curtis) 2015-04-29: add 6 new theme colors
-			// TC (Tim Curtis) 2015-05-30: streamline theme change code
 			case 'themechange':
 				// set colov values
-				if ($_SESSION['w_queueargs'] == "amethyst") {$hexlight = "9b59b6"; $hexdark = "8e44ad";}
-				else if ($_SESSION['w_queueargs'] == "bluejeans") {$hexlight = "436bab"; $hexdark = "1f4788";}
-				else if ($_SESSION['w_queueargs'] == "carrot") {$hexlight = "e67e22"; $hexdark = "d35400";}
-				else if ($_SESSION['w_queueargs'] == "emerald") {$hexlight = "2ecc71"; $hexdark = "27ae60";}
-				else if ($_SESSION['w_queueargs'] == "fallenleaf") {$hexlight = "e5a646"; $hexdark = "cb8c3e";}
-				else if ($_SESSION['w_queueargs'] == "grass") {$hexlight = "90be5d"; $hexdark = "7ead49";}
-				else if ($_SESSION['w_queueargs'] == "herb") {$hexlight = "48929b"; $hexdark = "317589";}
-				else if ($_SESSION['w_queueargs'] == "lavender") {$hexlight = "9a83d4"; $hexdark = "876dc6";}
-				else if ($_SESSION['w_queueargs'] == "river") {$hexlight = "3498db"; $hexdark = "2980b9";}
-				else if ($_SESSION['w_queueargs'] == "rose") {$hexlight = "d479ac"; $hexdark = "c1649b";}
-				else if ($_SESSION['w_queueargs'] == "turquoise") {$hexlight = "1abc9c"; $hexdark = "16a085";}
+				if ($args == "amethyst") {$hexlight = "9b59b6"; $hexdark = "8e44ad";}
+				elseif ($args == "bluejeans") {$hexlight = "436bab"; $hexdark = "1f4788";}
+				elseif ($args == "carrot") {$hexlight = "e67e22"; $hexdark = "d35400";}
+				elseif ($args == "emerald") {$hexlight = "2ecc71"; $hexdark = "27ae60";}
+				elseif ($args == "fallenleaf") {$hexlight = "e5a646"; $hexdark = "cb8c3e";}
+				elseif ($args == "grass") {$hexlight = "90be5d"; $hexdark = "7ead49";}
+				elseif ($args == "herb") {$hexlight = "48929b"; $hexdark = "317589";}
+				elseif ($args == "lavender") {$hexlight = "9a83d4"; $hexdark = "876dc6";}
+				elseif ($args == "river") {$hexlight = "3498db"; $hexdark = "2980b9";}
+				elseif ($args == "rose") {$hexlight = "d479ac"; $hexdark = "c1649b";}
+				elseif ($args == "turquoise") {$hexlight = "1abc9c"; $hexdark = "16a085";}
 				// change to new theme color
-				$cmd = "/var/www/tcmods/".TCMODS_RELEASE."/cmds/tcmods.sh ".$_SESSION['w_queueargs']." ".$hexlight." ".$hexdark;
-				sysCmd($cmd);
-				 // reload tcmods.conf data
+				sysCmd("/var/www/tcmods/".TCMODS_RELEASE."/cmds/tcmods.sh " . $args." ".$hexlight." ".$hexdark);
+				// reload tcmods.conf data
 				$_tcmods_conf = getTcmodsConf();
 				break;
 
@@ -607,91 +594,76 @@ while (1) {
 				// Remove any existing dtoverlay line(s)
 				sysCmd('sed -i /dtoverlay/d /boot/config.txt');
 				// Set i2s driver
-				// TC (Tim Curtis) 2015-06-26: use getKernelVer()
 				$kernelver = getKernelVer($_SESSION['kernelver']);
 				if ($kernelver == '3.18.5+' || $kernelver == '3.18.11+' || $kernelver == '3.18.14+') {
-					_setI2sDtoverlay($_SESSION['w_queueargs']); // Dtoverlay (/boot/config.txt)
+					_setI2sDtoverlay($args); // Dtoverlay (/boot/config.txt)
 				}
 				else {
-					_setI2sModules($_SESSION['w_queueargs']); // Modules (/etc/modules)
+					_setI2sModules($args); // Modules (/etc/modules)
 				}
 				break;
 
 			// TC (Tim Curtis) 2015-02-25: process kernel select request
 			case 'kernelver':
-				// TC (Tim Curtis) 2015-06-26: use getKernelVer()
-				$cmd = "/var/www/tcmods/".TCMODS_RELEASE."/cmds/tcmods.sh install-kernel ".getKernelVer($_SESSION['w_queueargs']);
-				$rtn = sysCmd($cmd);
+				$rtn = sysCmd("/var/www/tcmods/".TCMODS_RELEASE."/cmds/tcmods.sh install-kernel ".getKernelVer($args));
 				break;
 
 			// TC (Tim Curtis) 2015-04-29: process timezone select request
 			case 'timezone':
-				$cmd = "/var/www/tcmods/".TCMODS_RELEASE."/cmds/tcmods.sh set-timezone ".$_SESSION['w_queueargs'];
-				$rtn = sysCmd($cmd);
+				$rtn = sysCmd("/var/www/tcmods/".TCMODS_RELEASE."/cmds/tcmods.sh set-timezone " . $args);
 				break;
 
 			// TC (Tim Curtis) 2015-04-29: process host name change request
 			case 'host_name':
-				$cmd = "/var/www/tcmods/".TCMODS_RELEASE."/cmds/tcmods.sh chg-name host ".$_SESSION['w_queueargs'];
-				$rtn = sysCmd($cmd);
+				$rtn = sysCmd("/var/www/tcmods/".TCMODS_RELEASE."/cmds/tcmods.sh chg-name host " . $args);
 				break;
 
 			case 'browser_title':
-				$cmd = "/var/www/tcmods/".TCMODS_RELEASE."/cmds/tcmods.sh chg-name browsertitle ".$_SESSION['w_queueargs'];
-				$rtn = sysCmd($cmd);
+				$rtn = sysCmd("/var/www/tcmods/".TCMODS_RELEASE."/cmds/tcmods.sh chg-name browsertitle " . $args);
 				break;
 
 			case 'airplay_name':
-				$cmd = "/var/www/tcmods/".TCMODS_RELEASE."/cmds/tcmods.sh chg-name airplay ".$_SESSION['w_queueargs'];
-				$rtn = sysCmd($cmd);
+				$rtn = sysCmd("/var/www/tcmods/".TCMODS_RELEASE."/cmds/tcmods.sh chg-name airplay " . $args);
 				break;
 
 			case 'upnp_name':
-				$cmd = "/var/www/tcmods/".TCMODS_RELEASE."/cmds/tcmods.sh chg-name upnp ".$_SESSION['w_queueargs'];
-				$rtn = sysCmd($cmd);
+				$rtn = sysCmd("/var/www/tcmods/".TCMODS_RELEASE."/cmds/tcmods.sh chg-name upnp " . $args);
 				break;
 
 			case 'dlna_name':
-				$cmd = "/var/www/tcmods/".TCMODS_RELEASE."/cmds/tcmods.sh chg-name dlna ".$_SESSION['w_queueargs'];
-				$rtn = sysCmd($cmd);
+				$rtn = sysCmd("/var/www/tcmods/".TCMODS_RELEASE."/cmds/tcmods.sh chg-name dlna " . $args);
 				break;
 
 			// TC (Tim Curtis) 2015-04-29: handle PCM volume change
 			case 'pcm_volume':
 				// TC (Tim Curtis) 2015-06-26: set simple mixer name based on kernel version and i2s vs USB
 				$mixername = getMixerName(getKernelVer($_SESSION['kernelver']), $_SESSION['i2s']);
-				$cmd = "/var/www/tcmods/".TCMODS_RELEASE."/cmds/tcmods.sh set-pcmvol ".$mixername." ".$_SESSION['w_queueargs'];
-				$rtn = sysCmd($cmd);
+				$rtn = sysCmd("/var/www/tcmods/".TCMODS_RELEASE."/cmds/tcmods.sh set-pcmvol ".$mixername." " . $args);
 				break;
 
 			// TC (Tim Curtis) 2015-05-30: add clear system and playback history logs
 			case 'clearsyslogs':
-				$cmd = "/var/www/tcmods/".TCMODS_RELEASE."/cmds/utility.sh clear-logs";
-				$rtn = sysCmd($cmd);
+				$rtn = sysCmd("/var/www/tcmods/".TCMODS_RELEASE."/cmds/utility.sh clear-logs");
 				break;
 
 			case 'clearplayhistory':
-				$cmd = "/var/www/tcmods/".TCMODS_RELEASE."/cmds/utility.sh clear-playhistory";
-				$rtn = sysCmd($cmd);
+				$rtn = sysCmd("/var/www/tcmods/".TCMODS_RELEASE."/cmds/utility.sh clear-playhistory");
 				break;
 
 			// TC (Tim Curtis) 2015-07-31: expand sd card storage
 			case 'expandsdcard':
-				$cmd = "/var/www/tcmods/".TCMODS_RELEASE."/cmds/resizefs.sh start";
-				$rtn = sysCmd($cmd);
+				$rtn = sysCmd("/var/www/tcmods/".TCMODS_RELEASE."/cmds/resizefs.sh start");
 				break;
-
 		} // end switch
 
-		logWorker("[daemon] Task done");
+		// update session
+		Session::wrap(function() {
+			logWorker("[daemon] Task done");
+		}, true);
 
 		workerFinishTask();
 	}
-	else {
-		logWorker("[daemon] Sleeping");
-	}
 
-	session_write_close();
 	sleep(5);
 }
 // --- END WORKER MAIN LOOP --- //
