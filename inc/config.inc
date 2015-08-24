@@ -21,14 +21,17 @@
  * Rewrite by Tim Curtis and Andreas Goetz
  */
 
-// DEV debug parameters
-// ini_set('display_errors',1);
-// error_reporting(E_ERROR);
-error_reporting(E_ALL ^ E_NOTICE);
+// DEV parameters
+ini_set('display_errors', 1);
+error_reporting(E_NOTICE);
+error_reporting(E_ALL);
+// error_reporting(E_ALL ^ E_NOTICE);
+
+define('TCMODS_RELEASE', 'r21'); 			// Current release
 
 define('ROOTPATH', '/var/www' );
-define('DAEMONIP', '127.0.0.1');
+define('MPD_HOST', '127.0.0.1');
 
 define('MPD_LIB', '/var/lib/mpd/music/');	// include trailing /
 
-$db = 'sqlite:' . ROOTPATH . '/db/player.db';
+define('CONFIG_DB', 'sqlite:' . ROOTPATH . '/db/player.db');

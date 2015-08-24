@@ -23,7 +23,7 @@
 
 require_once dirname(__FILE__) . '/inc/connection.php';
 
-playerSession('open',$db,'','');
+Session::open();
 
 if (!$mpd) {
 	die('Error: connection to MPD failed');

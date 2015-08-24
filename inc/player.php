@@ -416,184 +416,6 @@ function parseFileStr($strFile, $delimiter) {
 	return $str;
 }
 
-// cfg engine and session management
-function playerSession($action, $db = null, $var = null, $value = null) {
-	// open new PHP SESSION
-	if ($action == 'open') {
-		// check presence of sessionID into SQLite datastore
-		$sessionid = playerSession('getsessionid', $db);
-		if (!empty($sessionid)) {
-			// echo "<br>---------- SET SESSION ID-------------<br>";
-			session_id($sessionid);
-			session_start();
-		} else {
-			session_start();
-			// echo "<br>---------- STORE SESSION -------------<br>";
-			playerSession('storesessionid', $db);
-		}
-		$dbh  = cfgdb_connect($db);
-		// scan cfg_engine and store values in the new session
-		$params = cfgdb_read('cfg_engine', $dbh);
-		foreach ($params as $row) {
-			$_SESSION[$row['param']] = $row['value'];
-		}
-		// close SQLite handle
-		$dbh  = null;
-	}
-
-	// unlock PHP SESSION file
-	if ($action == 'unlock') {
-		session_write_close();
-	}
-
-	// unset and destroy current PHP SESSION
-	if ($action == 'destroy') {
-		session_unset();
-		if (session_destroy()) {
-			$dbh  = cfgdb_connect($db);
-			if (cfgdb_update('cfg_engine', $dbh, 'sessionid', '')) {
-				$dbh = null;
-				return true;
-			} else {
-				echo "cannot reset session on SQLite datastore";
-				return false;
-			}
-		}
-	}
-
-	// store a value in the cfgdb and in current PHP SESSION
-	if ($action == 'write') {
-		$_SESSION[$var] = $value;
-		$dbh  = cfgdb_connect($db);
-		cfgdb_update('cfg_engine', $dbh, $var, $value);
-		$dbh = null;
-	}
-
-	// record actual PHP Session ID in SQLite datastore
-	if ($action == 'storesessionid') {
-		$sessionid = session_id();
-		playerSession('write', $db, 'sessionid', $sessionid);
-	}
-
-	// read PHP SESSION ID stored in SQLite datastore and use it to "attatch" the same SESSION (used in worker)
-	if ($action == 'getsessionid') {
-		$dbh  = cfgdb_connect($db);
-		$result = cfgdb_read('cfg_engine', $dbh, 'sessionid');
-		$dbh = null;
-		return $result['0']['value'];
-	}
-
-}
-
-function cfgdb_connect($dbpath) {
-	if ($dbh = new PDO($dbpath)) {
-		return $dbh;
-	}
-	else {
-		die("Error: cannot open database " . $dbpath);
-	}
-}
-
-function cfgdb_read($table, $dbh, $param = null, $id = null) {
-	if(!isset($param)) {
-		$querystr = 'SELECT * from '.$table;
-	} else if (isset($id)) {
-		$querystr = "SELECT * from ".$table." WHERE id='".$id."'";
-	} else if ($param == 'mpdconf'){
-		$querystr = "SELECT param,value_player FROM cfg_mpd WHERE value_player!=''";
-	} else if ($param == 'mpdconfdefault') {
-		$querystr = "SELECT param,value_default FROM cfg_mpd WHERE value_default!=''";
-	} else if ($table == 'cfg_audiodev') {
-		$querystr = 'SELECT name, dacchip, arch, iface, other from '.$table.' WHERE name="'.$param.'"';
-	} else if ($table == 'cfg_radio') {
-		$querystr = 'SELECT station, name, logo from '.$table.' WHERE station="'.$param.'"';
-	} else {
-		$querystr = 'SELECT value from '.$table.' WHERE param="'.$param.'"';
-	}
-
-	//debug
-	error_log(">>>>> cfgdb_read(".$table.",dbh, ".$param.", ".$id.") >>>>> \n".$querystr, 0);
-	$result = sdbquery($querystr, $dbh);
-	return $result;
-}
-
-function cfgdb_update($table, $dbh, $key, $value) {
-	switch ($table) {
-		case 'cfg_engine':
-			$querystr = "UPDATE ".$table." SET value='".$value."' where param='".$key."'";
-			break;
-
-		case 'cfg_lan':
-			$querystr = "UPDATE ".$table." SET dhcp='".$value['dhcp']."', ip='".$value['ip']."', netmask='".$value['netmask']."', gw='".$value['gw']."', dns1='".$value['dns1']."', dns2='".$value['dns2']."' where name='".$value['name']."'";
-			break;
-
-		case 'cfg_mpd':
-			$querystr = "UPDATE ".$table." SET value_player='".$value."' where param='".$key."'";
-			break;
-
-		case 'cfg_wifisec':
-			$querystr = "UPDATE ".$table." SET ssid='".$value['ssid']."', security='".$value['encryption']."', password='".$value['password']."' where id=1";
-			break;
-
-		case 'cfg_source':
-			$querystr = "UPDATE ".$table." SET name='".$value['name']."', type='".$value['type']."', address='".$value['address']."', remotedir='".$value['remotedir']."', username='".$value['username']."', password='".$value['password']."', charset='".$value['charset']."', rsize='".$value['rsize']."', wsize='".$value['wsize']."', options='".$value['options']."', error='".$value['error']."' where id=".$value['id'];
-			break;
-	}
-	//debug
-	error_log(">>>>> cfgdb_update(".$table.",dbh, ".$key.", ".$value.") >>>>> \n".$querystr, 0);
-	if (sdbquery($querystr, $dbh)) {
-		return true;
-	} else {
-		return false;
-	}
-}
-
-function cfgdb_write($table, $dbh, $values) {
-	$querystr = "INSERT INTO ".$table." VALUES (NULL, ".$values.")";
-	//debug
-	error_log(">>>>> cfgdb_write(".$table.",dbh, ".$values.") >>>>> \n".$querystr, 0);
-	if (sdbquery($querystr, $dbh)) {
-		return true;
-	} else {
-		return false;
-	}
-}
-
-function cfgdb_delete($table, $dbh, $id) {
-	if (!isset($id)) {
-		$querystr = "DELETE FROM ".$table;
-	} else {
-		$querystr = "DELETE FROM ".$table." WHERE id=".$id;
-	}
-	//debug
-	error_log(">>>>> cfgdb_delete(".$table.",dbh, ".$id.") >>>>> \n".$querystr, 0);
-	if (sdbquery($querystr, $dbh)) {
-		return true;
-	} else {
-		return false;
-	}
-}
-
-function sdbquery($querystr, $dbh) {
-	$query = $dbh->prepare($querystr);
-	if ($query->execute()) {
-		$result = array();
-		$i = 0;
-		foreach ($query as $value) {
-			$result[$i] = $value;
-			$i++;
-		}
-		$dbh = null;
-		if (empty($result)) {
-			return true;
-		} else {
-			return $result;
-		}
-	} else {
-		return false;
-	}
-}
-
 function recursiveDelete($str){
 	if (is_file($str)) {
 		return @unlink($str);
@@ -692,9 +514,9 @@ function getHwParams($resp) {
 }
 
 // DSP: parse MPD Conf
-function _parseMpdConf($dbh) {
+function _parseMpdConf() {
 	// read in mpd conf settings
-	$mpdconf = cfgdb_read('', $dbh, 'mpdconf');
+	$mpdconf = ConfigDB::read('', 'mpdconf');
 	// prepare array
 	$_mpd = array (
 		'port' => '',
@@ -834,9 +656,9 @@ function _updatePlayHistory($currentsong) {
 	return '_updatePlayHistory: update playhistory.log complete';
 }
 
-function _setI2sDtoverlay($db, $device) {
+function _setI2sDtoverlay($device) {
 	if ($device == 'I2S Off') {
-		_setI2sModules($db, 'I2S Off');
+		_setI2sModules('I2S Off');
 	}
 	else {
 		$text = "# Device Tree Overlay being used\n";
@@ -885,7 +707,7 @@ function _setI2sDtoverlay($db, $device) {
 }
 
 // TC (Tim Curtis) 2015-02-25: for pre 3.18 kernels
-function _setI2sModules($db, $device) {
+function _setI2sModules($device) {
 	$text = "# ". $device."\n";
 
 	switch ($device) {
@@ -960,11 +782,9 @@ function getMixerName($kernelver, $i2s) {
 			$mixername = 'Master'; // Hifiberry Amp(Amp+) i2s device
 		}
 		else {
-			if ($kernelver == '3.18.11+' || $kernelver == '3.18.14+') {
-				$mixername = 'Digital'; // default for these kernels
-			} else {
-				$mixername = 'PCM'; // default for 3.18.5+
-			}
+			$mixername = ($kernelver == '3.18.11+' || $kernelver == '3.18.14+')
+				? 'Digital' // default for these kernels
+				: 'PCM'; // default for 3.18.5+
 		}
 	}
 	else {
@@ -992,7 +812,7 @@ function waitWorker($sleeptime = 1, $mpdUpdate = false) {
 
 		// update MPD db after worker finishes
 		if ($mpdUpdate) {
-			$mpd = openMpdSocket('localhost', 6600);
+			$mpd = openMpdSocket(MPD_HOST, 6600);
 			execMpdCommand($mpd, 'update');
 			closeMpdSocket($mpd);
 		}

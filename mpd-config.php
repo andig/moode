@@ -24,74 +24,66 @@
 require_once dirname(__FILE__) . '/inc/connection.php';
 require_once dirname(__FILE__) . '/inc/worker.php';
 
-// open player session
-playerSession('open',$db,'','');
 
-$dbh = cfgdb_connect($db);
+Session::open();
+ConfigDB::connect();
 
+$workerSuccess = false;
 
 // Handle reset
 if (isset($_POST['reset']) && $_POST['reset'] == 1) {
-	$mpdconfdefault = cfgdb_read('',$dbh,'mpdconfdefault');
+	$mpdconfdefault = ConfigDB::read('','mpdconfdefault');
 
-	foreach($mpdconfdefault as $element) {
-		cfgdb_update('cfg_mpd',$dbh,$element['param'],$element['value_default']);
+	foreach ($mpdconfdefault as $element) {
+		ConfigDB::update('cfg_mpd',$element['param'],$element['value_default']);
 	}
 	// Tell worker to write new MPD config
-	if (workerPushTask('mpdcfg')) {
+	if ($workerSuccess = workerPushTask('mpdcfg')) {
 		uiSetNotification('MPD config reset', 'Restarting MPD server...');
 	}
-	else {
-		uiSetNotification('Job failed', 'Background worker is busy');
-	}
-
-	unset($_POST);
 }
+
 // Handle restart (same as process for mpdcfg)
 if (isset($_POST['mpdrestart']) && $_POST['mpdrestart'] == 1) {
 	// Tell worker to write new MPD config
-	if (workerPushTask('mpdcfg')) {
+	if ($workerSuccess = workerPushTask('mpdcfg')) {
 		uiSetNotification('MPD restart', 'MPD restarted');
 	}
-	else {
-		uiSetNotification('Job failed', 'Background worker is busy');
-	}
-
-	unset($_POST);
 }
 
 // Handle POST
 if (isset($_POST['conf']) && !empty($_POST['conf'])) {
 	foreach ($_POST['conf'] as $key => $value) {
-		cfgdb_update('cfg_mpd',$dbh,$key,$value);
+		ConfigDB::update('cfg_mpd',$key,$value);
 	}
+
 	// Tell worker to write new MPD config
-	if (workerPushTask('mpdcfg')) {
+	if ($workerSuccess = workerPushTask('mpdcfg')) {
 		uiSetNotification('MPD config modified', 'Restarting MPD server...');
-	}
-	else {
-		uiSetNotification('Job failed', 'Background worker is busy');
 	}
 }
 
 // Handle manual config
 if (isset($_POST['mpdconf']) && !empty($_POST['mpdconf'])) {
 	// tell worker to write new MPD config
-	if (workerPushTask('mpdcfgman', $_POST['mpdconf'])) {
+	if ($workerSuccess = workerPushTask('mpdcfgman', $_POST['mpdconf'])) {
 		uiSetNotification('MPD config modified', 'Restarting MPD server...');
-	}
-	else {
-		uiSetNotification('Job Failed', 'Background worker is busy');
 	}
 }
 
-session_write_close();
+// could not start worker job
+if (false === $workerSuccess) {
+	uiSetNotification('Job failed', 'Background worker is busy');
+}
+
+
+Session::close();
 
 
 // Wait for worker output if $_SESSION['w_active'] = 1
 waitWorker(1);
 
-$mpdconf = cfgdb_read('',$dbh,'mpdconf');
+$mpdconf = ConfigDB::read('','mpdconf');
 // Prepare array
 $_mpd = array (
 	'port' => '',
@@ -232,11 +224,6 @@ $_mpd_select['samplerate_converter'] .= "<option value=\"Best Sinc Interpolator\
 $tpl = "mpd-config.html";
 
 
-// Close DB connection
-$dbh = null;
-// Unlock session files
-playerSession('unlock',$db,'','');
-
 // TC (Tim Curtis) 2015-04-29: is this code used anymore?
 if (wrk_checkStrSysfile('/proc/asound/card0/pcm0p/info','bcm2835')) {
 	$_audioout = "<select id=\"audio-output-interface\" name=\"conf[audio-output-interface]\" class=\"input-large\">\n";
@@ -249,20 +236,13 @@ if (wrk_checkStrSysfile('/proc/asound/card0/pcm0p/info','bcm2835')) {
 else {
 	$_audioout .= "<input class=\"input-large\" class=\"input-large\" type=\"text\" id=\"port\" name=\"\" value=\"USB Audio\" data-trigger=\"change\" disabled>\n";
 }
-?>
 
-<?php 
+
 $sezione = basename(__FILE__, '.php');
 include('_header.php');
-?>
 
-<!-- TC (Tim Curtis) 2014-11-30: remove trailing ! in 1st content line causing code to be grayed out in editor -->
-<!-- CONTENT -->
-<?php
-// Wait for worker output if $_SESSION['w_active'] = 1
 waitWorker(1);
-eval("echoTemplate(\"".getTemplate("templates/$tpl")."\");");
-?>
-<!-- CONTENT -->
 
-<?php include('_footer.php'); ?>
+eval("echoTemplate(\"".getTemplate("templates/$tpl")."\");");
+
+include('_footer.php'); ?>

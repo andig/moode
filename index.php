@@ -23,8 +23,8 @@
 
 require_once dirname(__FILE__) . '/inc/connection.php';
 
-playerSession('open',$db,'','');
-playerSession('unlock',$db,'','');
+Session::open();
+Session::close();
 
 
 // set template

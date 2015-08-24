@@ -24,10 +24,9 @@
 require_once dirname(__FILE__) . '/inc/connection.php';
 require_once dirname(__FILE__) . '/inc/worker.php';
 
-// open player session
-playerSession('open',$db,'','');
 
-session_start();
+Session::open();
+
 
 // handle (reset)
 if (isset($_POST['reset']) && $_POST['reset'] == 1) {
@@ -97,12 +96,12 @@ session_write_close();
 // wait for worker output if $_SESSION['w_active'] = 1
 waitWorker(5, 'sources');
 
-$dbh = cfgdb_connect($db);
-$source = cfgdb_read('cfg_source',$dbh);
-$dbh = null;
+ConfigDB::connect();
+$source = ConfigDB::read('cfg_source');
+
 
 // unlock session files
-playerSession('unlock',$db,'','');
+Session::close();
 
 $_mounts = '';
 foreach ($source as $mp) {
@@ -126,6 +125,7 @@ if (isset($_GET['p']) && !empty($_GET['p'])) {
 				$_password = $mount['password'];
 				$_rsize = $mount['rsize'];
 				$_wsize = $mount['wsize'];
+
 				// mount type select
 				$_source_select['type'] .= "<option value=\"cifs\" ".(($mount['type'] == 'cifs') ? "selected" : "")." >SMB/CIFS</option>\n";
 				$_source_select['type'] .= "<option value=\"nfs\" ".(($mount['type'] == 'nfs') ? "selected" : "")." >NFS</option>\n";

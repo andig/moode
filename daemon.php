@@ -23,18 +23,13 @@
  */
 
 // Common TCMODS
-$TCMODS_REL = "r21"; // Current release, used in path for theme change
 $TCMODS_CONSUMEMODE_ON = "1"; // Used for run-once fix for mpd consume mode sometimes being on after boot/reboot
 $TCMODS_CLOCKRAD_RETRY = 3; // Num times to retry the stop cmd
 
-// Common include
+require_once dirname(__FILE__) . '/../inc/config.inc';
 require_once dirname(__FILE__) . '/../inc/player.php';
 require_once dirname(__FILE__) . '/../inc/worker.php';
 
-ini_set('display_errors', '1');
-ini_set('error_log', '/var/log/php_errors.log');
-$db = 'sqlite:/var/www/db/player.db';
-error_reporting(E_ALL);
 
 // command line options
 $options = getopt('th', array('test', 'help'));
@@ -82,14 +77,14 @@ if (false === $opt_test) {
 // reset file permissions
 sysCmd('chmod 777 /run');
 sysCmd('chmod 777 /run/sess*');
-sysCmd('chmod 777 /var/lib/mpd/music/WEBRADIO/*.*');
-sysCmd('chmod 777 /var/lib/mpd/music/SDCARD');
+sysCmd('chmod 777 ' . MPD_LIB . 'WEBRADIO/*.*');
+sysCmd('chmod 777 ' . MPD_LIB . 'SDCARD');
 sysCmd('chmod 777 /var/www/tcmods.conf');
 sysCmd('chmod 777 /var/www/playhistory.log');
 sysCmd('chmod 777 /var/www/liblog.txt');
 sysCmd('chmod -R 777 /var/www/db');
 // mount all sources
-wrk_sourcemount($db, 'mountall');
+wrk_sourcemount('mountall');
 
 // start MPD daemon
 sysCmd("service mpd start");
@@ -99,7 +94,7 @@ sysCmd("ln -s /var/lib/mpd/music /var/www/coverroot");
 
 
 // load session
-playerSession('open', $db, '', '');
+Session::open();
 
 // make sure session vars are set
 $vars = array('w_active', 'w_lock', 'w_queue', 'w_queueargs', 'debug', 'debugdata');
@@ -120,40 +115,39 @@ logWorker("[daemon] w_queueargs " . print_r($_SESSION['w_queueargs'],1));
 $arch = wrk_getHwPlatform();
 if ($arch != $_SESSION['hwplatformid']) {
 	// reset playerID if architectureID not match. This condition "fire" another first-install process
-	playerSession('write', $db, 'playerid', '');
+	Session::update('playerid', '');
 }
 // --- END INITIALIZE ENVIRONMENT --- //
 
 // --- PLAYER FIRST INSTALLATION PROCESS --- //
 if (isset($_SESSION['playerid']) && $_SESSION['playerid'] == '') {
 	// register HW architectureID and playerID
-	wrk_setHwPlatform($db);
-	// destroy actual session
-	playerSession('destroy', $db, '', '');
-	// reload session data
-	playerSession('open', $db, '', '');
+	wrk_setHwPlatform();
+
+	// re-init session
+	Session::destroy();
+	Session::open();
+
 	// reset ENV parameters
 	wrk_sysChmod();
 
 	// reset netconf to defaults
 	$value = array('ssid' => '', 'encryption' => '', 'password' => '');
-	$dbh = cfgdb_connect($db);
-	cfgdb_update('cfg_wifisec', $dbh, '', $value);
-	$file = '/etc/network/interfaces';
-	$fp = fopen($file, 'w');
-	$netconf = "auto lo\n";
-	$netconf .= "iface lo inet loopback\n";
-	$netconf .= "\n";
-	$netconf .= "auto eth0\n";
-	$netconf .= "iface eth0 inet dhcp\n";
-	$netconf .= "\n";
-	//$netconf .= "auto wlan0\n";
-	//$netconf .= "iface wlan0 inet dhcp\n";
-	fwrite($fp, $netconf);
-	fclose($fp);
-	// update hash
-	$hash = md5_file('/etc/network/interfaces');
-	playerSession('write', $db, 'netconfhash', $hash);
+	ConfigDB::connect();
+	ConfigDB::update('cfg_wifisec', '', $value);
+
+	$netconf = <<<EOD
+auto lo
+iface lo inet loopback
+
+auto eth0
+iface eth0 inet dhcp
+
+#auto wlan0
+#iface wlan0 inet dhcp
+EOD;
+	file_put_contents('/etc/network/interfaces', $netconf);
+
 	// restart wlan0 interface
 	if (strpos($netconf, 'wlan0') != false) {
 		$cmd = "ip addr list wlan0 |grep \"inet \" |cut -d' ' -f6|cut -d/ -f1";
@@ -171,19 +165,19 @@ if (isset($_SESSION['playerid']) && $_SESSION['playerid'] == '') {
 	sysCmd('service networking restart');
 
 	// reset sourcecfg to defaults
-	wrk_sourcecfg($db, 'reset');
+	wrk_sourcecfg('reset');
 	sendMpdCommand($mpd, 'update');
 
 	// reset mpdconf to defaults
-	$mpdconfdefault = cfgdb_read('', $dbh, 'mpdconfdefault');
+	$mpdconfdefault = ConfigDB::read('', 'mpdconfdefault');
 	foreach($mpdconfdefault as $element) {
-		cfgdb_update('cfg_mpd', $dbh, $element['param'], $element['value_default']);
+		ConfigDB::update('cfg_mpd', $element['param'], $element['value_default']);
 	}
 
 	// tell worker to write new MPD config
-	wrk_mpdconf('/etc', $db);
+	wrk_mpdconf('/etc');
 	sysCmd('service mpd restart');
-	$dbh = null;
+
 
 	// disable minidlna / samba / MPD startup
 	sysCmd("update-rc.d -f minidlna remove");
@@ -246,15 +240,14 @@ if (isset($_SESSION['djmount']) && $_SESSION['djmount'] == 1) {
 
 
 // unlock session files
-playerSession('unlock', $db, '', '');
+Session::close();
 
 // Shairport (Airplay receiver service)
 if (isset($_SESSION['shairport']) && $_SESSION['shairport'] == 1) {
 	$output = '';
-	$dbh = cfgdb_connect($db);
-	$query_cfg = "SELECT param,value_player FROM cfg_mpd WHERE value_player!=''";
-	$mpdcfg = sdbquery($query_cfg, $dbh);
-	$dbh = null;
+	ConfigDB::connect();
+	$mpdcfg = ConfigDB::read('', 'mpdconf');
+
 	foreach ($mpdcfg as $cfg) {
 		if ($cfg['param'] == 'audio_output_format' && $cfg['value_player'] == 'disabled'){
 			$output .= '';
@@ -296,8 +289,8 @@ $_ver_str = explode(": ", strtok(shell_exec('dpkg-query -p mpd | grep Version'),
 $_tcmods_conf['sys_mpd_ver'] = $_ver_str[1];
 $rtn = _updTcmodsConf($_tcmods_conf);
 // store in DB and $_SESSION[kernelver], $_SESSION[procarch] vars
-playerSession('write', $db, 'kernelver', $_tcmods_conf['sys_kernel_ver']);
-playerSession('write', $db, 'procarch', $_tcmods_conf['sys_processor_arch']);
+Session::update('kernelver', $_tcmods_conf['sys_kernel_ver']);
+Session::update('procarch', $_tcmods_conf['sys_processor_arch']);
 
 // Ensure audio output is unmuted
 if ($_SESSION['i2s'] == 'IQaudIO Pi-AMP+') {
@@ -314,14 +307,14 @@ else {
 // TC (Tim Curtis) 2015-06-26: set simple mixer name based on kernel version and i2s vs USB
 $mixername = getMixerName(getKernelVer($_SESSION['kernelver']), $_SESSION['i2s']);
 
-$cmd = "/var/www/tcmods/".$TCMODS_REL."/cmds/tcmods.sh get-pcmvol ".$mixername;
+$cmd = "/var/www/tcmods/".TCMODS_RELEASE."/cmds/tcmods.sh get-pcmvol ".$mixername;
 $rtn = sysCmd($cmd);
 if (substr($rtn[0], 0, 6 ) == 'amixer') {
-	playerSession('write', $db, 'pcm_volume', 'none');
+	Session::update('pcm_volume', 'none');
 }
 else {
 	$rtn[0] = str_replace("%", "", $rtn[0]);
-	playerSession('write', $db, 'pcm_volume', $rtn[0]);
+	Session::update('pcm_volume', $rtn[0]);
 }
 
 // --- END NORMAL STARTUP --- //
@@ -341,7 +334,7 @@ while (1) {
 	// TC (Tim Curtis) 2014-10-31: start with consume mode off, only runs once after player start
 	if ($TCMODS_CONSUMEMODE_ON == "1") {
 		$TCMODS_CONSUMEMODE_ON = "0";
-		$mpd = openMpdSocket('localhost', 6600);
+		$mpd = openMpdSocket(MPD_HOST, 6600);
 		sendMpdCommand($mpd, 'consume 0');
 		closeMpdSocket($mpd);
 	}
@@ -351,7 +344,7 @@ while (1) {
 		$current_time = date("hi A");
 		if ($current_time == $clock_radio_starttime) {
 			$clock_radio_starttime = '';
-			$mpd = openMpdSocket('localhost', 6600);
+			$mpd = openMpdSocket(MPD_HOST, 6600);
 
 			// TC (Tim Curtis) 2015-06-26: new volume control with optional logarithmic mapping of knob 0-100 range to hardware range
 			$_tcmods_conf = getTcmodsConf(); // read in conf file
@@ -380,7 +373,7 @@ while (1) {
 		}
 		else if ($current_time == $clock_radio_stoptime) {
 			//$_tcmods_conf['clock_radio_stoptime'] = '';
-			$mpd = openMpdSocket('localhost', 6600);
+			$mpd = openMpdSocket(MPD_HOST, 6600);
 			execMpdCommand($mpd, 'stop');
 			closeMpdSocket($mpd);
 			// retry stop cmd to improve robustness
@@ -401,7 +394,7 @@ while (1) {
 	// TC (Tim Curtis) 2015-05-30: update playback history log
 	if ($_tcmods_conf['play_history_enabled'] == "Yes") {
 		// Get MPD currentsong data
-		$mpd = openMpdSocket('localhost', 6600);
+		$mpd = openMpdSocket(MPD_HOST, 6600);
 		$resp = execMpdCommand($mpd, 'currentsong');
 		closeMpdSocket($mpd);
 
@@ -421,8 +414,8 @@ while (1) {
 				$searchStr = preg_replace('!\s+!', '+', $searchStr);
 			}
 			$artist = "<i class=\"icon-microphone\"></i>";
-			$dbh = cfgdb_connect($db);
-			$result = cfgdb_read('cfg_radio', $dbh, $currentsong['file']);
+			ConfigDB::connect();
+			$result = ConfigDB::read('cfg_radio', $currentsong['file']);
 
 			if (0 == count($result)) {  // station not in db
 				$album = isset($currentsong['Name'])
@@ -555,7 +548,7 @@ while (1) {
 			case 'mpdcfg':
 				// TC (Tim Curtis) 2015-06-26: add kernel version, i2s args
 				// TC (Tim Curtis) 2015-06-26: use getKernelVer()  
-				wrk_mpdconf('/etc', $db, getKernelVer($_SESSION['kernelver']), $_SESSION['i2s']);
+				wrk_mpdconf('/etc',getKernelVer($_SESSION['kernelver']), $_SESSION['i2s']);
 				sysCmd('killall mpd');
 				sysCmd('service mpd start');
 				break;
@@ -570,7 +563,7 @@ while (1) {
 				break;
 
 			case 'sourcecfg':
-				wrk_sourcecfg($db, $_SESSION['w_queueargs']);
+				wrk_sourcecfg($_SESSION['w_queueargs']);
 				break;
 
 			// TC (Tim Curtis) 2014-08-23: process theme change requests
@@ -591,7 +584,7 @@ while (1) {
 				else if ($_SESSION['w_queueargs'] == "rose") {$hexlight = "d479ac"; $hexdark = "c1649b";}
 				else if ($_SESSION['w_queueargs'] == "turquoise") {$hexlight = "1abc9c"; $hexdark = "16a085";}
 				// change to new theme color
-				$cmd = "/var/www/tcmods/".$TCMODS_REL."/cmds/tcmods.sh ".$_SESSION['w_queueargs']." ".$hexlight." ".$hexdark;
+				$cmd = "/var/www/tcmods/".TCMODS_RELEASE."/cmds/tcmods.sh ".$_SESSION['w_queueargs']." ".$hexlight." ".$hexdark;
 				sysCmd($cmd);
 				 // reload tcmods.conf data
 				$_tcmods_conf = getTcmodsConf();
@@ -617,49 +610,49 @@ while (1) {
 				// TC (Tim Curtis) 2015-06-26: use getKernelVer()
 				$kernelver = getKernelVer($_SESSION['kernelver']);
 				if ($kernelver == '3.18.5+' || $kernelver == '3.18.11+' || $kernelver == '3.18.14+') {
-					_setI2sDtoverlay($db, $_SESSION['w_queueargs']); // Dtoverlay (/boot/config.txt)
+					_setI2sDtoverlay($_SESSION['w_queueargs']); // Dtoverlay (/boot/config.txt)
 				}
 				else {
-					_setI2sModules($db, $_SESSION['w_queueargs']); // Modules (/etc/modules)
+					_setI2sModules($_SESSION['w_queueargs']); // Modules (/etc/modules)
 				}
 				break;
 
 			// TC (Tim Curtis) 2015-02-25: process kernel select request
 			case 'kernelver':
 				// TC (Tim Curtis) 2015-06-26: use getKernelVer()
-				$cmd = "/var/www/tcmods/".$TCMODS_REL."/cmds/tcmods.sh install-kernel ".getKernelVer($_SESSION['w_queueargs']);
+				$cmd = "/var/www/tcmods/".TCMODS_RELEASE."/cmds/tcmods.sh install-kernel ".getKernelVer($_SESSION['w_queueargs']);
 				$rtn = sysCmd($cmd);
 				break;
 
 			// TC (Tim Curtis) 2015-04-29: process timezone select request
 			case 'timezone':
-				$cmd = "/var/www/tcmods/".$TCMODS_REL."/cmds/tcmods.sh set-timezone ".$_SESSION['w_queueargs'];
+				$cmd = "/var/www/tcmods/".TCMODS_RELEASE."/cmds/tcmods.sh set-timezone ".$_SESSION['w_queueargs'];
 				$rtn = sysCmd($cmd);
 				break;
 
 			// TC (Tim Curtis) 2015-04-29: process host name change request
 			case 'host_name':
-				$cmd = "/var/www/tcmods/".$TCMODS_REL."/cmds/tcmods.sh chg-name host ".$_SESSION['w_queueargs'];
+				$cmd = "/var/www/tcmods/".TCMODS_RELEASE."/cmds/tcmods.sh chg-name host ".$_SESSION['w_queueargs'];
 				$rtn = sysCmd($cmd);
 				break;
 
 			case 'browser_title':
-				$cmd = "/var/www/tcmods/".$TCMODS_REL."/cmds/tcmods.sh chg-name browsertitle ".$_SESSION['w_queueargs'];
+				$cmd = "/var/www/tcmods/".TCMODS_RELEASE."/cmds/tcmods.sh chg-name browsertitle ".$_SESSION['w_queueargs'];
 				$rtn = sysCmd($cmd);
 				break;
 
 			case 'airplay_name':
-				$cmd = "/var/www/tcmods/".$TCMODS_REL."/cmds/tcmods.sh chg-name airplay ".$_SESSION['w_queueargs'];
+				$cmd = "/var/www/tcmods/".TCMODS_RELEASE."/cmds/tcmods.sh chg-name airplay ".$_SESSION['w_queueargs'];
 				$rtn = sysCmd($cmd);
 				break;
 
 			case 'upnp_name':
-				$cmd = "/var/www/tcmods/".$TCMODS_REL."/cmds/tcmods.sh chg-name upnp ".$_SESSION['w_queueargs'];
+				$cmd = "/var/www/tcmods/".TCMODS_RELEASE."/cmds/tcmods.sh chg-name upnp ".$_SESSION['w_queueargs'];
 				$rtn = sysCmd($cmd);
 				break;
 
 			case 'dlna_name':
-				$cmd = "/var/www/tcmods/".$TCMODS_REL."/cmds/tcmods.sh chg-name dlna ".$_SESSION['w_queueargs'];
+				$cmd = "/var/www/tcmods/".TCMODS_RELEASE."/cmds/tcmods.sh chg-name dlna ".$_SESSION['w_queueargs'];
 				$rtn = sysCmd($cmd);
 				break;
 
@@ -667,24 +660,24 @@ while (1) {
 			case 'pcm_volume':
 				// TC (Tim Curtis) 2015-06-26: set simple mixer name based on kernel version and i2s vs USB
 				$mixername = getMixerName(getKernelVer($_SESSION['kernelver']), $_SESSION['i2s']);
-				$cmd = "/var/www/tcmods/".$TCMODS_REL."/cmds/tcmods.sh set-pcmvol ".$mixername." ".$_SESSION['w_queueargs'];
+				$cmd = "/var/www/tcmods/".TCMODS_RELEASE."/cmds/tcmods.sh set-pcmvol ".$mixername." ".$_SESSION['w_queueargs'];
 				$rtn = sysCmd($cmd);
 				break;
 
 			// TC (Tim Curtis) 2015-05-30: add clear system and playback history logs
 			case 'clearsyslogs':
-				$cmd = "/var/www/tcmods/".$TCMODS_REL."/cmds/utility.sh clear-logs";
+				$cmd = "/var/www/tcmods/".TCMODS_RELEASE."/cmds/utility.sh clear-logs";
 				$rtn = sysCmd($cmd);
 				break;
 
 			case 'clearplayhistory':
-				$cmd = "/var/www/tcmods/".$TCMODS_REL."/cmds/utility.sh clear-playhistory";
+				$cmd = "/var/www/tcmods/".TCMODS_RELEASE."/cmds/utility.sh clear-playhistory";
 				$rtn = sysCmd($cmd);
 				break;
 
 			// TC (Tim Curtis) 2015-07-31: expand sd card storage
 			case 'expandsdcard':
-				$cmd = "/var/www/tcmods/".$TCMODS_REL."/cmds/resizefs.sh start";
+				$cmd = "/var/www/tcmods/".TCMODS_RELEASE."/cmds/resizefs.sh start";
 				$rtn = sysCmd($cmd);
 				break;
 

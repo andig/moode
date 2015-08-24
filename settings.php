@@ -27,41 +27,23 @@ require_once dirname(__FILE__) . '/inc/connection.php';
 require_once dirname(__FILE__) . '/inc/timezone.php';
 
 
-playerSession('open',$db,'','');
-playerSession('unlock',$db,'','');
+Session::open();
+
+$workerSuccess = false;
 
 // theme change via system command
 if (isset($_POST['syscmd'])) {
-	switch ($_POST['syscmd']) {
-		case 'alizarin':
-		case 'amethyst':
-		case 'bluejeans':
-		case 'carrot':
-		case 'emerald':
-		case 'fallenleaf':
-		case 'grass':
-		case 'herb':
-		case 'lavender':
-		case 'river':
-		case 'rose':
-		case 'turquoise':
-			if (workerPushTask("themechange", $_POST['syscmd'])) {
-				playerSession('unlock');
-			}
-			else {
-				echo "background worker is busy";
-			}
-			break;
+	$themes = array('alizarin', 'amethyst', 'bluejeans', 'carrot', 'emerald', 'fallenleaf', 'grass', 'herb', 'lavender', 'river', 'rose', 'turquoise');
+	if (in_array($theme = $_POST['syscmd'], $themes)) {
+		$workerSuccess = workerPushTask("themechange", $theme);
 	}
 }
 
 
-session_start();
-
 // audio device update
 if (isset($_POST['update_i2s_device'])) {
 	if (isset($_POST['i2s']) && $_POST['i2s'] != $_SESSION['i2s']) {
-		if (workerPushTask('i2sdriver', $_POST['i2s'])) {
+		if ($workerSuccess = workerPushTask('i2sdriver', $_POST['i2s'])) {
 			uiSetNotification('Setting change', "I2S device has been changed, REBOOT for setting to take effect.", 5);
 
 			// TC (Tim Curtis) 2015-03-21: Adjust message depending on selected device
@@ -78,11 +60,7 @@ if (isset($_POST['update_i2s_device'])) {
 				uiSetNotification('', "<br><br>This device supports hardware volume control. After rebooting, optionally set MPD Volume control to Hardware.");
 			}
 			// TC (Tim Curtis) 2015-04-29: update cfg_engine table, moved from daemon.php, fixes field not updating when page echos back
-			playerSession('write',$db,'i2s',$_POST['i2s']);
-			playerSession('unlock');
-		}
-		else {
-			echo "background worker busy";
+			Session::update('i2s',$_POST['i2s']);
 		}
 	}
 }
@@ -91,47 +69,31 @@ if (isset($_POST['update_i2s_device'])) {
 // TC (Tim Curtis) 2015-06-26: change notify message duration from 5 to 10 mins
 if (isset($_POST['update_kernel_version'])) {
 	if (isset($_POST['kernelver']) && $_POST['kernelver'] != $_SESSION['kernelver']) {
-		if (workerPushTask('kernelver', $_POST['kernelver'])) {
+		if ($workerSuccess = workerPushTask('kernelver', $_POST['kernelver'])) {
 			uiSetNotification('Kernel change', "Version ".$_POST['kernelver']." install initiated...<br><br>The process can take 5+ minutes to<br>complete after which the CONNECTING<br>screen will appear and the system will<br>be POWERED OFF.", 600);
 			// TC (Tim Curtis) 2015-04-29: update cfg_engine table, added, fixes field not updating when page echos back
-			playerSession('write',$db,'kernelver',$_POST['kernelver']);
-			playerSession('unlock');
-		}
-		else {
-			echo "background worker busy";
+			Session::update('kernelver',$_POST['kernelver']);
 		}
 	}
 }
 // TC (Tim Curtis) 2015-04-29: timezone select handler
 if (isset($_POST['update_time_zone'])) {
 	if (isset($_POST['timezone']) && $_POST['timezone'] != $_SESSION['timezone']) {
-		if (workerPushTask('timezone', $_POST['timezone'])) {
+		if ($workerSuccess = workerPushTask('timezone', $_POST['timezone'])) {
 			uiSetNotification('Setting change', "Timezone ".$_POST['timezone']." has been set.", 4);
 			// TC (Tim Curtis) 2015-04-29: update cfg_engine table, moved from daemon.php, fixes field not updating when page echos back
-			playerSession('write',$db,'timezone',$_POST['timezone']);
-			playerSession('unlock');
-		}
-		else {
-			echo "background worker busy";
+			Session::update('timezone',$_POST['timezone']);
 		}
 	}
 }
 if (isset($_POST['update_latency_setting'])) {
 	if (isset($_POST['orionprofile']) && $_POST['orionprofile'] != $_SESSION['orionprofile']) {
-		if (workerPushTask('orionprofile', $_POST['orionprofile'])) {
+		if ($workerSuccess = workerPushTask('orionprofile', $_POST['orionprofile'])) {
 			uiSetNotification('Setting change', 'Kernel latency setting has been changed to: '.$_POST['orionprofile'].', REBOOT for setting to take effect.', 4);
-			playerSession('unlock');
-		}
-		else {
-			echo "background worker busy";
 		}
 
 		if ($_SESSION['w_lock'] != 1) {
-			playerSession('write',$db,'orionprofile',$_POST['orionprofile']);
-			playerSession('unlock');
-		}
-		else {
-			return "background worker busy";
+			Session::update('orionprofile',$_POST['orionprofile']);
 		}
 	}
 }
@@ -139,36 +101,33 @@ if (isset($_POST['update_latency_setting'])) {
 // shairport
 if (isset($_POST['shairport']) && $_POST['shairport'] != $_SESSION['shairport']) {
 	if ($_POST['shairport'] == 1 OR $_POST['shairport'] == 0) {
-		playerSession('write',$db,'shairport',$_POST['shairport']);
+		Session::update('shairport',$_POST['shairport']);
 	}
 	uiSetNotification('Setting change', ($_POST['shairport'] == 1)
 		? 'Airplay receiver enabled, REBOOT for setting to take effect.'
 		: 'Airplay receiver disabled, REBOOT for setting to take effect.',
 	4);
-	playerSession('unlock');
 }
 
 
 if (isset($_POST['upnpmpdcli']) && $_POST['upnpmpdcli'] != $_SESSION['upnpmpdcli']) {
 	if ($_POST['upnpmpdcli'] == 1 OR $_POST['upnpmpdcli'] == 0) {
-		playerSession('write',$db,'upnpmpdcli',$_POST['upnpmpdcli']);
+		Session::update('upnpmpdcli',$_POST['upnpmpdcli']);
 	}
 	uiSetNotification('Setting change', ($_POST['upnpmpdcli'] == 1)
 		? 'UPnP renderer enabled, REBOOT for setting to take effect.'
 		: 'UPnP renderer disabled, REBOOT for setting to take effect.',
 	4);
-	playerSession('unlock');
 }
 
 if (isset($_POST['djmount']) && $_POST['djmount'] != $_SESSION['djmount']) {
 	if ($_POST['djmount'] == 1 OR $_POST['djmount'] == 0) {
-		playerSession('write',$db,'djmount',$_POST['djmount']);
+		Session::update('djmount',$_POST['djmount']);
 	}
 	uiSetNotification('Setting change', ($_POST['djmount'] == 1)
 		? 'DLNA server enabled, REBOOT for setting to take effect.'
 		: 'DLNA server disabled, REBOOT for setting to take effect.',
 	4);
-	playerSession('unlock');
 }
 
 // TC (Tim Curtis) 2015-04-29: host and network service name change handlers
@@ -178,64 +137,43 @@ if (isset($_POST['update_host_name'])) {
 			uiSetNotification('Invalid input', "Host name can only contain A-Z, a-z, 0-9 or hyphen (-).", 4);
 		}
 		else {
-			if (workerPushTask('host_name', "\"".$_SESSION['host_name']."\" "."\"".$_POST['host_name']."\"")) {
+			if ($workerSuccess = workerPushTask('host_name', "\"".$_SESSION['host_name']."\" "."\"".$_POST['host_name']."\"")) {
 				uiSetNotification('Setting change', "Host name has been changed, REBOOT for setting to take effect.", 4);
-				playerSession('write',$db,'host_name',$_POST['host_name']);
-			}
-			else {
-				echo "background worker busy";
+				Session::update('host_name',$_POST['host_name']);
 			}
 		}
-		playerSession('unlock');
 	}
 }
 if (isset($_POST['update_browser_title'])) {
 	if (isset($_POST['browser_title']) && $_POST['browser_title'] != $_SESSION['browser_title']) {
-		if (workerPushTask('browser_title', "\"".$_SESSION['browser_title']."\" "."\"".$_POST['browser_title']."\"")) {
+		if ($workerSuccess = workerPushTask('browser_title', "\"".$_SESSION['browser_title']."\" "."\"".$_POST['browser_title']."\"")) {
 			uiSetNotification('Setting change', "Browser title has been changed, REBOOT for setting to take effect.", 4);
-			playerSession('write',$db,'browser_title',$_POST['browser_title']);
-			playerSession('unlock');
-		}
-		else {
-			echo "background worker busy";
+			Session::update('browser_title',$_POST['browser_title']);
 		}
 	}
 }
 if (isset($_POST['update_airplay_name'])) {
 	if (isset($_POST['airplay_name']) && $_POST['airplay_name'] != $_SESSION['airplay_name']) {
-		if (workerPushTask('airplay_name', "\"".$_SESSION['airplay_name']."\" "."\"".$_POST['airplay_name']."\"")) {
+		if ($workerSuccess = workerPushTask('airplay_name', "\"".$_SESSION['airplay_name']."\" "."\"".$_POST['airplay_name']."\"")) {
 			uiSetNotification('Setting change', "Airplay receiver name has been changed, REBOOT for setting to take effect.", 4);
-			playerSession('write',$db,'airplay_name',$_POST['airplay_name']);
-			playerSession('unlock');
-		}
-		else {
-			echo "background worker busy";
-
+			Session::update('airplay_name',$_POST['airplay_name']);
 		}
 	}
 }
 if (isset($_POST['update_upnp_name'])) {
 	if (isset($_POST['upnp_name']) && $_POST['upnp_name'] != $_SESSION['upnp_name']) {
-		if (workerPushTask('upnp_name', "\"".$_SESSION['upnp_name']."\" "."\"".$_POST['upnp_name']."\"")) {
+		if ($workerSuccess = workerPushTask('upnp_name', "\"".$_SESSION['upnp_name']."\" "."\"".$_POST['upnp_name']."\"")) {
 			uiSetNotification('Setting change', "UPnP renderer name has been changed, REBOOT for setting to take effect.", 4);
-			playerSession('write',$db,'upnp_name',$_POST['upnp_name']);
-			playerSession('unlock');
-		}
-		else {
-			echo "background worker busy";
+			Session::update('upnp_name',$_POST['upnp_name']);
 		}
 	}
 
 }
 if (isset($_POST['update_dlna_name'])) {
 	if (isset($_POST['dlna_name']) && $_POST['dlna_name'] != $_SESSION['dlna_name']) {
-		if (workerPushTask('dlna_name', "\"".$_SESSION['dlna_name']."\" "."\"".$_POST['dlna_name']."\"")) {
+		if ($workerSuccess = workerPushTask('dlna_name', "\"".$_SESSION['dlna_name']."\" "."\"".$_POST['dlna_name']."\"")) {
 			uiSetNotification('Setting change', "DLNA server name has been changed, REBOOT for setting to take effect.", 4);
-			playerSession('write',$db,'dlna_name',$_POST['dlna_name']);
-			playerSession('unlock');
-		}
-		else {
-			echo "background worker busy";
+			Session::update('dlna_name',$_POST['dlna_name']);
 		}
 	}
 
@@ -244,13 +182,9 @@ if (isset($_POST['update_dlna_name'])) {
 // TC (Tim Curtis) 2015-04-29: handle PCM volume change
 if (isset($_POST['update_pcm_volume'])) {
 	if (isset($_POST['pcm_volume'])) {
-		if (workerPushTask('pcm_volume', $_POST['pcm_volume'])) {
+		if ($workerSuccess = workerPushTask('pcm_volume', $_POST['pcm_volume'])) {
 			uiSetNotification('Setting change', "PCM volume has been set.", 4);
-			playerSession('write',$db,'pcm_volume',$_POST['pcm_volume']);
-			playerSession('unlock');
-		}
-		else {
-			echo "background worker busy";
+			Session::update('pcm_volume',$_POST['pcm_volume']);
 		}
 	}
 }
@@ -258,23 +192,15 @@ if (isset($_POST['update_pcm_volume'])) {
 // TC (Tim Curtis) 2015-05-30: handle log maintenance for system and play history logs
 if (isset($_POST['update_clear_syslogs'])) {
 	if ($_POST['clearsyslogs'] == 1) {
-		if (workerPushTask('clearsyslogs')) {
+		if ($workerSuccess = workerPushTask('clearsyslogs')) {
 			uiSetNotification('Log maintenance', "System logs have been cleared.", 4);
-			playerSession('unlock');
-		}
-		else {
-			echo "background worker busy";
 		}
 	}
 }
 if (isset($_POST['update_clear_playhistory'])) {
 	if ($_POST['clearplayhistory'] == 1) {
-		if (workerPushTask('clearplayhistory')) {
+		if ($workerSuccess = workerPushTask('clearplayhistory')) {
 			uiSetNotification('Log maintenance', "Playback history log hase been cleared.", 4);
-			playerSession('unlock');
-		}
-		else {
-			echo "background worker busy";
 		}
 	}
 }
@@ -282,16 +208,19 @@ if (isset($_POST['update_clear_playhistory'])) {
 // TC (Tim Curtis) 2015-07-31: expand sd card storage
 if (isset($_POST['update_expand_sdcard'])) {
 	if ($_POST['expandsdcard'] == 1) {
-		if (workerPushTask('expandsdcard')) {
+		if ($workerSuccess = workerPushTask('expandsdcard')) {
 			uiSetNotification('Expand SD Card Storage', "Storage expansion request has been queued. REBOOT has been initiated.", 6);
-			playerSession('unlock');
-		}
-		else {
-			echo "background worker busy";
 		}
 	}
-
 }
+
+
+Session::close();
+
+if (false === $workerSuccess) {
+	echo "background worker busy";
+}
+
 
 // configure html select elements
 $kernelver = getKernelVer($_SESSION['kernelver']);
@@ -371,10 +300,6 @@ else if ($_SESSION['procarch'] == "armv6l") { // Pi-1 and Pi-B+
 	$_linux_kernel['kernelver'] .= "<option value=\"3.18.14+\" ".(($_SESSION['kernelver'] == '3.18.14+') ? "selected" : "").">3.18.14+</option>\n";
 	$_linux_kernel['kernelver'] .= "<option value=\"3.18.11+\" ".(($_SESSION['kernelver'] == '3.18.11+') ? "selected" : "").">3.18.11+</option>\n";
 	$_linux_kernel['kernelver'] .= "<option value=\"3.18.5+\" ".(($_SESSION['kernelver'] == '3.18.5+') ? "selected" : "").">3.18.5+</option>\n";
-
-	// TC (Tim Curtis) 2015-06-26: drop support for these, not in use by any users
-	//$_linux_kernel['kernelver'] .= "<option value=\"3.12.26+\" ".(($_SESSION['kernelver'] == '3.12.26+') ? "selected" : "").">3.12.26+</option>\n";
-	//$_linux_kernel['kernelver'] .= "<option value=\"3.10.36+\" ".(($_SESSION['kernelver'] == '3.10.36+') ? "selected" : "").">3.10.36+</option>\n";
 }
 else {
 	$_linux_kernel['kernelver'] .= "<option value=\"Unknown Arch\" "."selected".">None</option>\n";

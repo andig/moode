@@ -20,14 +20,8 @@
 require_once dirname(__FILE__) . '/inc/connection.php';
 require_once dirname(__FILE__) . '/inc/worker.php';
 
-playerSession('open',$db,'','');
-playerSession('unlock',$db,'','');
-$dbh = cfgdb_connect($db);
-
-
-//session_write_close();
-session_start();
-
+Session::open();
+ConfigDB::connect();
 
 if (isset($_POST['syscmd'])) {
 	switch ($_POST['syscmd']) {
@@ -85,12 +79,12 @@ else if (isset($_GET['cmd']) && $_GET['cmd'] != '') {
 	$cmd = $_GET['cmd'];
 	switch ($cmd) {
 		case 'getaudiodevdesc':
-			$result = cfgdb_read('cfg_audiodev', $dbh, $_POST['audiodev']);
+			$result = ConfigDB::read('cfg_audiodev', $_POST['audiodev']);
 			echo json_encode($result[0]);
 			break;
 
 		case 'getradioinfo':
-			$result = cfgdb_read('cfg_radio', $dbh, $_POST['station']);
+			$result = ConfigDB::read('cfg_radio', $_POST['station']);
 			echo json_encode($result[0]);
 			break;
 
@@ -114,7 +108,7 @@ else if (isset($_GET['cmd']) && $_GET['cmd'] != '') {
 
 		case 'readstationfile':
 			// misuse mpd function to split lines
-			echo json_encode(parseMpdKeyedResponse(file_get_contents('/var/lib/mpd/music/'.$_POST['path'])), '=');
+			echo json_encode(parseMpdKeyedResponse(file_get_contents(MPD_LIB . $_POST['path'])), '=');
 			break;
 
 		case 'readplayhistory':
@@ -245,4 +239,4 @@ else {
 	eval("echoTemplate(\"".getTemplate("templates/$tpl")."\");");
 }
 
-playerSession('unlock');
+Session::close();

@@ -24,17 +24,17 @@
 require_once dirname(__FILE__) . '/inc/connection.php';
 require_once dirname(__FILE__) . '/inc/worker.php';
 
-// open player session
-playerSession('open',$db,'','');
+
+Session::open();
 
 // handle POST (reset)
 if (isset($_POST['reset']) && $_POST['reset'] == 1) {
 	$eth0 = "iface eth0 inet dhcp\n";
 	$value = array('ssid' => '', 'encryption' => '', 'password' => '');
-	$dbh = cfgdb_connect($db);
-	cfgdb_update('cfg_wifisec',$dbh,'',$value);
-	$wifisec = cfgdb_read('cfg_wifisec',$dbh);
-	$dbh = null;
+	ConfigDB::connect();
+	ConfigDB::update('cfg_wifisec','',$value);
+	$wifisec = ConfigDB::read('cfg_wifisec');
+
 	$_POST['eth0']['dhcp'] = 'true';
 	$_POST['eth0']['ip'] = '';
 	$_POST['eth0']['netmask'] = '';
@@ -45,11 +45,11 @@ if (isset($_POST['reset']) && $_POST['reset'] == 1) {
 
 // handle POST
 if (isset($_POST) && !empty($_POST)) {
-	$dbh  = cfgdb_connect($db);
+	ConfigDB::connect();
+
 	// eth0
 	if (isset($_POST['eth0']['dhcp']) && isset($_POST['eth0']['ip'])) {
 		if ($_POST['eth0']['dhcp'] == 'true') {
-			$_POST['eth0']['dhcp'] = 'true';
 			$_POST['eth0']['ip'] = '';
 			$_POST['eth0']['netmask'] = '';
 			$_POST['eth0']['gw'] = '';
@@ -68,8 +68,8 @@ if (isset($_POST) && !empty($_POST)) {
 			'dns1' => $_POST['eth0']['dns1'],
 			'dns2' => $_POST['eth0']['dns2'] );
 
-		cfgdb_update('cfg_lan',$dbh,'',$value);
-		$net = cfgdb_read('cfg_lan',$dbh);
+		ConfigDB::update('cfg_lan','',$value);
+		$net = ConfigDB::read('cfg_lan');
 
 		// format new config string for eth0
 		if ($_POST['eth0']['dhcp'] == 'true' ) {
@@ -94,14 +94,15 @@ if (isset($_POST) && !empty($_POST)) {
 	// wlan0
 	if (isset($_POST['wifisec']['ssid']) && !empty($_POST['wifisec']['ssid']) && $_POST['wifisec']['password'] && !empty($_POST['wifisec']['password'])) {
 		$value = array('ssid' => $_POST['wifisec']['ssid'], 'encryption' => $_POST['wifisec']['encryption'], 'password' => $_POST['wifisec']['password']);
-		cfgdb_update('cfg_wifisec',$dbh,'',$value);
-		$wifisec = cfgdb_read('cfg_wifisec',$dbh);
+		ConfigDB::update('cfg_wifisec','',$value);
+		$wifisec = ConfigDB::read('cfg_wifisec');
 
 		// format new config string for wlan0
 		$wlan0 = "\n";
 		$wlan0 .= "auto wlan0\n";
 		$wlan0 .= "iface wlan0 inet dhcp\n";
 		$wlan0 .= "wireless-power off\n";
+
 		if ($_POST['wifisec']['encryption'] == 'wpa') {
 			$wlan0 .= "wpa-ssid ".$_POST['wifisec']['ssid']."\n"; // TC (Tim Curtis) 2015-08-DD: place holder, add quotes around ssid
 			$wlan0 .= "wpa-psk ".$_POST['wifisec']['password']."\n";
@@ -132,7 +133,7 @@ if (isset($_POST) && !empty($_POST)) {
 	}
 
 	// close DB handle
-	$dbh = null;
+
 
 	// create job for background worker
 	if (workerPushTask('netcfg', $wlan0.$eth0)) {
@@ -145,16 +146,16 @@ if (isset($_POST) && !empty($_POST)) {
 		uiSetNotification('Job failed', 'Background worker is busy');
 	}
 	// unlock session file
-	playerSession('unlock');
+	Session::close();
 }
 
 // wait for worker output if $_SESSION['w_active'] = 1
 waitWorker(1);
 
-$dbh = cfgdb_connect($db);
-$net = cfgdb_read('cfg_lan',$dbh);
-$wifisec = cfgdb_read('cfg_wifisec',$dbh);
-$dbh = null;
+ConfigDB::connect();
+$net = ConfigDB::read('cfg_lan');
+$wifisec = ConfigDB::read('cfg_wifisec');
+
 
 // eth0
 if (isset($_SESSION['netconf']['eth0']) && !empty($_SESSION['netconf']['eth0'])) {
@@ -193,7 +194,7 @@ $tpl = "net-config.html";
 
 
 // unlock session files
-playerSession('unlock',$db,'','');
+Session::close();
 
 $sezione = basename(__FILE__, '.php');
 include('_header.php');

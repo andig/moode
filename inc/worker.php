@@ -74,12 +74,10 @@ function wrk_checkStrSysfile($sysfile,$searchstr) {
 	return (strpos($file, $searchstr)) ? true : false;
 }
 
-function wrk_mpdconf($outpath, $db, $kernelver, $i2s) {
+function wrk_mpdconf($outpath,$kernelver, $i2s) {
 	// extract mpd.conf from SQLite datastore
-	$dbh = cfgdb_connect($db);
-	$query_cfg = "SELECT param,value_player FROM cfg_mpd WHERE value_player!=''";
-	$mpdcfg = sdbquery($query_cfg,$dbh);
-	$dbh = null;
+	ConfigDB::connect();
+	$mpdcfg = ConfigDB::read('', 'mpdconf');
 
 	// set mpd.conf file header
 	// TC (Tim Curtis) 2015-04-29: remove tabs, cleanup formatting
@@ -155,13 +153,13 @@ function wrk_mpdconf($outpath, $db, $kernelver, $i2s) {
 	fclose($fh);
 }
 
-function wrk_sourcemount($db,$action,$id = null) {
+function wrk_sourcemount($action,$id = null) {
 	$return = null;
 
 	switch ($action) {
 		case 'mount':
-			$dbh = cfgdb_connect($db);
-			$mp = cfgdb_read('cfg_source',$dbh,'',$id);
+			ConfigDB::connect();
+			$mp = ConfigDB::read('cfg_source','',$id);
 			sysCmd("mkdir \"/mnt/NAS/".$mp[0]['name']."\"");
 			$mountstr = ($mp[0]['type'] == 'cifs')
 				// smb/cifs mount
@@ -175,91 +173,79 @@ function wrk_sourcemount($db,$action,$id = null) {
 			if (empty($sysoutput)) {
 				if (!empty($mp[0]['error'])) {
 					$mp[0]['error'] = '';
-					cfgdb_update('cfg_source',$dbh,'',$mp[0]);
+					ConfigDB::update('cfg_source','',$mp[0]);
 				}
 				$return = 1;
 			}
 			else {
 				sysCmd("rmdir \"/mnt/NAS/".$mp[0]['name']."\"");
 				$mp[0]['error'] = implode("\n",$sysoutput);
-				cfgdb_update('cfg_source',$dbh,'',$mp[0]);
+				ConfigDB::update('cfg_source','',$mp[0]);
 				$return = 0;
 			}
 			break;
 
 		case 'mountall':
-			$dbh = cfgdb_connect($db);
-			$mounts = cfgdb_read('cfg_source',$dbh);
+			ConfigDB::connect();
+			$mounts = ConfigDB::read('cfg_source');
 			foreach ($mounts as $mp) {
 				if (!wrk_checkStrSysfile('/proc/mounts',$mp['name']) ) {
-					$return = wrk_sourcemount($db,'mount',$mp['id']);
+					$return = wrk_sourcemount('mount',$mp['id']);
 				}
 			}
-			$dbh = null;
+
 			break;
 	}
 	return $return;
 }
 
-function wrk_sourcecfg($db,$queueargs) {
+function wrk_sourcecfg($queueargs) {
 	$action = $queueargs['mount']['action'];
 	unset($queueargs['mount']['action']);
 	switch ($action) {
 		case 'reset':
-			$dbh = cfgdb_connect($db);
-			$source = cfgdb_read('cfg_source',$dbh);
+			ConfigDB::connect();
+			$source = ConfigDB::read('cfg_source');
 				foreach ($source as $mp) {
 					sysCmd("umount -f \"/mnt/NAS/".$mp['name']."\"");
 					sysCmd("rmdir \"/mnt/NAS/".$mp['name']."\"");
 				}
-			$return = (cfgdb_delete('cfg_source',$dbh)) ? 1 : 0;
-			$dbh = null;
+			$return = (ConfigDB::delete('cfg_source')) ? 1 : 0;
+
 			break;
 
 		case 'add':
-			$dbh = cfgdb_connect($db);
+			ConfigDB::connect();
 			print_r($queueargs);
 			unset($queueargs['mount']['id']);
-			// format values string
-			foreach ($queueargs['mount'] as $key => $value) {
-				if ($key == 'error') {
-					$values .= "'".SQLite3::escapeString($value)."'";
-					error_log(">>>>> values on line 1014 >>>>> ".$values, 0);
-				}
-				else {
-					$values .= "'".SQLite3::escapeString($value)."',";
-					error_log(">>>>> values on line 1016 >>>>> ".$values, 0);
-				}
-			}
-			error_log(">>>>> values on line 1019 >>>>> ".$values, 0);
+
 			// write new entry
-			cfgdb_write('cfg_source',$dbh,$values);
-			$newmountID = $dbh->lastInsertId();
-			$dbh = null;
-			$return = (wrk_sourcemount($db,'mount',$newmountID)) ? 1 : 0;
+			$newmountID = ConfigDB::write('cfg_source', array_values($queueargs['mount']));
+
+			$return = wrk_sourcemount('mount', $newmountID) ? 1 : 0;
 			break;
 
 		case 'edit':
-			$dbh = cfgdb_connect($db);
-			$mp = cfgdb_read('cfg_source',$dbh,'',$queueargs['mount']['id']);
-			cfgdb_update('cfg_source',$dbh,'',$queueargs['mount']);
+			ConfigDB::connect();
+			$mp = ConfigDB::read('cfg_source','',$queueargs['mount']['id']);
+			ConfigDB::update('cfg_source','',$queueargs['mount']);
 			sysCmd("umount -f \"/mnt/NAS/".$mp[0]['name']."\"");
+
 			if ($mp[0]['name'] != $queueargs['mount']['name']) {
 				sysCmd("rmdir \"/mnt/NAS/".$mp[0]['name']."\"");
 				sysCmd("mkdir \"/mnt/NAS/".$queueargs['mount']['name']."\"");
 			}
-			$return = (wrk_sourcemount($db,'mount',$queueargs['mount']['id'])) ? 1 : 0;
+
+			$return = (wrk_sourcemount('mount',$queueargs['mount']['id'])) ? 1 : 0;
 			error_log(">>>>> wrk_sourcecfg(edit) exit status = >>>>> ".$return, 0);
-			$dbh = null;
 			break;
 
 		case 'delete':
-			$dbh = cfgdb_connect($db);
-			$mp = cfgdb_read('cfg_source',$dbh,'',$queueargs['mount']['id']);
+			ConfigDB::connect();
+			$mp = ConfigDB::read('cfg_source','',$queueargs['mount']['id']);
 			sysCmd("umount -f \"/mnt/NAS/".$mp[0]['name']."\"");
 			sysCmd("rmdir \"/mnt/NAS/".$mp[0]['name']."\"");
-			$return = (cfgdb_delete('cfg_source',$dbh,$queueargs['mount']['id'])) ? 1 : 0;
-			$dbh = null;
+			$return = (ConfigDB::delete('cfg_source',$queueargs['mount']['id'])) ? 1 : 0;
 			break;
 	}
 
@@ -316,46 +302,46 @@ function wrk_getHwPlatform() {
 	return $arch;
 }
 
-function wrk_setHwPlatform($db) {
+function wrk_setHwPlatform() {
 	$arch = wrk_getHwPlatform();
 	$playerid = wrk_playerID($arch);
 	// register playerID into database
-	playerSession('write',$db,'playerid',$playerid);
+	Session::update('playerid',$playerid);
 	// register platform into database
 	switch($arch) {
 		case '01':
-			playerSession('write',$db,'hwplatform','RaspberryPi');
-			playerSession('write',$db,'hwplatformid',$arch);
+			Session::update('hwplatform','RaspberryPi');
+			Session::update('hwplatformid',$arch);
 			break;
 
 		case '02':
-			playerSession('write',$db,'hwplatform','UDOO');
-			playerSession('write',$db,'hwplatformid',$arch);
+			Session::update('hwplatform','UDOO');
+			Session::update('hwplatformid',$arch);
 			break;
 
 		case '03':
-			playerSession('write',$db,'hwplatform','CuBox');
-			playerSession('write',$db,'hwplatformid',$arch);
+			Session::update('hwplatform','CuBox');
+			Session::update('hwplatformid',$arch);
 			break;
 
 		case '04':
-			playerSession('write',$db,'hwplatform','BeagleBone Black');
-			playerSession('write',$db,'hwplatformid',$arch);
+			Session::update('hwplatform','BeagleBone Black');
+			Session::update('hwplatformid',$arch);
 			break;
 
 		case '05':
-			playerSession('write',$db,'hwplatform','Compulab Utilite');
-			playerSession('write',$db,'hwplatformid',$arch);
+			Session::update('hwplatform','Compulab Utilite');
+			Session::update('hwplatformid',$arch);
 			break;
 
 		case '06':
-			playerSession('write',$db,'hwplatform','Wandboard');
-			playerSession('write',$db,'hwplatformid',$arch);
+			Session::update('hwplatform','Wandboard');
+			Session::update('hwplatformid',$arch);
 			break;
 
 		default:
-			playerSession('write',$db,'hwplatform','unknown');
-			playerSession('write',$db,'hwplatformid',$arch);
+			Session::update('hwplatform','unknown');
+			Session::update('hwplatformid',$arch);
 	}
 }
 
