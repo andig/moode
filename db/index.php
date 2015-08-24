@@ -65,7 +65,10 @@ switch ($cmd) {
 
 			// create new file if none exists, or open existing file for overwrite
 			$_file = MPD_LIB . 'WEBRADIO/' . $path . '.pls';
-			$handle = fopen($_file, 'w') or die('db/index.php: file create failed on '.$_file);
+			if (false === ($handle = fopen($_file, 'w'))) {
+				die('db/index.php: file create failed on '.$_file);
+			}
+
 			// format .pls lines
 			$data = '[playlist]' . "\n";
 			$data .= 'numberofentries=1' . "\n";

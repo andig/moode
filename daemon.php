@@ -175,7 +175,7 @@ EOD;
 	}
 
 	// tell worker to write new MPD config
-	wrk_mpdconf('/etc');
+	wrk_mpdconf();
 	sysCmd('service mpd restart');
 
 
@@ -548,7 +548,7 @@ while (1) {
 			case 'mpdcfg':
 				// TC (Tim Curtis) 2015-06-26: add kernel version, i2s args
 				// TC (Tim Curtis) 2015-06-26: use getKernelVer()  
-				wrk_mpdconf('/etc',getKernelVer($_SESSION['kernelver']), $_SESSION['i2s']);
+				wrk_mpdconf(getKernelVer($_SESSION['kernelver']), $_SESSION['i2s']);
 				sysCmd('killall mpd');
 				sysCmd('service mpd start');
 				break;

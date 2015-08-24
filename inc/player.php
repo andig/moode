@@ -648,7 +648,10 @@ function echoTemplate($template) {
 function _updatePlayHistory($currentsong) {
 	// Open file for write w/append
 	$_file = '/var/www/playhistory.log';
-	$handle = fopen($_file, 'a') or die('tcmods.php: file open failed on '.$_file); // creates file if none exists
+	if (false === ($handle = fopen($_file, 'a'))) {
+		die('tcmods.php: file open failed on '.$_file);
+	}
+
 	// Append data, close file
 	fwrite($handle, $currentsong."\n");
 	fclose($handle);
@@ -709,6 +712,8 @@ function _setI2sDtoverlay($device) {
 // TC (Tim Curtis) 2015-02-25: for pre 3.18 kernels
 function _setI2sModules($device) {
 	$text = "# ". $device."\n";
+	$text .= "snd_soc_bcm2708\n";
+	$text .= "bcm2708_dmaengine\n";
 
 	switch ($device) {
 		case 'I2S Off':
@@ -718,47 +723,35 @@ function _setI2sModules($device) {
 		case 'G2 Labs BerryNOS':
 		case 'G2 Labs BerryNOS Red':
 		case 'HiFiBerry DAC':
-			$text .= "snd_soc_bcm2708\n";
-			$text .= "bcm2708_dmaengine\n";
 			$text .= "snd_soc_pcm5102a\n";
 			$text .= "snd_soc_hifiberry_dac\n";
 			break;
 		case 'HiFiBerry DAC+':
-			$text .= "snd_soc_bcm2708\n";
-			$text .= "bcm2708_dmaengine\n";
 			$text .= "snd_soc_pcm512x\n";
 			$text .= "snd_soc_hifiberry_dacplus\n";
 			break;
 		case 'HiFiBerry Digi(Digi+)':
-			$text .= "snd_soc_bcm2708\n";
-			$text .= "bcm2708_dmaengine\n";
 			$text .= "snd_soc_hifiberry_digi\n";
 			break;
 		case 'HiFiBerry Amp(Amp+)':
-			$text .= "snd_soc_bcm2708\n";
-			$text .= "bcm2708_dmaengine\n";
 			$text .= "snd_soc_hifiberry_amp\n";
 			break;
 		case 'IQaudIO Pi-DAC':
 		case 'IQaudIO Pi-DAC+':
-			$text .= "snd_soc_bcm2708\n";
 			$text .= "snd_soc_bcm2708_i2s\n";
-			$text .= "bcm2708_dmaengine\n";
 			$text .= "snd_soc_pcm512x\n";
 			$text .= "snd_soc_iqaudio_dac\n";
 			break;
 		case 'RPi DAC':
-			$text .= "snd_soc_bcm2708\n";
 			$text .= "snd_soc_bcm2708_i2s\n";
-			$text .= "bcm2708_dmaengine\n";
 			$text .= "snd_soc_pcm5102a\n";
 			$text .= "snd_soc_rpi_dac\n";
 			break;
 		case 'Generic':
 			$text = "# Generic I2S driver\n";
 			$text .= "snd_soc_bcm2708\n";
-			$text .= "snd_soc_bcm2708_i2s\n";
 			$text .= "bcm2708_dmaengine\n";
+			$text .= "snd_soc_bcm2708_i2s\n";
 			$text .= "snd_soc_pcm5102a\n";
 			$text .= "snd_soc_pcm512x\n";
 			$text .= "snd_soc_hifiberry_dac\n";

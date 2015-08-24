@@ -21,7 +21,6 @@
  * Rewrite by Tim Curtis and Andreas Goetz
  */
 
-$TCMODS_REL = "r21"; // Current release
 
 require_once dirname(__FILE__) . '/inc/connection.php';
 require_once dirname(__FILE__) . '/inc/timezone.php';
@@ -275,7 +274,7 @@ else {
 	// TC (Tim Curtis) 2015-06-26: get current volume setting, requires www-data user in visudo
 	// TC (Tim Curtis) 2015-06-26: set simple mixer name based on kernel version and i2s vs USB
 	$mixername = getMixerName($kernelver, $_SESSION['i2s']);
-	$cmd = "sudo /var/www/tcmods/".$TCMODS_REL."/cmds/tcmods.sh get-pcmvol ".$mixername;
+	$cmd = "sudo /var/www/tcmods/".TCMODS_RELEASE."/cmds/tcmods.sh get-pcmvol ".$mixername;
 
 	$rtn = sysCmd($cmd);
 	$_pcm_volume = str_replace("%", "", $rtn[0]);
