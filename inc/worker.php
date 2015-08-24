@@ -250,102 +250,56 @@ function wrk_sourcecfg($queueargs) {
 	return $return;
 }
 
-function wrk_getHwPlatform() {
-	$file = '/proc/cpuinfo';
-	$fileData = file($file);
-	foreach($fileData as $line) {
-		if (substr($line, 0, 8) == 'Hardware') {
-			$arch = trim(substr($line, 11, 50));
-			switch($arch) {
+function wrk_getHwPlatform(&$archName) {
+	$arch = '--';
+	$archName = 'unknown';
 
-				// RaspberryPi
+	foreach (file('/proc/cpuinfo') as $line) {
+		if (substr($line, 0, 8) == 'Hardware') {
+			switch (trim(substr($line, 11, 50))) {
 				case 'BCM2708':
 					$arch = '01';
+					$archName = 'RaspberryPi';
 					break;
-
-				// UDOO
 				case 'SECO i.Mx6 UDOO Board':
 					$arch = '02';
+					$archName = 'UDOO';
 					break;
-
-				// CuBox
 				case 'Marvell Dove (Flattened Device Tree)':
 					$arch = '03';
+					$archName = 'CuBox';
 					break;
-
-				// BeagleBone Black
 				case 'Generic AM33XX (Flattened Device Tree)':
 					$arch = '04';
+					$archName = 'BeagleBone Black';
 					break;
-
-				// Compulab Utilite
 				case 'Compulab CM-FX6':
 					$arch = '05';
+					$archName = 'Compulab Utilite';
 					break;
-
-				// Wandboard
 				case 'Freescale i.MX6 Quad/DualLite (Device Tree)':
 					$arch = '06';
-					break;
-
-				default:
-					$arch = '--';
+					$archName = 'Wandboard';
 					break;
 			}
 		}
 	}
-	if (!isset($arch)) {
-		$arch = '--';
-	}
+
 	return $arch;
 }
 
 function wrk_setHwPlatform() {
-	$arch = wrk_getHwPlatform();
-	$playerid = wrk_playerID($arch);
 	// register playerID into database
-	Session::update('playerid',$playerid);
+	Session::update('playerid', wrk_playerID($arch));
+
 	// register platform into database
-	switch($arch) {
-		case '01':
-			Session::update('hwplatform','RaspberryPi');
-			Session::update('hwplatformid',$arch);
-			break;
-
-		case '02':
-			Session::update('hwplatform','UDOO');
-			Session::update('hwplatformid',$arch);
-			break;
-
-		case '03':
-			Session::update('hwplatform','CuBox');
-			Session::update('hwplatformid',$arch);
-			break;
-
-		case '04':
-			Session::update('hwplatform','BeagleBone Black');
-			Session::update('hwplatformid',$arch);
-			break;
-
-		case '05':
-			Session::update('hwplatform','Compulab Utilite');
-			Session::update('hwplatformid',$arch);
-			break;
-
-		case '06':
-			Session::update('hwplatform','Wandboard');
-			Session::update('hwplatformid',$arch);
-			break;
-
-		default:
-			Session::update('hwplatform','unknown');
-			Session::update('hwplatformid',$arch);
-	}
+	$arch = wrk_getHwPlatform($archName);
+	Session::update('hwplatformid', $arch);
+	Session::update('hwplatform', $RaspberryPi);
 }
 
 function wrk_playerID($arch) {
-	$playerid = $arch.md5_file('/sys/class/net/eth0/address');
-	return $playerid;
+	return $arch.md5_file('/sys/class/net/eth0/address');
 }
 
 function wrk_sysChmod() {

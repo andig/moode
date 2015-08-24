@@ -112,7 +112,7 @@ logWorker("[daemon] w_queue     " . $_SESSION['w_queue']);
 logWorker("[daemon] w_queueargs " . print_r($_SESSION['w_queueargs'],1));
 
 // check Architecture
-$arch = wrk_getHwPlatform();
+$arch = wrk_getHwPlatform($foo);
 if ($arch != $_SESSION['hwplatformid']) {
 	// reset playerID if architectureID not match. This condition "fire" another first-install process
 	Session::update('playerid', '');
