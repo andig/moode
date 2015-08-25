@@ -40,9 +40,9 @@ require_once dirname(__FILE__) . '/../inc/worker.php';
 
 
 // command line options
-$options = getopt('thi', array('test', 'help', 'install'));
-$opt_test = isset($options['t']) || isset($options['test']);
-$opt_install = isset($options['i']) || isset($options['install']);
+$options = getopt('', array('test', 'help', 'install', 'clear'));
+$opt_test = isset($options['test']);			// test daemon - doesn't fork
+$opt_install = isset($options['install']);		// force first-time installation
 
 $lock = fopen('/run/player_wrk.pid', 'c+');
 if (!flock($lock, LOCK_EX | LOCK_NB)) {
@@ -88,7 +88,6 @@ if (false === $opt_test) {
 /*
  * Initialize environment
  */
-logWorker('[daemon] Initialize environment');
 
 // reset file permissions
 // TODO can this be moved to wrk_sysChmod?
@@ -116,8 +115,6 @@ sysCmd("ln -s /var/lib/mpd/music /var/www/coverroot");
 
 // load session
 Session::wrap(function() {
-	logWorker("[daemon] Reading session");
-
 	// make sure session vars are set
 	$vars = array('w_active', 'w_lock', 'w_queue', 'w_queueargs', 'debug', 'debugdata');
 	foreach ($vars as $var) {
@@ -125,7 +122,6 @@ Session::wrap(function() {
 			$_SESSION[$var] = '';
 		}
 	}
-	logWorker("[daemon] " . print_r($_SESSION,1));
 
 	// check Architecture
 	$arch = wrk_getHwPlatform($foo);
@@ -244,12 +240,10 @@ $ip_wlan0 = sysCmd("ip addr list wlan0 |grep \"inet \" |cut -d' ' -f6|cut -d/ -f
 Session::wrap(function() use ($ip, $ip_eth0, $ip_wlan0) {
 	// check IP for minidlna assignment and add to session
 	if (isset($ip_eth0) && !empty($ip_eth0)) {
-		$ip = $ip_eth0[0];
-		$_SESSION['netconf']['eth0']['ip'] = $ip;
+		$_SESSION['netconf']['eth0']['ip'] = $ip = $ip_eth0[0];
 	}
 	elseif (isset($ip_wlan0) && !empty($ip_wlan0)) {
-		$ip = $ip_wlan0[0];
-		$_SESSION['netconf']['wlan0']['ip'] = $ip;
+		$_SESSION['netconf']['wlan0']['ip'] = $ip = $ip_wlan0[0];
 	}
 }, true);
 
@@ -269,12 +263,10 @@ if (isset($_SESSION['djmount']) && $_SESSION['djmount'] == 1) {
 if (isset($_SESSION['shairport']) && $_SESSION['shairport'] == 1) {
 	logWorker("[daemon] Starting shairport");
 
-	$output = '';
 	ConfigDB::connect();
 	$mpdcfg = array_column(ConfigDB::read('', 'mpdconf'), 'value_player', 'param');
-// ksort($mpdcfg);print_r($mpdcfg);die;
 
-	// Start Shairport
+	// start
 	sysCmd('/usr/local/bin/shairport -a "Moode" -w -B "mpc stop" -o alsa -- -d "hw:"' . $mpdcfg['device'] . '",0" > /dev/null 2>&1 &');
 }
 
@@ -471,14 +463,14 @@ while (1) {
 
 	// getting task requires write access to session
 	$task = $args = false;
-	Session::wrap(function() use ($task, $args) {
+	Session::wrap(function() use (&$task, &$args) {
 		$task = workerPopTask($args);
 	}, true);
 
 	// Monitor loop
 	if (false !== $task) {
 		logWorker("[daemon] Task active: " . $task);
-		if (isset($args)) {
+		if (isset($args) &! is_array($args) || count($args)) {
 			logWorker("[daemon] Task args: " . print_r($args,1));
 		}
 
@@ -558,7 +550,7 @@ while (1) {
 
 			// TC (Tim Curtis) 2014-08-23: process theme change requests
 			case 'themechange':
-				// set colov values
+				// set color values
 				if ($args == "amethyst") {$hexlight = "9b59b6"; $hexdark = "8e44ad";}
 				elseif ($args == "bluejeans") {$hexlight = "436bab"; $hexdark = "1f4788";}
 				elseif ($args == "carrot") {$hexlight = "e67e22"; $hexdark = "d35400";}
@@ -653,16 +645,20 @@ while (1) {
 			case 'expandsdcard':
 				sysCmd("/var/www/tcmods/".TCMODS_RELEASE."/cmds/resizefs.sh start");
 				break;
-		} // end switch
+		}
 
 		// update session
 		Session::wrap(function() {
 			logWorker("[daemon] Task done");
+			workerFinishTask();
 		}, true);
-
-		workerFinishTask();
+	}
+	else {
+		// update session even if no task processed to avoid deadlock
+		Session::wrap(function() {
+			workerFinishTask();
+		}, true);
 	}
 
 	sleep(5);
 }
-// --- END WORKER MAIN LOOP --- //

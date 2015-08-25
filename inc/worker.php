@@ -32,14 +32,14 @@ function workerIsFree() {
 /**
  * Add task to queue
  */
-function workerPushTask($task, $parameters = null) {
+function workerPushTask($task, $args = null) {
 	if (!workerIsFree()) {
 		return false;
 	}
 
 	$_SESSION['w_active'] = 1;
 	$_SESSION['w_queue'] = $task;
-	$_SESSION['w_queueargs'] = $parameters;
+	$_SESSION['w_queueargs'] = $args;
 
 	return true;
 }
@@ -47,7 +47,7 @@ function workerPushTask($task, $parameters = null) {
 /**
  * Get task from queue
  */
-function workerPopTask($args) {
+function workerPopTask(&$args) {
 	if ($task =
 		isset($_SESSION['w_active']) && $_SESSION['w_active'] == 1 &&
 		isset($_SESSION['w_lock']) && $_SESSION['w_lock'] == 0)
@@ -92,6 +92,10 @@ function wrk_mpdconf($kernelver = null, $i2s = null) {
 
 	foreach ($mpdcfg as $key => $val) {
 		switch ($key) {
+			// supress
+			case 'dsd_usb':
+				break;
+
 			case 'device':
 				$device = $val;
 				break;
@@ -128,6 +132,7 @@ audio_output {
 type "alsa"
 name "Output"
 device "hw:$device,0"
+
 EOT;
 
 	if (isset($hwmixer)) {
