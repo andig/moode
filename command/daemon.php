@@ -40,8 +40,9 @@ require_once dirname(__FILE__) . '/../inc/worker.php';
 
 
 // command line options
-$options = getopt('th', array('test', 'help'));
+$options = getopt('thi', array('test', 'help', 'install'));
 $opt_test = isset($options['t']) || isset($options['test']);
+$opt_install = isset($options['i']) || isset($options['install']);
 
 $lock = fopen('/run/player_wrk.pid', 'c+');
 if (!flock($lock, LOCK_EX | LOCK_NB)) {
@@ -128,7 +129,7 @@ Session::wrap(function() {
 }, true);
 
 // --- PLAYER FIRST INSTALLATION PROCESS --- //
-if (isset($_SESSION['playerid']) && $_SESSION['playerid'] == '') {
+if ($opt_install || (isset($_SESSION['playerid']) && $_SESSION['playerid'] == '')) {
 	// re-init session
 	Session::wrap(function() {
 		Session::destroy();
