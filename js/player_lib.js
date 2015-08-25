@@ -1,4 +1,4 @@
-/**
+*
  *	This Program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
  *  the Free Software Foundation; either version 3, or (at your option)
@@ -150,29 +150,30 @@ function mpdCurrentSong() {
 	});
 }
 
-// Convert song file path to a URL for cover art display
-// TC (Tim Curtis) 2014-10-31: initial version
-// TC (Tim Curtis) 2015-06-26: Add logic to handle different methods for finding album art
+/**
+ * Convert song file path to a URL for cover art display
+ */
 function makeCoverURL(filepath) {
 	var cover = '/mpodcover.php/' + encodeURIComponent(filepath);
 	return cover;
 }
 
-// Check for existance of cover art image file
-// TC (Tim Curtis) 2014-08-23: initial version
-function coverImgExists(coverURL) {
+/**
+ * Json POST to tcmods.php
+ */
+function tcmodsPostCmd(cmd, data) {
 	var result;
 
 	$.ajax({
-		type:'HEAD',
-		url: coverURL,
-		async: false, // Ensure data is current
-		cache: false,
-		success: function(){
-			result = true;
+		type: 'POST',
+		url: 'tcmods.php?cmd=' + cmd,
+		async: false,
+		data: data,
+		success: function(json) {
+			result = json;
 		},
 		error: function() {
-			result = false;
+			console.error('Could not POST tcmods.php?cmd=' + cmd);
 		}
 	});
 
@@ -202,173 +203,64 @@ function makeUPNPCoverURL() {
 
 // TC (Tim Curtis) 2015-03-21: query cfg_audiodev table, return audio device description fields
 function getAudioDevDesc(audiodev) {
-	var tmpObj;
-
-	$.ajax({
-		type: 'POST',
-		url: 'tcmods.php?cmd=getaudiodevdesc',
-		async: false, // Ensure data is current
-		cache: false,
-		data: {'audiodev': audiodev},
-		success: function(json) {
-			tmpObj = json;
-		},
-		error: function() {
-			console.log('Error: getAudioDevDesc() no data returned');
-		}
+	return tcmodsPostCmd('getaudiodevdesc', {
+		'audiodev': audiodev
 	});
-
-	return tmpObj;
 }
 
 // TC (Tim Curtis) 2015-07-31: query cfg_radio table, return radio info fields
 function getRadioInfo(station) {
-	var tmpObj;
-
-	$.ajax({
-		type: 'POST',
-		url: 'tcmods.php?cmd=getradioinfo',
-		async: false, // Ensure data is current
-		cache: false,
-		data: {'station': station},
-		success: function(json) {
-			tmpObj = json;
-		},
-		error: function() {
-			console.log('Error: getRadioInfo() no data returned');
-		}
+	return tcmodsPostCmd('getradioinfo', {
+		'station': station
 	});
-
-	return tmpObj;
 }
 
-// Read tcmods.conf file
-// TC (Tim Curtis) 2014-11-30: initial version
+/**
+ * Read tcmods.conf file
+ */
 function readTcmConf() {
-	var tmpObj;
-
-	$.ajax({
-		type: 'GET',
-		url: 'tcmods.php?cmd=readtcmconf',
-		async: false, // Ensure data is current
-		cache: false,
-		success: function(json) {
-			tmpObj = json;
-		},
-		error: function() {
-			console.log('Error: readTcmConf() no data returned');
-		}
-	});
-
-	return tmpObj;
+	return tcmodsPostCmd('readtcmconf');
 }
 
-// Update tcmods.conf file
-// TC (Tim Curtis) 2014-12-23: initial version
+/**
+ * Update tcmods.conf file
+ */
 function updateTcmConf() {
-	var tmpObj;
-
-	$.ajax({
-		type: 'POST',
-		url: 'tcmods.php?cmd=updatetcmconf',
-		async: false, // Ensure data is current
-		cache: false,
-		data: TCMCONF.json,
-		success: function(json) {
-			tmpObj = json;
-		},
-		error: function() {
-			console.log('Error: updateTcmConf() no data returned');
-		}
-	});
-
-	return tmpObj;
+	return tcmodsPostCmd('updatetcmconf', TCMCONF.json);
 }
 
-// Get MPD status
-// TC (Tim Curtis) 2014-11-30: initial version
+/**
+ * Get MPD status
+ */
 function getMpdStatus() {
-	var tmpObj;
-
-	$.ajax({
-		type: 'GET',
-		url: 'tcmods.php?cmd=getmpdstatus',
-		async: false, // Ensure data is current
-		cache: false,
-		success: function(json) {
-			tmpObj = json;
-		},
-		error: function() {
-			console.log('Error: getMpdStatus() no data returned');
-		}
-	});
-
-	return tmpObj;
+	return tcmodsPostCmd('getmpdstatus');
 }
 
-// Read radio station file
-// TC (Tim Curtis) 2014-12-23: initial version
+/**
+ * Read radio station file
+ */
 function readStationFile(path) {
-	var tmpObj;
-
-	$.ajax({
-		type: 'POST',
-		url: 'tcmods.php?cmd=readstationfile',
-		async: false, // Ensure data is current
-		cache: false,
-		data: {'path': path},
-		success: function(json) {
-			tmpObj = json;
-		},
-		error: function() {
-			console.log('Error: readStationFile() no data returned');
-		}
+	return tcmodsPostCmd('readstationfile', {
+		'path': path
 	});
-
-	return tmpObj;
 }
 
-// Read play history file
-// TC (Tim Curtis) 2015-05-30: initial version
+/**
+ * Read play history file
+ */
 function readPlayHistory() {
-	var tmpObj;
-
-	$.ajax({
-		type: 'GET',
-		url: 'tcmods.php?cmd=readplayhistory',
-		async: false, // Ensure immediate read
-		cache: false,
-		success: function(json) {
-			tmpObj = json;
-		},
-		error: function() {
-			console.log('Error: readPlayHistory() no data returned');
-		}
-	});
-
-	return tmpObj;
+	return tcmodsPostCmd('readplayhistory');
 }
 
-// TC (Tim Curtis) 2015-06-26: TESTING ALSA-Direct volume control
-// Send Amixer set volume command
+/**
+ * Send Amixer set volume command
+ */
 function sendAlsaCmd(cmd, level, scale) {
-	var tmpObj;
-
-	$.ajax({
-		type: 'POST',
-		url: 'tcmods.php?cmd=sendalsacmd',
-		async: true, // Async is ok for this
-		cache: false,
-		data: {'alsacmd':cmd, 'volumelevel':level, 'scale':scale},
-		success: function(json) {
-			tmpObj = json;
-		},
-		error: function() {
-			console.log('Error: sendAlsaCmd() no data returned');
-		}
+	return tcmodsPostCmd('sendalsacmd', {
+		'alsacmd':cmd,
+		'volumelevel':level,
+		'scale':scale
 	});
-
-	return tmpObj;
 }
 
 // Send MPD command to command/index.php
@@ -2037,4 +1929,3 @@ function drop(ev) {
 	var data = ev.dataTransfer.getData("text");
 	ev.target.appendChild(document.getElementById(data));
 }
-*/
