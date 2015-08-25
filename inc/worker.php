@@ -77,8 +77,11 @@ function wrk_checkStrSysfile($sysfile,$searchstr) {
 
 function wrk_mpdconf($kernelver = null, $i2s = null) {
 	// extract mpd.conf from SQLite datastore
+	$_tcmods_conf = getTcmodsConf();
+
+	// $mpdcfg = ConfigDB::read('', 'mpdconf');
 	ConfigDB::connect();
-	$mpdcfg = ConfigDB::read('', 'mpdconf');
+	$mpdcfg = array_column(ConfigDB::read('', 'mpdconf'), 'value_player', 'param');
 
 	// set mpd.conf file header
 	$output =  "#########################################\n";
@@ -87,36 +90,24 @@ function wrk_mpdconf($kernelver = null, $i2s = null) {
 	$output .= "#########################################\n";
 	$output .= "\n";
 
-	// parse DB output
-	foreach ($mpdcfg as $cfg) {
-		if ($cfg['param'] == 'audio_output_format' && $cfg['value_player'] == 'disabled'){
-			$output .= '';
-		}
-		else if ($cfg['param'] == 'dsd_usb') {
-			$dsd = $cfg['value_player'];
-		}
-		else if ($cfg['param'] == 'device') {
-			$device = $cfg['value_player'];
-			var_export($device);
-		}
-		else if ($cfg['param'] == 'mixer_type') {
-			// store volume mixer type in tcmods.conf
-			$_tcmods_conf = getTcmodsConf();
-			if ($_tcmods_conf['volume_mixer_type'] != $cfg['value_player']) {
-				$_tcmods_conf['volume_mixer_type'] = $cfg['value_player'];
-				$rtn = _updTcmodsConf($_tcmods_conf); // update conf file
-			}
+	foreach ($mpdcfg as $key => $val) {
+		switch ($key) {
+			case 'device':
+				$device = $val;
+				break;
 
-			// get volume mixer control name
-			if ($cfg['value_player'] == 'hardware' ) {
-				$hwmixer['control'] = getMixerName($kernelver, $i2s);
-			}
-			else {
-				$output .= $cfg['param']." \"".$cfg['value_player']."\"\n";
-			}
-		}
-		else {
-			$output .= $cfg['param']." \"".$cfg['value_player']."\"\n";
+			case 'mixer_type':
+				// get volume mixer control name
+				if ('hardware' == ($mixer_type = $mpdcfg['mixer_type'])) {
+					$hwmixer = getMixerName($kernelver, $i2s);
+					break;
+				}
+				// fallthrough - output mixer_type
+			default:
+				// don't output disabled audio_output_format
+				if ($key !== 'audio_output_format' || $val !== 'disabled') {
+					$output .= $key . " \"" . $val . "\"\n";
+				}
 		}
 	}
 
@@ -140,16 +131,22 @@ device "hw:$device,0"
 EOT;
 
 	if (isset($hwmixer)) {
-		$output .= "mixer_control \"".$hwmixer['control']."\"\n";
-		$output .= "mixer_device \"hw:".$device."\"\n";
+		$output .= "mixer_control \"" . $hwmixer . "\"\n";
+		$output .= "mixer_device \"hw:" . $device . "\"\n";
 		$output .= "mixer_index \"0\"\n";
 	}
 
-	$output .= "dsd_usb \"".$dsd."\"\n";
+	$output .= "dsd_usb \"" . $mpdcfg['dsd_usb'] . "\"\n";
 	$output .= "}\n";
 
 	// write mpd.conf file
 	file_put_contents("/etc/mpd.conf", $output);
+
+	// store volume mixer type in tcmods.conf
+	if ($_tcmods_conf['volume_mixer_type'] != $mixer_type) {
+		$_tcmods_conf['volume_mixer_type'] = $mixer_type;
+		_updTcmodsConf($_tcmods_conf);
+	}
 }
 
 function wrk_sourcemount($action,$id = null) {

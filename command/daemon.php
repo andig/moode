@@ -49,7 +49,9 @@ if (!flock($lock, LOCK_EX | LOCK_NB)) {
 	die('already running');
 }
 
-// --- DEMONIZE --- only if not in test mode
+/*
+ * Daemonize - don't run if in test mode
+ */
 if (false === $opt_test) {
 	switch ($pid = pcntl_fork()) {
 		case -1:
@@ -82,7 +84,12 @@ if (false === $opt_test) {
 	pcntl_signal(SIGHUP, SIG_IGN);
 }
 
-// --- INITIALIZE ENVIRONMENT --- //
+
+/*
+ * Initialize environment
+ */
+logWorker('[daemon] Initialize environment');
+
 // reset file permissions
 // TODO can this be moved to wrk_sysChmod?
 sysCmd('chmod 777 /run');
@@ -109,6 +116,8 @@ sysCmd("ln -s /var/lib/mpd/music /var/www/coverroot");
 
 // load session
 Session::wrap(function() {
+	logWorker("[daemon] Reading session");
+
 	// make sure session vars are set
 	$vars = array('w_active', 'w_lock', 'w_queue', 'w_queueargs', 'debug', 'debugdata');
 	foreach ($vars as $var) {
@@ -116,8 +125,6 @@ Session::wrap(function() {
 			$_SESSION[$var] = '';
 		}
 	}
-
-	logWorker("[daemon] Startup");
 	logWorker("[daemon] " . print_r($_SESSION,1));
 
 	// check Architecture
@@ -128,8 +135,13 @@ Session::wrap(function() {
 	}
 }, true);
 
-// --- PLAYER FIRST INSTALLATION PROCESS --- //
+
+/*
+ * First-time installation
+ */
 if ($opt_install || (isset($_SESSION['playerid']) && $_SESSION['playerid'] == '')) {
+	logWorker('[daemon] First-time installation');
+
 	// re-init session
 	Session::wrap(function() {
 		Session::destroy();
@@ -212,7 +224,6 @@ EOD;
 	sysCmd('service minidlna stop');
 	sysCmd('service samba stop');
 	sysCmd('service mpd stop');
-// --- END PLAYER FIRST INSTALLATION PROCESS --- //
 }
 
 // TC (Tim Curtis) 2015-07-31: shovel & broom change to /etc/samba/smb.conf instead of _OS_SETTINGS/etc/...
@@ -225,12 +236,12 @@ if ($_SESSION['dev'] == 0) {
 }
 
 // check current eth0 / wlan0 IP Address
+$ip = '192.168.10.110'; // fallback
 $ip_eth0 = sysCmd("ip addr list eth0 |grep \"inet \" |cut -d' ' -f6|cut -d/ -f1");
 $ip_wlan0 = sysCmd("ip addr list wlan0 |grep \"inet \" |cut -d' ' -f6|cut -d/ -f1");
-$ip_fallback = "192.168.10.110";
 
 // add ip address to session
-Session::wrap(function() use ($ip, $ip_eth0, $ip_wlan0, $ip_fallback) {
+Session::wrap(function() use ($ip, $ip_eth0, $ip_wlan0) {
 	// check IP for minidlna assignment and add to session
 	if (isset($ip_eth0) && !empty($ip_eth0)) {
 		$ip = $ip_eth0[0];
@@ -240,10 +251,7 @@ Session::wrap(function() use ($ip, $ip_eth0, $ip_wlan0, $ip_fallback) {
 		$ip = $ip_wlan0[0];
 		$_SESSION['netconf']['wlan0']['ip'] = $ip;
 	}
-	else {
-		$ip = $ip_fallback;
-	}
-});
+}, true);
 
 // minidlna.conf
 $dlna = file_get_contents('/etc/minidlna.conf');
@@ -259,24 +267,15 @@ if (isset($_SESSION['djmount']) && $_SESSION['djmount'] == 1) {
 
 // Shairport (Airplay receiver service)
 if (isset($_SESSION['shairport']) && $_SESSION['shairport'] == 1) {
+	logWorker("[daemon] Starting shairport");
+
 	$output = '';
 	ConfigDB::connect();
-	$mpdcfg = ConfigDB::read('', 'mpdconf');
-
-	foreach ($mpdcfg as $cfg) {
-		if ($cfg['param'] == 'audio_output_format' && $cfg['value_player'] == 'disabled'){
-			$output .= '';
-		}
-		else if ($cfg['param'] == 'device') {
-			$device = $cfg['value_player'];
-		}
-		else {
-			$output .= $cfg['param']." \t\"".$cfg['value_player']."\"\n";
-		}
-	}
+	$mpdcfg = array_column(ConfigDB::read('', 'mpdconf'), 'value_player', 'param');
+// ksort($mpdcfg);print_r($mpdcfg);die;
 
 	// Start Shairport
-	sysCmd('/usr/local/bin/shairport -a "Moode" -w -B "mpc stop" -o alsa -- -d "hw:"'.$device.'",0" > /dev/null 2>&1 &');
+	sysCmd('/usr/local/bin/shairport -a "Moode" -w -B "mpc stop" -o alsa -- -d "hw:"' . $mpdcfg['device'] . '",0" > /dev/null 2>&1 &');
 }
 
 // DLNA server
@@ -322,19 +321,17 @@ $volume = (substr($rtn[0], 0, 6) == 'amixer') ? 'none' : str_replace("%", "", $r
 Session::wrap(function() use ($_tcmods_conf, $volume) {
 	Session::update('kernelver', $_tcmods_conf['sys_kernel_ver']);
 	Session::update('procarch', $_tcmods_conf['sys_processor_arch']);
-
 	Session::update('pcm_volume', $volume);
 }, true);
 
-// --- END NORMAL STARTUP --- //
 
 
-// --- WORKER MAIN LOOP --- //
+/*
+ * Worker main loop
+ */
+logWorker('[daemon] Loop');
+
 while (1) {
-	if (!count($_SESSION)) {
-		logWorker('[daemon] session ' . session_id() . ' empty');
-	}
-
 	// TC (Tim Curtis) 2014-12-23: check clock radio for scheduled playback
 	if ($_tcmods_conf['clock_radio_enabled'] == "Yes") {
 		$current_time = date("hi A");
@@ -473,6 +470,7 @@ while (1) {
 	}
 
 	// getting task requires write access to session
+	$task = $args = false;
 	Session::wrap(function() use ($task, $args) {
 		$task = workerPopTask($args);
 	}, true);
@@ -606,54 +604,54 @@ while (1) {
 
 			// TC (Tim Curtis) 2015-02-25: process kernel select request
 			case 'kernelver':
-				$rtn = sysCmd("/var/www/tcmods/".TCMODS_RELEASE."/cmds/tcmods.sh install-kernel ".getKernelVer($args));
+				sysCmd("/var/www/tcmods/".TCMODS_RELEASE."/cmds/tcmods.sh install-kernel ".getKernelVer($args));
 				break;
 
 			// TC (Tim Curtis) 2015-04-29: process timezone select request
 			case 'timezone':
-				$rtn = sysCmd("/var/www/tcmods/".TCMODS_RELEASE."/cmds/tcmods.sh set-timezone " . $args);
+				sysCmd("/var/www/tcmods/".TCMODS_RELEASE."/cmds/tcmods.sh set-timezone " . $args);
 				break;
 
 			// TC (Tim Curtis) 2015-04-29: process host name change request
 			case 'host_name':
-				$rtn = sysCmd("/var/www/tcmods/".TCMODS_RELEASE."/cmds/tcmods.sh chg-name host " . $args);
+				sysCmd("/var/www/tcmods/".TCMODS_RELEASE."/cmds/tcmods.sh chg-name host " . $args);
 				break;
 
 			case 'browser_title':
-				$rtn = sysCmd("/var/www/tcmods/".TCMODS_RELEASE."/cmds/tcmods.sh chg-name browsertitle " . $args);
+				sysCmd("/var/www/tcmods/".TCMODS_RELEASE."/cmds/tcmods.sh chg-name browsertitle " . $args);
 				break;
 
 			case 'airplay_name':
-				$rtn = sysCmd("/var/www/tcmods/".TCMODS_RELEASE."/cmds/tcmods.sh chg-name airplay " . $args);
+				sysCmd("/var/www/tcmods/".TCMODS_RELEASE."/cmds/tcmods.sh chg-name airplay " . $args);
 				break;
 
 			case 'upnp_name':
-				$rtn = sysCmd("/var/www/tcmods/".TCMODS_RELEASE."/cmds/tcmods.sh chg-name upnp " . $args);
+				sysCmd("/var/www/tcmods/".TCMODS_RELEASE."/cmds/tcmods.sh chg-name upnp " . $args);
 				break;
 
 			case 'dlna_name':
-				$rtn = sysCmd("/var/www/tcmods/".TCMODS_RELEASE."/cmds/tcmods.sh chg-name dlna " . $args);
+				sysCmd("/var/www/tcmods/".TCMODS_RELEASE."/cmds/tcmods.sh chg-name dlna " . $args);
 				break;
 
 			// TC (Tim Curtis) 2015-04-29: handle PCM volume change
 			case 'pcm_volume':
 				// TC (Tim Curtis) 2015-06-26: set simple mixer name based on kernel version and i2s vs USB
 				$mixername = getMixerName(getKernelVer($_SESSION['kernelver']), $_SESSION['i2s']);
-				$rtn = sysCmd("/var/www/tcmods/".TCMODS_RELEASE."/cmds/tcmods.sh set-pcmvol ".$mixername." " . $args);
+				sysCmd("/var/www/tcmods/".TCMODS_RELEASE."/cmds/tcmods.sh set-pcmvol " . $mixername . " " . $args);
 				break;
 
 			// TC (Tim Curtis) 2015-05-30: add clear system and playback history logs
 			case 'clearsyslogs':
-				$rtn = sysCmd("/var/www/tcmods/".TCMODS_RELEASE."/cmds/utility.sh clear-logs");
+				sysCmd("/var/www/tcmods/".TCMODS_RELEASE."/cmds/utility.sh clear-logs");
 				break;
 
 			case 'clearplayhistory':
-				$rtn = sysCmd("/var/www/tcmods/".TCMODS_RELEASE."/cmds/utility.sh clear-playhistory");
+				sysCmd("/var/www/tcmods/".TCMODS_RELEASE."/cmds/utility.sh clear-playhistory");
 				break;
 
 			// TC (Tim Curtis) 2015-07-31: expand sd card storage
 			case 'expandsdcard':
-				$rtn = sysCmd("/var/www/tcmods/".TCMODS_RELEASE."/cmds/resizefs.sh start");
+				sysCmd("/var/www/tcmods/".TCMODS_RELEASE."/cmds/resizefs.sh start");
 				break;
 		} // end switch
 

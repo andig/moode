@@ -800,11 +800,9 @@ function getMixerName($kernelver, $i2s) {
 }
 
 function waitWorker($sleeptime = 1, $mpdUpdate = false) {
-	logWorker('[client] waitWorker ' . session_id());
-	logWorker($_SESSION);
+	logWorker('[client] waiting for worker');
 
 	$wait = 0;
-
 	if ($_SESSION['w_active'] == 1) {
 		do {
 			sleep($sleeptime);
@@ -822,6 +820,8 @@ function waitWorker($sleeptime = 1, $mpdUpdate = false) {
 			closeMpdSocket($mpd);
 		}
 	}
+
+	logWorker('[client] worker finished');
 }
 
 function logWorker($o) {
