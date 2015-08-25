@@ -1912,20 +1912,3 @@ $("#volume-warning-limit").change(function() {
 		$('#volume-warning-limit-aftertext').html('');
 	}
 });
-
-// TC (Tim Curtis) 2015-04-29: TESTING
-// Drag & drop handlers for Playlist
-/*
-function allowDrop(ev) {
-	ev.preventDefault();
-}
-
-function drag(ev) {
-	ev.dataTransfer.setData("text", ev.target.id);
-}
-
-function drop(ev) {
-	ev.preventDefault();
-	var data = ev.dataTransfer.getData("text");
-	ev.target.appendChild(document.getElementById(data));
-}
