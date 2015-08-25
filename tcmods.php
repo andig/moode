@@ -131,8 +131,6 @@ else {
 	// Show audio information
 	$_hwparams = getHwParams();
 
-	// TC (Tim Curtis) 2015-06-26: comment out to make room for Volume settings under DSP INFO
-	//$audioinfo_hwparams_status = $_hwparams['status'];
 	if ($_hwparams['status'] == 'active') {
 		$audioinfo_hwparams_format = $_hwparams['channels'] . ", ";
 		$audioinfo_hwparams_format .= $_hwparams['format'] . " bit, ";
@@ -164,18 +162,19 @@ else {
 			$audioinfo_mpdstatus_format .= ($_mpdstatus['audio_sample_depth'] == "dsd") ? ", " : " bit, ";
 			$audioinfo_mpdstatus_format .= $_mpdstatus['audio_sample_rate'] . " kHz";
 			// bit rate
-			$audioinfo_mpdstatus_bitrate .= $_mpdstatus['bitrate'] . " kbps";
+			$audioinfo_mpdstatus_bitrate = $_mpdstatus['bitrate'] . " kbps";
 		}
 		else {
 			$audioinfo_mpdstatus_format = '';
-			$audioinfo_mpdstatus_bitrate .= "0 bps";
+			$audioinfo_mpdstatus_bitrate = "0 bps";
 		}
 	}
 
 	// DSP INFO: mpd.conf, configured SRC output format and converter
 	// TC (Tim Curtis) 2015-06-26: add Volume settings from tcmods.conf
 	$_tcmodsconf = getTcmodsConf();
-	$_mpdconf = _parseMpdConf($dbh);
+	$_mpdconf = _parseMpdConf();
+
 	if ($_mpdconf['audio_channels'] != '') {
 		$audioinfo_mpdconf_src = $_mpdconf['samplerate_converter'];
 		$audioinfo_mpdconf_format = $_mpdconf['audio_channels'] . ", ";
@@ -217,8 +216,7 @@ else {
 	$audioinfo_tcmodsconf_device_other = $_tcmodsconf['audio_device_other'];
 
 	// SYSTEM INFO: architecture, cpu util, temp and freq
-	$_cpuload = shell_exec("top -bn 2 -d 0.5 | grep 'Cpu(s)' | tail -n 1 | awk '{print $2 + $4 + $6}'");
-	$systeminfo_cpuload = number_format($_cpuload,0,'.','');
+	$systeminfo_cpuload = number_format(trim(shell_exec("top -bn 2 -d 0.5 | grep 'Cpu(s)' | tail -n 1 | awk '{print $2 + $4 + $6}'")),0,'.','');
 	$systeminfo_cputemp = substr(shell_exec('cat /sys/class/thermal/thermal_zone0/temp'), 0, 2);
 	$_cpufreq = (float)shell_exec('cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq');
 	if ($_cpufreq < 1000000) {

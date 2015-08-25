@@ -465,8 +465,8 @@ EOT;
 }
 
 // OUTPUT: parse HW_PARAMS
-function getHwParams($resp) {
-	if (false === ($resp = shell_exec('cat /proc/asound/card0/pcm0p/sub0/hw_params'))) {
+function getHwParams() {
+	if (false === ($resp = file_get_contents('/proc/asound/card0/pcm0p/sub0/hw_params'))) {
 		die('Error, _parseHwParams response is null');
 	}
 
@@ -518,10 +518,8 @@ function getHwParams($resp) {
 
 // DSP: parse MPD Conf
 function _parseMpdConf() {
-	// read in mpd conf settings
-	$mpdconf = ConfigDB::read('', 'mpdconf');
 	// prepare array
-	$_mpd = array (
+	$_mpd = array(
 		'port' => '',
 		'gapless_mp3_playback' => '',
 		'auto_update' => '',
@@ -538,17 +536,22 @@ function _parseMpdConf() {
 		'volume_normalization' => ''
 	);
 
+	// read in mpd conf settings
+	$mpdconf = ConfigDB::read('', 'mpdconf');
+
 	// parse output for template
 	foreach ($mpdconf as $key => $value) {
-		foreach ($_mpd as $key2 => $value2) {
-			if ($value['param'] == $key2) {
-				$_mpd[$key2] = $value['value_player'];
-			}
+		if (in_array($value['param'], array_keys($_mpd))) {
+			$_mpd[$value['param']] = $value['value_player'];
 		}
 	}
 
 	// parse audio output format, ex "44100:16:2"
 	$audio_format = explode(":", $_mpd['audio_output_format']);
+// print_r($mpdconf);
+// print_r($_mpd);
+// print_r($audio_format);die;
+
 	// TC (Tim Curtis) 2015-06-26: add sample rate 384000
 	switch ($audio_format[0]) {
 		// integer format
@@ -567,8 +570,10 @@ function _parseMpdConf() {
 			$_mpd['audio_sample_rate'] = rtrim(number_format($audio_format[0],0, ', ', '.'),0);
 			break;
 	}
+
 	// add sample depth, ex "16"
 	$_mpd['audio_sample_depth'] = $audio_format[1];
+
 	// add channels, ex "2"
 	if ($audio_format[2] == "2") $_mpd['audio_channels'] = "Stereo";
 	if ($audio_format[2] == "1") $_mpd['audio_channels'] = "Mono";
