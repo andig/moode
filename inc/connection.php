@@ -22,8 +22,6 @@
  */
 
 require_once dirname(__FILE__) . '/config.inc';
-require_once dirname(__FILE__) . '/../inc/Session.php';
-require_once dirname(__FILE__) . '/../inc/ConfigDB.php';
 require_once dirname(__FILE__) . '/../inc/player.php';
 
 // mpd socket/port

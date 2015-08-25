@@ -62,7 +62,7 @@ class Session
 	 * Update session and config table
 	 */
 	public static function update($key, $val) {
-		$_SESSION[$var] = $value;
+		$_SESSION[$key] = $val;
 		ConfigDB::connect();
 		ConfigDB::update('cfg_engine', $key, $val);
 	}
@@ -70,7 +70,7 @@ class Session
 	/**
 	 * Destroy session data
 	 */
-	public static function close() {
+	public static function destroy() {
 		session_unset();
 		session_destroy();
 	}

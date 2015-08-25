@@ -25,6 +25,9 @@
 define("MPD_RESPONSE_ERR", "ACK");
 define("MPD_RESPONSE_OK",  "OK");
 
+require_once dirname(__FILE__) . '/../inc/Session.php';
+require_once dirname(__FILE__) . '/../inc/ConfigDB.php';
+
 function openMpdSocket($host, $port) {
 	if (false === ($sock = stream_socket_client('tcp://'.$host.':'.$port, $errorno, $errorstr, 30))) {
 		die('Error: could not connect to MPD');
