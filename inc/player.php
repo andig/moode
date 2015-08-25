@@ -346,7 +346,6 @@ function _parseStatusResponse($resp) {
 	return $status;
 }
 
-// AG
 /**
  * Parse MPD playlist
  */
@@ -359,8 +358,11 @@ function _parseFileListResponse($resp) {
 	$cnt = -1;
 
 	foreach (explode("\n", $resp) as $line) {
-		list ($key, $val) = explode(": ", $line, 2);
+		if (0 == strlen($line) || false === strpos(': ', $line)) {
+			continue;
+		}
 
+		list($key, $val) = explode(': ', $line, 2);
 		// TC (Tim Curtis) 2014-09-17, remove OR playlist in original stmt below
 		if ("file" == $key) {
 			$cnt++;
@@ -386,7 +388,9 @@ function _parseFileListResponse($resp) {
 		}
 		else {
 			$res[$cnt][$key] = $val;
-			$res[$cnt]["Time2"] = songTime($res[$cnt]["Time"]);
+			if (isset($res[$cnt]["Time"])) {
+				$res[$cnt]["Time2"] = songTime($res[$cnt]["Time"]);
+			}
 		}
 	}
 

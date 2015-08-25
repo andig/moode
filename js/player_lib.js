@@ -188,9 +188,9 @@ function makeUPNPCoverURL() {
 		url: 'tcmods.php?cmd=getupnpcoverurl',
 		async: false, // Ensure data is current
 		cache: false,
-		success: function(result) {
-			upnpCoverUrl = result.replace(/\n/g, '');
-			//console.log('upnpCoverUrl=', upnpCoverUrl); // debug
+		success: function(json) {
+			console.log(json); // debug
+			upnpCoverUrl = json.coverurl;
 		},
 		error: function() {
 			console.log('Error: getUPNPCoverURL() no data returned');
@@ -210,8 +210,8 @@ function getAudioDevDesc(audiodev) {
 		async: false, // Ensure data is current
 		cache: false,
 		data: {'audiodev': audiodev},
-		success: function(result) {
-			tmpObj = JSON.parse(result);
+		success: function(json) {
+			tmpObj = json;
 		},
 		error: function() {
 			console.log('Error: getAudioDevDesc() no data returned');
@@ -231,8 +231,8 @@ function getRadioInfo(station) {
 		async: false, // Ensure data is current
 		cache: false,
 		data: {'station': station},
-		success: function(result) {
-			tmpObj = JSON.parse(result);
+		success: function(json) {
+			tmpObj = json;
 		},
 		error: function() {
 			console.log('Error: getRadioInfo() no data returned');
@@ -245,28 +245,28 @@ function getRadioInfo(station) {
 // Read tcmods.conf file
 // TC (Tim Curtis) 2014-11-30: initial version
 function readTcmConf() {
-	var tmpobj;
+	var tmpObj;
 
 	$.ajax({
 		type: 'GET',
 		url: 'tcmods.php?cmd=readtcmconf',
 		async: false, // Ensure data is current
 		cache: false,
-		success: function(data) {
-			tmpobj = JSON.parse(data);
+		success: function(json) {
+			tmpObj = json;
 		},
 		error: function() {
 			console.log('Error: readTcmConf() no data returned');
 		}
 	});
 
-	return tmpobj;
+	return tmpObj;
 }
 
 // Update tcmods.conf file
 // TC (Tim Curtis) 2014-12-23: initial version
 function updateTcmConf() {
-	var resultData;
+	var tmpObj;
 
 	$.ajax({
 		type: 'POST',
@@ -274,43 +274,42 @@ function updateTcmConf() {
 		async: false, // Ensure data is current
 		cache: false,
 		data: TCMCONF.json,
-		dataType: 'json',
-		success: function(result) {
-			resultData = result;
+		success: function(json) {
+			tmpObj = json;
 		},
 		error: function() {
 			console.log('Error: updateTcmConf() no data returned');
 		}
 	});
 
-	return resultData;
+	return tmpObj;
 }
 
 // Get MPD status
 // TC (Tim Curtis) 2014-11-30: initial version
 function getMpdStatus() {
-	var tmpobj;
+	var tmpObj;
 
 	$.ajax({
 		type: 'GET',
 		url: 'tcmods.php?cmd=getmpdstatus',
 		async: false, // Ensure data is current
 		cache: false,
-		success: function(data) {
-			tmpobj = JSON.parse(data);
+		success: function(json) {
+			tmpObj = json;
 		},
 		error: function() {
 			console.log('Error: getMpdStatus() no data returned');
 		}
 	});
 
-	return tmpobj;
+	return tmpObj;
 }
 
 // Read radio station file
 // TC (Tim Curtis) 2014-12-23: initial version
 function readStationFile(path) {
-	var tmpobj;
+	var tmpObj;
 
 	$.ajax({
 		type: 'POST',
@@ -318,36 +317,36 @@ function readStationFile(path) {
 		async: false, // Ensure data is current
 		cache: false,
 		data: {'path': path},
-		success: function(result) {
-			tmpobj = JSON.parse(result);
+		success: function(json) {
+			tmpObj = json;
 		},
 		error: function() {
 			console.log('Error: readStationFile() no data returned');
 		}
 	});
 
-	return tmpobj;
+	return tmpObj;
 }
 
 // Read play history file
 // TC (Tim Curtis) 2015-05-30: initial version
 function readPlayHistory() {
-	var tmpobj;
+	var tmpObj;
 
 	$.ajax({
 		type: 'GET',
 		url: 'tcmods.php?cmd=readplayhistory',
 		async: false, // Ensure immediate read
 		cache: false,
-		success: function(data) {
-			tmpobj = JSON.parse(data);
+		success: function(json) {
+			tmpObj = json;
 		},
 		error: function() {
 			console.log('Error: readPlayHistory() no data returned');
 		}
 	});
 
-	return tmpobj;
+	return tmpObj;
 }
 
 // TC (Tim Curtis) 2015-06-26: TESTING ALSA-Direct volume control
@@ -361,9 +360,8 @@ function sendAlsaCmd(cmd, level, scale) {
 		async: true, // Async is ok for this
 		cache: false,
 		data: {'alsacmd':cmd, 'volumelevel':level, 'scale':scale},
-		success: function(result) {
-			tmpObj = JSON.parse(result);
-			//console.log('tmpObj= ', tmpObj);
+		success: function(json) {
+			tmpObj = json;
 		},
 		error: function() {
 			console.log('Error: sendAlsaCmd() no data returned');

@@ -76,6 +76,8 @@ if (isset($_POST['syscmd'])) {
 	}
 }
 else if (isset($_GET['cmd']) && $_GET['cmd'] != '') {
+	header('Content-type: application/json');
+
 	$cmd = $_GET['cmd'];
 	switch ($cmd) {
 		case 'getaudiodevdesc':
@@ -84,14 +86,14 @@ else if (isset($_GET['cmd']) && $_GET['cmd'] != '') {
 			break;
 
 		case 'getradioinfo':
-			$result = ConfigDB::read('cfg_radio', $_POST['station']);
+			$result = ConfigDB::read('cfg_radio', isset($_POST['station']) ? $_POST['station'] : null);
 			echo json_encode($result[0]);
 			break;
 
 		case 'getupnpcoverurl':
 			$cmd = "upexplorer --album-art \"".$_SESSION['upnp_name']."\"";
 			$rtn = sysCmd($cmd);
-			echo $rtn[0];
+			echo json_encode(array('coverurl' => $rtn[0]));
 			break;
 
 		case 'readtcmconf':
@@ -123,7 +125,6 @@ else if (isset($_GET['cmd']) && $_GET['cmd'] != '') {
 			$rtn = sysCmd($cmd);
 			echo json_encode($rtn[0]);
 			break;
-
 	} // End switch
 
 }
