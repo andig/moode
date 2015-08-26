@@ -33,7 +33,9 @@ function openMpdSocket($host, $port) {
 		// just log, don't die()
 		error_log('Error: could not connect to MPD');
 	}
-	$response = readMpdResponse($sock);
+	else {
+		$response = readMpdResponse($sock);
+	}
 	return $sock;
 }
 
@@ -146,33 +148,8 @@ function libLog($str, $overwrite = false) {
 
 // TC (Tim Curtis) 2015-06-26: add debug logging
 function loadAllLib($sock) {
-	// TC (Tim Curtis) 2015-06-26: debug
-	$debug_flags = str_replace("\n", '', explode(', ', file_get_contents("/var/www/liblog.conf")));
-	// write out the debug flags
-	libLog("debug flags= ".$debug_flags[0].", ".$debug_flags[1].", ".$debug_flags[2].", ".$debug_flags[3].", ".$debug_flags[4], true);
-
+	$cmd = "find modified-since " . ($debug_flags[4] == "2") ? "1901-01-01T00:00:00Z" : "36500";
 	$lib = array();
-	if (false !== ($count = _loadDirForLib($sock, $lib, $debug_flags))) {
-		// TC (Tim Curtis) 2015-06-26: debug, #0 total count of files
-		if ($debug_flags[0] == "y") {
-			libLog("_loadAllLib() count= ".$count);
-		}
-
-		return $lib;
-	}
-}
-
-// AG (Andreas Goetz) 2015-08-10: less memory-intensive library parsing
-function _loadDirForLib($sock, &$lib, $debug_flags) {
-	if ($debug_flags[4] == "1") {
-		$cmd = "find modified-since 36500"; // number of days
-	} else if ($debug_flags[4] == "2") {
-		$cmd = "find modified-since 1901-01-01T00:00:00Z"; // full time stamp
-	} else {
-		$cmd = "find modified-since 36500"; // default: number of days
-	}
-
-	$libCount = 0;
 	$item = array();
 
 	foreach (explode("\n", execMpdCommand($sock, $cmd)) as $line) {
@@ -180,18 +157,8 @@ function _loadDirForLib($sock, &$lib, $debug_flags) {
 		if ($key == "file") {
 			if (count($item)) {
 				_libAddItem($lib, $item);
-				$libCount++;
-// if ($libCount > 1000) return $libCount;
 				$item = array();
-			} 
-
-			if ($debug_flags[1] == "y") {
-				libLog("_loadDirForLib() item= ".$libCount.", file= ".$val);
-			} 
-		}
-
-		if ($debug_flags[2] == "y") {
-			libLog("_loadDirForLib() item= ".$libCount.", key= ".$key.", val= ".$val);
+			}
 		}
 
 		$item[$key] = $val;
@@ -199,11 +166,10 @@ function _loadDirForLib($sock, &$lib, $debug_flags) {
 
 	if (count($item)) {
 		_libAddItem($lib, $item);
-		$libCount++;
 		$item = array();
 	}
 
-	return $libCount;
+	return $lib;
 }
 
 function _libAddItem(&$lib, $item) {
@@ -249,12 +215,6 @@ function searchDB($sock, $type, $query = '') {
 	}
 
 	return _parseFileListResponse($resp);
-}
-
-// create JS like Timestamp
-function jsTimestamp() {
-	$timestamp = round(microtime(true) * 1000);
-	return $timestamp;
 }
 
 function songTime($sec) {
