@@ -23,19 +23,4 @@
 
 require_once dirname(__FILE__) . '/inc/connection.php';
 
-Session::open();
-Session::close();
-
-
-// set template
-$tpl = "index_new.html";
-
-
-$sezione = basename(__FILE__, '.php');
-include('_header.php');
-
-
-eval("echoTemplate(\"".getTemplate("templates/$tpl")."\");");
-
-
-include('_footer.php');
+render("index");

@@ -334,12 +334,6 @@ $_system_select['expandsdcard0'] .= "<input type=\"radio\" name=\"expandsdcard\"
 // TC (Tim Curtis) 2015-04-29: timezones
 $_timezone['timezone'] = buildTimezoneSelect($_SESSION['timezone']);
 
-// set template
-$tpl = "settings.html";
-
-
-$sezione = basename(__FILE__, '.php');
-include('_header.php');
 
 // TC (Tim Curtis) 2015-02-25: dont wait if kernel select so page returns and uiShowNotification message appears
 // TC (Tim Curtis) 2015-02-25: use notify title as the check since its not cleared by worker (daemon.php)
@@ -349,5 +343,6 @@ if (!isset($_SESSION['notify']['title']) ||
 	waitWorker(1);
 }
 
-eval("echoTemplate(\"".getTemplate("templates/$tpl")."\");");
-include('_footer.php');
+Session::close();
+
+render("settings");

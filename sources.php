@@ -111,7 +111,7 @@ foreach ($source as $mp) {
 	$_mounts .= "<p><a href=\"sources.php?p=edit&id=".$mp['id']."\" class='btn btn-large' style='width: 240px;'> ".$icon." ".$mp['name']." (".$mp['address'].") </a></p>";
 }
 
-$tpl = "sources.html";
+$tpl = "sources";
 
 if (isset($_GET['p']) && !empty($_GET['p'])) {
 	if (isset($_GET['id']) && !empty($_GET['id'])) {
@@ -149,10 +149,7 @@ if (isset($_GET['p']) && !empty($_GET['p'])) {
 		$_source_select['type'] .= "<option value=\"cifs\">SMB/CIFS</option>\n";
 		$_source_select['type'] .= "<option value=\"nfs\">NFS</option>\n";
 	}
-	$tpl = 'source.html';
+	$tpl = 'source';
 }
 
-$sezione = basename(__FILE__, '.php');
-include('_header.php');
-eval("echoTemplate(\"".getTemplate("templates/$tpl")."\");");
-include('_footer.php');
+render($tpl);

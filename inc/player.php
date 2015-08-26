@@ -437,19 +437,18 @@ function getHwParams() {
 
 	if ($resp != "closed\n") {
 		$res = parseMpdKeyedResponse($resp, ': ');
+		$res['status'] = 'active';
 
 		// format sample rate, ex: "44100 (44100/1)"
 		$rate = substr($res['rate'], 0, strpos($res['rate'], ' ('));
 		$res['rate'] = formatSampleRate($rate);
+		$res['calcrate'] = number_format((((float)$rate * (float)$res['format'] * (float)$res['channels']) / 1000000), 3, '.', '');
+
 		// format sample depth, ex "S24_3LE"
 		$res['format'] = substr($res['format'], 1, 2);
-		$_bits = (float)$res['format'];
-		$_chans = (float)$res['channels'];
 
+		// format channels
 		$res['channels'] = formatChannels($res['channels']);
-
-		$res['status'] = 'active';
-		$res['calcrate'] = number_format((((float)$rate * $_bits * $_chans) / 1000000),3, '.', '');
 	}
 	else {
 		$res['status'] = 'closed';
@@ -549,16 +548,6 @@ function _updTcmodsConf($tcmconf) {
 
 	return '_updTcmodsConf: update tcmods.conf complete';
 }
-
-
-function getTemplate($template) {
-	return str_replace("\"", "\\\"",implode("",file($template)));
-}
-
-function echoTemplate($template) {
-	echo $template;
-}
-
 
 // TC (Tim Curtis) 2015-05-30: update play history log
 function _updatePlayHistory($currentsong) {
@@ -736,5 +725,26 @@ function logWorker($o) {
 
 		fwrite($f, $o . "\n");
 		fclose($f);
+	}
+}
+
+/**
+ * Render template file, variables will be substituted
+ */
+function render($template, $headers = true) {
+	global $sezione;
+
+	if (false === ($str = file_get_contents('templates/' . $template . '.html'))) {
+		die("Could not read template " . $template);
+	}
+
+	$sezione = $template;
+	if ($headers) {
+		include('_header.php');
+	}
+	// str_replace("\"", "\\\"", $str);
+	echo eval($str);
+	if ($headers) {
+		include('_footer.php');
 	}
 }

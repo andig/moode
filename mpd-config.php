@@ -220,9 +220,6 @@ $_mpd_select['samplerate_converter'] .= "<option value=\"Fastest Sinc Interpolat
 $_mpd_select['samplerate_converter'] .= "<option value=\"Medium Sinc Interpolator\" ".(($_mpd['samplerate_converter'] == 'Medium Sinc Interpolator') ? "selected" : "")." >SRC: Medium Quality</option>\n";
 $_mpd_select['samplerate_converter'] .= "<option value=\"Best Sinc Interpolator\" ".(($_mpd['samplerate_converter'] == 'Best Sinc Interpolator') ? "selected" : "")." >SRC: Best Quality</option>\n";
 
-// Set normal config template
-$tpl = "mpd-config.html";
-
 
 // TC (Tim Curtis) 2015-04-29: is this code used anymore?
 if (wrk_checkStrSysfile('/proc/asound/card0/pcm0p/info','bcm2835')) {
@@ -237,12 +234,6 @@ else {
 	$_audioout .= "<input class=\"input-large\" class=\"input-large\" type=\"text\" id=\"port\" name=\"\" value=\"USB Audio\" data-trigger=\"change\" disabled>\n";
 }
 
-
-$sezione = basename(__FILE__, '.php');
-include('_header.php');
-
 waitWorker(1);
 
-eval("echoTemplate(\"".getTemplate("templates/$tpl")."\");");
-
-include('_footer.php'); ?>
+render("mpd-config");

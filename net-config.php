@@ -190,13 +190,8 @@ $_wlan0security .= "<option value=\"wpa\"".(($wifisec[0]['security'] == 'wpa') ?
 $_wlan0security .= "<option value=\"wep\"".(($wifisec[0]['security'] == 'wep') ? "selected" : "").">WEP</option>\n";
 $_wlan0security .= "<option value=\"none\"".(($wifisec[0]['security'] == 'none') ? "selected" : "").">No security</option>\n";
 
-$tpl = "net-config.html";
-
 
 // unlock session files
 Session::close();
 
-$sezione = basename(__FILE__, '.php');
-include('_header.php');
-eval("echoTemplate(\"".getTemplate("templates/$tpl")."\");");
-include('_footer.php');
+render("net-config");

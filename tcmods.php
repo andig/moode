@@ -34,14 +34,14 @@ if (isset($_POST['syscmd'])) {
 			if ($workerSuccess = workerPushTask("poweroff")) {
 				uiSetNotification('Shutdown', 'System shutdown initiated...');
 			}
-			$tpl = "poweroff.html";
+			$tpl = "poweroff";
 			break;
 
 		case 'reboot':
 			if ($workerSuccess = workerPushTask("reboot")) {
 				uiSetNotification('Reboot', 'System reboot initiated...');
 			}
-			$tpl = "reboot.html";
+			$tpl = "reboot";
 			break;
 
 		case 'reloadclockradio':
@@ -61,10 +61,7 @@ if (isset($_POST['syscmd'])) {
 
 	// Display template if not clock radio reload or tcmods conf reload
 	if (isset($tpl)) {
-		$sezione = basename(__FILE__, '.php');
-		include('_header.php');
-		eval("echoTemplate(\"".getTemplate("templates/$tpl")."\");");
-		include('_footer.php');
+		render($tpl);
 	}
 
 	exit();
@@ -229,8 +226,7 @@ else {
 // TC (Tim Curtis) 2015-02-25: processor architecture
 $systeminfo_arch = trim(shell_exec('uname -m'));
 
-// Set template html
-$tpl = "audioinfo.html";
-eval("echoTemplate(\"".getTemplate("templates/$tpl")."\");");
 
 Session::close();
+
+render("audioinfo", false);
