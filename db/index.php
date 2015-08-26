@@ -27,20 +27,24 @@ function mpdTouchFiles() {
 	return sysCmd("find '" . MPD_LIB . 'WEBRADIO' . "' -name \"" . "*.pls" . "\"" . " -exec touch {} \+");
 }
 
+// Get options- cmd line or GET
+$options = getopt('c:', array('cmd:'));
+$cmd = isset($options['c']) ? $options['c'] : isset($options['cmd']) ? $options['cmd'] : false;
+
+if (emtpy($cmd)) {
+	if (!isset($_GET['cmd'])) {
+		die('Error: missing or invalid command');
+	}
+
+	$cmd = $_GET['cmd'];
+	$path = isset($_POST['path']) ? $_POST['path'] : null;
+}
+
 if (!$mpd) {
 	die('Error: connection to MPD failed');
 }
 
-if (!isset($_GET['cmd'])) {
-	die('Error: missing or invalid command');
-}
-
-$cmd = $_GET['cmd'];
-$path = isset($_POST['path']) ? $_POST['path'] : null;
-
-$res = array('OK' => true);
-
-
+// Commands
 switch ($cmd) {
 	case 'filepath':
 		$res = (null !== $path)
