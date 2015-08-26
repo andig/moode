@@ -52,7 +52,6 @@ $queue = mpdQueueTrackInfo($mpd, $status['song']);
 if (isset($queue[0])) {
 	$track = $queue[0];
 
-	// parseFileStr($track['file'], '.');
 	$status['fileext'] = pathinfo($track['file'], PATHINFO_EXTENSION);
 
 	$status['currentartist'] = isset($track['Artist']) ? $track['Artist'] : '';

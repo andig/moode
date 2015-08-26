@@ -109,7 +109,7 @@ function mpdQueueRemoveTrack($sock, $id) {
 }
 
 function mpdQueueAdd($sock, $path) {
-	$ext = parseFileStr($path, '.');
+	$ext = pathinfo($path, PATHINFO_EXTENSION);
 	$cmd = ($ext == 'm3u' || $ext == 'pls' || strpos($path, '/') === false) ? 'load' : 'add';
 
 	$resp = execMpdCommand($sock, $cmd . ' "' . html_entity_decode($path) . '"');
@@ -268,7 +268,6 @@ function sysCmd($syscmd) {
 	return $output;
 }
 
-// AG
 /**
  * Parse MPD response into key => value pairs
  */
@@ -285,7 +284,6 @@ function parseMpdKeyedResponse($resp, $separator = ': ') {
 	return $res;
 }
 
-// AG
 /**
  * Return formatted MPD player status
  */
@@ -311,37 +309,7 @@ function _parseStatusResponse($resp) {
 
 	 // "audio format" output
 	if (isset($status['audio'])) {
-		$audio_format = explode(":", $status['audio']);
-		// TC (Tim Curtis) 2015-06-26: add case 384000
-		switch ($audio_format[0]) {
-			// integer format
-			case '32000';
-			case '48000':
-			case '96000':
-			case '192000':
-			case '384000':
-				$status['audio_sample_rate'] = rtrim(rtrim(number_format($audio_format[0]),0), ', ');
-				break;
-			// decimal format
-			case '22050':
-				$status['audio_sample_rate'] = '22.05';
-				break;
-			case '44100':
-			case '88200':
-			case '176400':
-			case '352800':
-				$status['audio_sample_rate'] = rtrim(number_format($audio_format[0],0, ', ', '.'),0);
-				break;
-		}
-		// format "audio_sample_depth" string
-		$status['audio_sample_depth'] = $audio_format[1];
-		// format "audio_channels" string
-		if ($audio_format[2] == "2")
-			$status['audio_channels'] = "Stereo";
-		elseif ($audio_format[2] == "1")
-			$status['audio_channels'] = "Mono";
-		elseif ($audio_format[2] > 2)
-			$status['audio_channels'] = "Multichannel";
+		$status += parseAudioFormat($status['audio']);
 	}
 
 	return $status;
@@ -394,7 +362,7 @@ function _parseFileListResponse($resp) {
 
 	// reverse MPD list output
 	if ($directoryIndex >= 0) {
-		$dir = array_splice($res, -$directoryIndex);
+		$dir = array_splice($res, $directoryIndex);
 		$res = $dir + $res;
 	}
 
@@ -413,24 +381,62 @@ function _parseMpdCurrentSong($resp) {
 	return $res;
 }
 
-// get file extension
-function parseFileStr($strFile, $delimiter) {
-	$pos = strrpos($strFile, $delimiter);
-	$str = substr($strFile, $pos+1);
-	return $str;
+/**
+ * Convert sample rate to easily readable format
+ */
+function formatSampleRate($raw) {
+	switch ($raw) {
+		// integer format
+		case '32000':
+		case '48000':
+		case '96000':
+		case '192000':
+		case '384000':
+			$res = rtrim(rtrim(number_format($raw),0), ', ');
+			break;
+		// decimal format
+		case '22050':
+			$res = '22.05';
+			break;
+		case '44100':
+		case '88200':
+		case '176400':
+		case '352800':
+			$res = rtrim(number_format($raw,0, ', ', '.'),0);
+			break;
+		default:
+			$res = '';
+	}
+	return $res;
 }
 
-function recursiveDelete($str){
-	if (is_file($str)) {
-		return @unlink($str);
-		// aggiungere ricerca path in playlist e conseguente remove from playlist
-	}
-	else if (is_dir($str)) {
-		$scan = glob(rtrim($str, '/').'/*');
-		foreach($scan as $index=>$path){
-			recursiveDelete($path);
-		}
-	}
+/**
+ * Convert number of channels to readable format
+ */
+function formatChannels($raw) {
+	$raw = (int)$raw;
+	if ($raw == 2)
+		$res = "Stereo";
+	elseif ($raw == 1)
+		$res = "Mono";
+	elseif ($raw > 2)
+		$res = "Multichannel";
+	else
+		$res = '';
+	return $res;
+}
+
+/**
+ * Convert number of channels to readable format
+ */
+function parseAudioFormat($raw) {
+	$audio_format = explode(":", $raw);
+	$res = array(
+		'audio_sample_rate' => formatSampleRate($audio_format[0]),
+		'audio_sample_depth' => $audio_format[1],
+		'audio_channels' => formatChannels($audio_format[2])
+	);
+	return $res;
 }
 
 function uiSetNotification($title, $msg, $duration = 2) {
@@ -440,8 +446,6 @@ function uiSetNotification($title, $msg, $duration = 2) {
 		'duration' => $duration
 	);
 }
-
-
 
 function uiShowNotification($notify) {
 	$str = <<<EOT
@@ -472,49 +476,26 @@ function getHwParams() {
 	}
 
 	if ($resp != "closed\n") {
-		$tcArray = parseMpdKeyedResponse($resp, ': ');
+		$res = parseMpdKeyedResponse($resp, ': ');
 
 		// format sample rate, ex: "44100 (44100/1)"
-		// TC (Tim Curtis) 2015-06-26: add cases 22050, 32000, 384000
-		$rate = substr($tcArray['rate'], 0, strpos($tcArray['rate'], ' ('));
-		$_rate = (float)$rate;
-		switch ($rate) {
-			// integer format
-			case '32000':
-			case '48000':
-			case '96000':
-			case '192000':
-			case '384000':
-				$tcArray['rate'] = rtrim(rtrim(number_format($rate),0), ', ');
-				break;
-			// decimal format
-			case '22050':
-				$tcArray['rate'] = '22.05';
-				break;
-			case '44100':
-			case '88200':
-			case '176400':
-			case '352800':
-				$tcArray['rate'] = rtrim(number_format($rate,0, ', ', '.'),0);
-				break;
-		}
+		$rate = substr($res['rate'], 0, strpos($res['rate'], ' ('));
+		$res['rate'] = formatSampleRate($rate);
 		// format sample depth, ex "S24_3LE"
-		$tcArray['format'] = substr($tcArray['format'], 1, 2);
-		$_bits = (float)$tcArray['format'];
-		// format channels, ex "2"
-		$_chans = (float)$tcArray['channels'];
-		if ($tcArray['channels'] == "2") $tcArray['channels'] = "Stereo";
-		if ($tcArray['channels'] == "1") $tcArray['channels'] = "Mono";
-		if ($tcArray['channels'] > 2) $tcArray['channels'] = "Multichannel";
+		$res['format'] = substr($res['format'], 1, 2);
+		$_bits = (float)$res['format'];
+		$_chans = (float)$res['channels'];
 
-		$tcArray['status'] = 'active';
-		$tcArray['calcrate'] = number_format((($_rate * $_bits * $_chans) / 1000000),3, '.', '');
+		$res['channels'] = formatChannels($res['channels']);
+
+		$res['status'] = 'active';
+		$res['calcrate'] = number_format((((float)$rate * $_bits * $_chans) / 1000000),3, '.', '');
 	}
 	else {
-		$tcArray['status'] = 'closed';
-		$tcArray['calcrate'] = '0 bps';
+		$res['status'] = 'closed';
+		$res['calcrate'] = '0 bps';
 	}
-	return $tcArray;
+	return $res;
 }
 
 // DSP: parse MPD Conf
@@ -548,37 +529,7 @@ function _parseMpdConf() {
 	}
 
 	// parse audio output format, ex "44100:16:2"
-	$audio_format = explode(":", $_mpd['audio_output_format']);
-// print_r($mpdconf);
-// print_r($_mpd);
-// print_r($audio_format);die;
-
-	// TC (Tim Curtis) 2015-06-26: add sample rate 384000
-	switch ($audio_format[0]) {
-		// integer format
-		case '48000':
-		case '96000':
-		case '192000':
-		case '384000':
-			$_mpd['audio_sample_rate'] = rtrim(rtrim(number_format($audio_format[0]),0), ', ');
-			break;
-
-		// decimal format
-		case '44100':
-		case '88200':
-		case '176400':
-		case '352800':
-			$_mpd['audio_sample_rate'] = rtrim(number_format($audio_format[0],0, ', ', '.'),0);
-			break;
-	}
-
-	// add sample depth, ex "16"
-	$_mpd['audio_sample_depth'] = $audio_format[1];
-
-	// add channels, ex "2"
-	if ($audio_format[2] == "2") $_mpd['audio_channels'] = "Stereo";
-	if ($audio_format[2] == "1") $_mpd['audio_channels'] = "Mono";
-	if ($audio_format[2] > 2) $_mpd['audio_channels'] = "Multichannel";
+	$_mpd += parseAudioFormat($_mpd['audio_output_format']);
 
 	return $_mpd;
 }
@@ -594,11 +545,7 @@ function getTcmodsConf() {
 }
 
 
-// TC (Tim Curtis) 2015-02-25: update tcmods.conf file
-// TC (Tim Curtis) 2015-04-29: add theme_color element
-// TC (Tim Curtis) 2015-05-30: add play_history_ elements
-// TC (Tim Curtis) 2015-06-26: add volume_ elements to tcmods.conf for logarithmic volume control and improved mute
-// TC (Tim Curtis) 2015-06-26: add albumart_lookup_method
+
 function _updTcmodsConf($tcmconf) {
 	$keys = array(
 		'albumart_lookup_method',
@@ -658,7 +605,7 @@ function _updatePlayHistory($currentsong) {
 	// Open file for write w/append
 	$_file = '/var/www/playhistory.log';
 	if (false === ($handle = fopen($_file, 'a'))) {
-		die('tcmods.php: file open failed on '.$_file);
+		error_log('tcmods.php: file open failed on '.$_file);
 	}
 
 	// Append data, close file
