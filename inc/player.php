@@ -351,60 +351,56 @@ function _parseStatusResponse($resp) {
  * Parse MPD playlist
  */
 function _parseFileListResponse($resp) {
-	if (is_null($resp)) {
-		return NULL;
-	}
-
 	$res = array();
-	$cnt = -1;
+	$item = array();
+	$directoryIndex = -1;
 
 	foreach (explode("\n", $resp) as $line) {
-		if (0 == strlen($line) || false === strpos(': ', $line)) {
+		if (false === strpos($line, ': ')) {
 			continue;
 		}
 
 		list($key, $val) = explode(': ', $line, 2);
-		// TC (Tim Curtis) 2014-09-17, remove OR playlist in original stmt below
-		if ("file" == $key) {
-			$cnt++;
-			$res[$cnt]["file"] = $val;
-			$res[$cnt]["fileext"] = parseFileStr($val, '.');
+		if (sizeof($item) && in_array($key, array('file', 'playlist', 'directory'))) {
+			$res[] = $item;
+			$item = array();
 		}
-		elseif ("directory" == $key) {
-			$cnt++;
-			// record directory index for further processing
-			$dirCounter++;
-			$res[$cnt]["directory"] = $val;
+
+		switch ($key) {
+			case 'playlist':
+				// treat webradio playlists as files
+				if (substr($val, 0, 8) !== "WEBRADIO") {
+					break;
+				}
+				$key = 'file';
+				// fallthrough
+			case 'file':
+				$item["fileext"] = pathinfo($val, PATHINFO_EXTENSION);
+				break;
+			case 'directory':
+				$directoryIndex = sizeof($res);
+				break;
+			case 'Time':
+				$item['Time2'] = songTime($val);
 		}
-		// - differentiate saved playlists from WEBRADIO playlist files
-		elseif ("playlist" == $key) {
-			$cnt++;
-			if ( substr($val, 0, 8 ) == "WEBRADIO") {
-				$res[$cnt]["file"] = $val;
-				$res[$cnt]["fileext"] = parseFileStr($val, '.');
-			}
-			else {
-				$res[$cnt]["playlist"] = $val;
-			}
-		}
-		else {
-			$res[$cnt][$key] = $val;
-			if (isset($res[$cnt]["Time"])) {
-				$res[$cnt]["Time2"] = songTime($res[$cnt]["Time"]);
-			}
-		}
+
+		$item[$key] = $val;
+	}
+
+	// add final item to array
+	if (sizeof($item)) {
+		$res[] = $item;
 	}
 
 	// reverse MPD list output
-	if (isset($dirCounter) && isset($res[0]["file"]) ) {
-		$dir = array_splice($res, -$dirCounter);
+	if ($directoryIndex >= 0) {
+		$dir = array_splice($res, -$directoryIndex);
 		$res = $dir + $res;
 	}
 
 	return $res;
 }
 
-// AG
 /**
  * Parse MPD current song
  */
@@ -592,9 +588,9 @@ function getTcmodsConf() {
 	if (false === ($conf = file_get_contents('/var/www/tcmods.conf'))) {
 		die('Failed to read tcmods.conf');
 	}
+
 	// split config lines
-	$res = parseMpdKeyedResponse($conf, ": ");
-	return $res;
+	return parseMpdKeyedResponse($conf, ": ");
 }
 
 
