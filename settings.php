@@ -274,7 +274,7 @@ else {
 	// TC (Tim Curtis) 2015-06-26: get current volume setting, requires www-data user in visudo
 	// TC (Tim Curtis) 2015-06-26: set simple mixer name based on kernel version and i2s vs USB
 	$mixername = getMixerName($kernelver, $_SESSION['i2s']);
-	$cmd = "sudo /var/www/tcmods/".TCMODS_RELEASE."/cmds/tcmods.sh get-pcmvol ".$mixername;
+	$cmd = "sudo /var/www/tcmods/".MOODE_RELEASE."/cmds/tcmods.sh get-pcmvol ".$mixername;
 
 	$rtn = sysCmd($cmd);
 	$_pcm_volume = str_replace("%", "", $rtn[0]);

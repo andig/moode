@@ -105,9 +105,10 @@ wrk_sourcemount('mountall');
 
 // start MPD daemon with consume mode off
 sysCmd("service mpd start");
-$mpd = openMpdSocket(MPD_HOST, 6600);
-sendMpdCommand($mpd, 'consume 0');
-closeMpdSocket($mpd);
+if (false !== ($mpd = openMpdSocket(MPD_HOST, 6600))) {
+	sendMpdCommand($mpd, 'consume 0');
+	closeMpdSocket($mpd);
+}
 
 // - set symlink for album art lookup
 sysCmd("ln -s /var/lib/mpd/music /var/www/coverroot");
@@ -306,7 +307,7 @@ else {
 // TC (Tim Curtis) 2015-04-29: store PCM (alsamixer) volume, picked up by settings.php ALSA volume field
 // TC (Tim Curtis) 2015-06-26: set simple mixer name based on kernel version and i2s vs USB
 $mixername = getMixerName(getKernelVer($_SESSION['kernelver']), $_SESSION['i2s']);
-$rtn = "/var/www/tcmods/".TCMODS_RELEASE."/cmds/tcmods.sh get-pcmvol ".$mixername;
+$rtn = "/var/www/tcmods/".MOODE_RELEASE."/cmds/tcmods.sh get-pcmvol ".$mixername;
 $volume = (substr($rtn[0], 0, 6) == 'amixer') ? 'none' : str_replace("%", "", $rtn[0]);
 
 // update session and db
@@ -329,7 +330,6 @@ while (1) {
 		$current_time = date("hi A");
 		if ($current_time == $clock_radio_starttime) {
 			$clock_radio_starttime = '';
-			$mpd = openMpdSocket(MPD_HOST, 6600);
 
 			// TC (Tim Curtis) 2015-06-26: new volume control with optional logarithmic mapping of knob 0-100 range to hardware range
 			$_tcmods_conf = getTcmodsConf(); // read in conf file
@@ -349,18 +349,22 @@ while (1) {
 
 			$_tcmods_conf['volume_knob_setting'] = $_tcmods_conf['clock_radio_volume'];
 			$rtn = _updTcmodsConf($_tcmods_conf); // update conf file
-			if ($_tcmods_conf['volume_muted'] == 0) { // unmuted
-				execMpdCommand($mpd, 'setvol '.$level);
-			}
 
-			execMpdCommand($mpd, 'play '.$_tcmods_conf['clock_radio_playitem']);
-			closeMpdSocket($mpd);
+			if (false !== ($mpd = openMpdSocket(MPD_HOST, 6600))) {
+				if ($_tcmods_conf['volume_muted'] == 0) { // unmuted
+					execMpdCommand($mpd, 'setvol ' . $level);
+				}
+
+				execMpdCommand($mpd, 'play ' . $_tcmods_conf['clock_radio_playitem']);
+				closeMpdSocket($mpd);
+			}
 		}
 		elseif ($current_time == $clock_radio_stoptime) {
-			//$_tcmods_conf['clock_radio_stoptime'] = '';
-			$mpd = openMpdSocket(MPD_HOST, 6600);
-			execMpdCommand($mpd, 'stop');
-			closeMpdSocket($mpd);
+			if (false !== ($mpd = openMpdSocket(MPD_HOST, 6600))) {
+				execMpdCommand($mpd, 'stop');
+				closeMpdSocket($mpd);
+			}
+
 			// retry stop cmd to improve robustness
 			if ($TCMODS_CLOCKRAD_RETRY == 0) {
 				$clock_radio_stoptime = '';
@@ -377,9 +381,7 @@ while (1) {
 	}
 
 	// TC (Tim Curtis) 2015-05-30: update playback history log
-	if ($_tcmods_conf['play_history_enabled'] == "Yes") {
-		// Get MPD currentsong data
-		$mpd = openMpdSocket(MPD_HOST, 6600);
+	if ($_tcmods_conf['play_history_enabled'] == "Yes" && ($mpd = openMpdSocket(MPD_HOST, 6600))) {
 		$resp = execMpdCommand($mpd, 'currentsong');
 		closeMpdSocket($mpd);
 
@@ -563,7 +565,7 @@ while (1) {
 				elseif ($args == "rose") {$hexlight = "d479ac"; $hexdark = "c1649b";}
 				elseif ($args == "turquoise") {$hexlight = "1abc9c"; $hexdark = "16a085";}
 				// change to new theme color
-				sysCmd("/var/www/tcmods/".TCMODS_RELEASE."/cmds/tcmods.sh " . $args." ".$hexlight." ".$hexdark);
+				sysCmd("/var/www/tcmods/".MOODE_RELEASE."/cmds/tcmods.sh " . $args." ".$hexlight." ".$hexdark);
 				// reload tcmods.conf data
 				$_tcmods_conf = getTcmodsConf();
 				break;
@@ -596,54 +598,54 @@ while (1) {
 
 			// TC (Tim Curtis) 2015-02-25: process kernel select request
 			case 'kernelver':
-				sysCmd("/var/www/tcmods/".TCMODS_RELEASE."/cmds/tcmods.sh install-kernel ".getKernelVer($args));
+				sysCmd("/var/www/tcmods/".MOODE_RELEASE."/cmds/tcmods.sh install-kernel ".getKernelVer($args));
 				break;
 
 			// TC (Tim Curtis) 2015-04-29: process timezone select request
 			case 'timezone':
-				sysCmd("/var/www/tcmods/".TCMODS_RELEASE."/cmds/tcmods.sh set-timezone " . $args);
+				sysCmd("/var/www/tcmods/".MOODE_RELEASE."/cmds/tcmods.sh set-timezone " . $args);
 				break;
 
 			// TC (Tim Curtis) 2015-04-29: process host name change request
 			case 'host_name':
-				sysCmd("/var/www/tcmods/".TCMODS_RELEASE."/cmds/tcmods.sh chg-name host " . $args);
+				sysCmd("/var/www/tcmods/".MOODE_RELEASE."/cmds/tcmods.sh chg-name host " . $args);
 				break;
 
 			case 'browser_title':
-				sysCmd("/var/www/tcmods/".TCMODS_RELEASE."/cmds/tcmods.sh chg-name browsertitle " . $args);
+				sysCmd("/var/www/tcmods/".MOODE_RELEASE."/cmds/tcmods.sh chg-name browsertitle " . $args);
 				break;
 
 			case 'airplay_name':
-				sysCmd("/var/www/tcmods/".TCMODS_RELEASE."/cmds/tcmods.sh chg-name airplay " . $args);
+				sysCmd("/var/www/tcmods/".MOODE_RELEASE."/cmds/tcmods.sh chg-name airplay " . $args);
 				break;
 
 			case 'upnp_name':
-				sysCmd("/var/www/tcmods/".TCMODS_RELEASE."/cmds/tcmods.sh chg-name upnp " . $args);
+				sysCmd("/var/www/tcmods/".MOODE_RELEASE."/cmds/tcmods.sh chg-name upnp " . $args);
 				break;
 
 			case 'dlna_name':
-				sysCmd("/var/www/tcmods/".TCMODS_RELEASE."/cmds/tcmods.sh chg-name dlna " . $args);
+				sysCmd("/var/www/tcmods/".MOODE_RELEASE."/cmds/tcmods.sh chg-name dlna " . $args);
 				break;
 
 			// TC (Tim Curtis) 2015-04-29: handle PCM volume change
 			case 'pcm_volume':
 				// TC (Tim Curtis) 2015-06-26: set simple mixer name based on kernel version and i2s vs USB
 				$mixername = getMixerName(getKernelVer($_SESSION['kernelver']), $_SESSION['i2s']);
-				sysCmd("/var/www/tcmods/".TCMODS_RELEASE."/cmds/tcmods.sh set-pcmvol " . $mixername . " " . $args);
+				sysCmd("/var/www/tcmods/".MOODE_RELEASE."/cmds/tcmods.sh set-pcmvol " . $mixername . " " . $args);
 				break;
 
 			// TC (Tim Curtis) 2015-05-30: add clear system and playback history logs
 			case 'clearsyslogs':
-				sysCmd("/var/www/tcmods/".TCMODS_RELEASE."/cmds/utility.sh clear-logs");
+				sysCmd("/var/www/tcmods/".MOODE_RELEASE."/cmds/utility.sh clear-logs");
 				break;
 
 			case 'clearplayhistory':
-				sysCmd("/var/www/tcmods/".TCMODS_RELEASE."/cmds/utility.sh clear-playhistory");
+				sysCmd("/var/www/tcmods/".MOODE_RELEASE."/cmds/utility.sh clear-playhistory");
 				break;
 
 			// TC (Tim Curtis) 2015-07-31: expand sd card storage
 			case 'expandsdcard':
-				sysCmd("/var/www/tcmods/".TCMODS_RELEASE."/cmds/resizefs.sh start");
+				sysCmd("/var/www/tcmods/".MOODE_RELEASE."/cmds/resizefs.sh start");
 				break;
 		}
 

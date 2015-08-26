@@ -23,15 +23,16 @@
 
 // DEV parameters
 ini_set('display_errors', 1);
-error_reporting(E_NOTICE);
 error_reporting(E_ALL);
+// PRD parameters
 // error_reporting(E_ALL ^ E_NOTICE);
+// ini_set('display_errors', 0);
 
-define('TCMODS_RELEASE', 'r21'); 			// Current release
+define('MOODE_RELEASE', 'r21'); 			// Current release
 
-define('ROOTPATH', '/var/www' );
-define('MPD_HOST', '127.0.0.1');
+define('MOODE_ROOT_PATH', '/var/www' );
+define('MOODE_CONFIG_DB', 'sqlite:' . MOODE_ROOT_PATH . '/db/player.db');
 
+define('MPD_HOST', '127.0.0.1');			// localhost
+define('MPD_TIMEOUT', 5);					// connection timeout
 define('MPD_LIB', '/var/lib/mpd/music/');	// include trailing /
-
-define('CONFIG_DB', 'sqlite:' . ROOTPATH . '/db/player.db');

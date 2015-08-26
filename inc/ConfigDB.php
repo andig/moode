@@ -33,9 +33,9 @@ class ConfigDB
 			return true;
 		}
 
-		if (false === (static::$dbh = new PDO(CONFIG_DB))) {
+		if (false === (static::$dbh = new PDO(MOODE_CONFIG_DB))) {
 			static::disconnect();
-			die("Cannot open database " . CONFIG_DB);
+			die("Cannot open database " . MOODE_CONFIG_DB);
 		}
 	}
 

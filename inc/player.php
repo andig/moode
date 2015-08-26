@@ -29,8 +29,9 @@ require_once dirname(__FILE__) . '/../inc/Session.php';
 require_once dirname(__FILE__) . '/../inc/ConfigDB.php';
 
 function openMpdSocket($host, $port) {
-	if (false === ($sock = stream_socket_client('tcp://'.$host.':'.$port, $errorno, $errorstr, 30))) {
-		die('Error: could not connect to MPD');
+	if (false === ($sock = stream_socket_client('tcp://'.$host.':'.$port, $errorno, $errorstr, MPD_TIMEOUT))) {
+		// just log, don't die()
+		error_log('Error: could not connect to MPD');
 	}
 	$response = readMpdResponse($sock);
 	return $sock;
