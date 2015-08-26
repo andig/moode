@@ -91,7 +91,8 @@ if (isset($_POST['mount']) && !empty($_POST['mount'])) {
 	}
 }
 
-session_write_close();
+Session::close();
+
 
 // wait for worker output if $_SESSION['w_active'] = 1
 waitWorker(5, 'sources');
@@ -99,9 +100,6 @@ waitWorker(5, 'sources');
 ConfigDB::connect();
 $source = ConfigDB::read('cfg_source');
 
-
-// unlock session files
-Session::close();
 
 $_mounts = '';
 foreach ($source as $mp) {
@@ -127,8 +125,9 @@ if (isset($_GET['p']) && !empty($_GET['p'])) {
 				$_wsize = $mount['wsize'];
 
 				// mount type select
-				$_source_select['type'] .= "<option value=\"cifs\" ".(($mount['type'] == 'cifs') ? "selected" : "")." >SMB/CIFS</option>\n";
-				$_source_select['type'] .= "<option value=\"nfs\" ".(($mount['type'] == 'nfs') ? "selected" : "")." >NFS</option>\n";
+				$_source_select = "<option value=\"cifs\" ".(($mount['type'] == 'cifs') ? "selected" : "")." >SMB/CIFS</option>\n";
+				$_source_select .= "<option value=\"nfs\" ".(($mount['type'] == 'nfs') ? "selected" : "")." >NFS</option>\n";
+
 				$_charset = $mount['charset'];
 				$_options = $mount['options'];
 				$_error = $mount['error'];
@@ -143,12 +142,13 @@ if (isset($_GET['p']) && !empty($_GET['p'])) {
 	}
 	else {
 		$_title = 'Configure new source';
+		$_action = 'add';
 		$_hide = 'hide';
 		$_hideerror = 'hide';
-		$_action = 'add';
-		$_source_select['type'] .= "<option value=\"cifs\">SMB/CIFS</option>\n";
-		$_source_select['type'] .= "<option value=\"nfs\">NFS</option>\n";
+		$_source_select = "<option value=\"cifs\">SMB/CIFS</option>\n";
+		$_source_select .= "<option value=\"nfs\">NFS</option>\n";
 	}
+
 	$tpl = 'source';
 }
 

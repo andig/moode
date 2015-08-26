@@ -17,38 +17,7 @@
  *	PlayerUI Copyright (C) 2013 Andrea Coiutti & Simone De Gregori
  *	Tsunamp Team
  *	http://www.tsunamp.com
- *
- *	UI-design/JS code by: 	Andrea Coiutti (aka ACX)
- *	PHP/JS code by:			Simone De Gregori (aka Orion)
- * 
- *	file:					source.html
- * 	version:				1.0
- *
- *	TCMODS Edition 
- *
- *	TC (Tim Curtis) 2014-12-23, r1.3
- *	- add header
- * 	- fix mmissing / in last <fieldset> tag 
- *	- add confirmation modal for "remove this mount"
- *	- fix double class defs: class="input-large" class="input-large"
- *	- fix bad for= assignments
- *	- shovel & broom
- *
- *	TC (Tim Curtis) 2015-02-25, r1.6
- *	- update some help text, correct grammar errors
- *	- update mount options placeholder text to match defaults in code
- *	- streamline confirm modal
- *	- remove place holder text and change wording on help text
- *	- fix no top margin on help text under dropdowns
- *	- shovel & broom
- *
- *	TC (Tim Curtis) 2015-04-29, r1.8
- *	- new <div> for hide/show userid and password fields if NFS mount (handler in scripts-configuration.js)
- *
- *	TC (Tim Curtis) 2015-05-30, r1.9
- *  - on-demand help via info show/hide toggle (scripts-configuration.js)
- *  - streamline REMOVE text
- *
+ * Rewrite by Tim Curtis and Andreas Goetz
  */
 -->	
 <div class="container">
@@ -83,7 +52,7 @@
 				<label class="control-label" for="type">Fileshare protocol</label>
 				<div class="controls">
 					<select id="type" name="mount[type]" class="input-large">
-						$_source_select[type]
+						$_source_select
 					</select>
 					<a class="info-toggle" data-cmd="info-fileshare-protocol" href="#notarget"><i class="icon-info-sign"></i></a>
 					<span id="info-fileshare-protocol" class="help-block help-block-margin hide">
