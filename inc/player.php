@@ -742,8 +742,11 @@ function render($template, $headers = true) {
 	if ($headers) {
 		include('_header.php');
 	}
-	// str_replace("\"", "\\\"", $str);
-	echo eval($str);
+
+	// ugly build-string hack
+	@eval('$var = "' . str_replace('"', '\"', $str) . '";');
+	echo $var;
+
 	if ($headers) {
 		include('_footer.php');
 	}
