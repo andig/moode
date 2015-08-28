@@ -47,8 +47,6 @@ class ConfigDB
 	}
 
 	public static function read($table, $param = null, $id = null) {
-		// static::connect();
-
 		$para = array();
 
 		if (null === $param) {
@@ -132,6 +130,8 @@ class ConfigDB
 	}
 
 	private static function execute($querystr, $para = null) {
+		static::connect();
+
 		$stmt = static::$dbh->prepare($querystr);
 
 		if (!$stmt->execute($para)) {

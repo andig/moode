@@ -340,7 +340,7 @@ $_timezone['timezone'] = buildTimezoneSelect($_SESSION['timezone']);
 if (!isset($_SESSION['notify']['title']) ||
 	isset($_SESSION['notify']['title']) && $_SESSION['notify']['title'] !== 'Kernel change')
 {
-	waitWorker(1);
+	waitWorker();
 }
 
 Session::close();

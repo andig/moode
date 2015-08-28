@@ -95,9 +95,14 @@ Session::close();
 
 
 // wait for worker output if $_SESSION['w_active'] = 1
-waitWorker(5, 'sources');
+waitWorker();
 
-ConfigDB::connect();
+// update MPD db after worker finishes
+if (false !== ($mpd = openMpdSocket(MPD_HOST, 6600))) {
+	execMpdCommand($mpd, 'update');
+	closeMpdSocket($mpd);
+}
+
 $source = ConfigDB::read('cfg_source');
 
 

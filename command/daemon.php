@@ -44,9 +44,9 @@ $options = getopt('', array('test', 'help', 'install', 'clear'));
 $opt_test = isset($options['test']);			// test daemon - doesn't fork
 $opt_install = isset($options['install']);		// force first-time installation
 
-$lock = fopen('/run/player_wrk.pid', 'c+');
+$lock = fopen($pidfile = '/run/player_wrk.pid', 'c+');
 if (!flock($lock, LOCK_EX | LOCK_NB)) {
-	die('already running');
+	die('already running (pid ' . @file_get_contents($pidfile) . ')');
 }
 
 /*
@@ -158,7 +158,6 @@ if ($opt_install || (isset($_SESSION['playerid']) && $_SESSION['playerid'] == ''
 	wrk_sysChmod();
 
 	// reset netconf to defaults
-	ConfigDB::connect();
 	ConfigDB::update('cfg_wifisec', '', array('ssid' => '', 'encryption' => '', 'password' => ''));
 
 	$netconf = <<<EOD
@@ -264,7 +263,6 @@ if (isset($_SESSION['djmount']) && $_SESSION['djmount'] == 1) {
 if (isset($_SESSION['shairport']) && $_SESSION['shairport'] == 1) {
 	logWorker("[daemon] Starting shairport");
 
-	ConfigDB::connect();
 	$mpdcfg = array_column(ConfigDB::read('', 'mpdconf'), 'value_player', 'param');
 
 	// start
@@ -401,7 +399,7 @@ while (1) {
 				$searchStr = preg_replace('!\s+!', '+', $searchStr);
 			}
 			$artist = "<i class=\"icon-microphone\"></i>";
-			ConfigDB::connect();
+
 			$result = ConfigDB::read('cfg_radio', $currentsong['file']);
 
 			if (0 == count($result)) {  // station not in db

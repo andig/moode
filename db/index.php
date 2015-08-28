@@ -29,8 +29,8 @@ function mpdTouchFiles() {
 
 // Get options- cmd line or GET
 $options = getopt('c:p:', array('cmd:', 'path:'));
-$cmd = isset($options['c']) ? $options['c'] : isset($options['cmd']) ? $options['cmd'] : null;
-$path = isset($options['p']) ? $options['p'] : isset($options['path']) ? $options['path'] : null;
+$cmd = isset($options['c']) ? $options['c'] : (isset($options['cmd']) ? $options['cmd'] : null);
+$path = isset($options['p']) ? $options['p'] : (isset($options['path']) ? $options['path'] : null);
 
 if (empty($cmd)) {
 	if (!isset($_GET['cmd'])) {

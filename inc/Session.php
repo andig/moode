@@ -17,6 +17,8 @@
  * Copyright (c) 2015 Andreas Goetz <cpuidle@gmx.de>
  */
 
+require_once dirname(__FILE__) . '/ConfigDB.php';
+
 /**
  * Session handling
  *
@@ -37,6 +39,17 @@ class Session
 			throw new \LogicException('Session already open');
 		}
 
+		// automatic admin mode for command line testing if root
+		$session_file = session_save_path() . DIRECTORY_SEPARATOR . 'sess_' . static::SESSION_ID;
+		if (file_exists($session_file) && is_readable($session_file)) {
+			$session_owner = fileowner($session_file);
+			if ($session_owner !== posix_getuid() && 0 === posix_getuid()) {
+				// echo("o: $session_owner\n");
+				$admin = true;
+			}
+			$_SESSION['_dirty'] = microtime();
+		}
+
 		// set effective uid of session owner
 		if ($admin) {
 			static::$pre_session_uid = posix_getuid();
@@ -52,7 +65,6 @@ class Session
 
 		// update sesson with current configuration
 		// TODO check if necessary
-		ConfigDB::connect();
 		foreach (ConfigDB::read('cfg_engine') as $row) {
 			$_SESSION[$row['param']] = $row['value'];
 		}
@@ -63,7 +75,6 @@ class Session
 	 */
 	public static function update($key, $val) {
 		$_SESSION[$key] = $val;
-		ConfigDB::connect();
 		ConfigDB::update('cfg_engine', $key, $val);
 	}
 

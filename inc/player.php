@@ -29,7 +29,7 @@ require_once dirname(__FILE__) . '/../inc/Session.php';
 require_once dirname(__FILE__) . '/../inc/ConfigDB.php';
 
 function openMpdSocket($host, $port) {
-	if (false === ($sock = stream_socket_client('tcp://'.$host.':'.$port, $errorno, $errorstr, MPD_TIMEOUT))) {
+	if (false === ($sock = @stream_socket_client('tcp://'.$host.':'.$port, $errorno, $errorstr, MPD_TIMEOUT))) {
 		// just log, don't die()
 		error_log('Error: could not connect to MPD');
 	}
@@ -692,7 +692,7 @@ function getMixerName($kernelver, $i2s) {
 	return $mixername;
 }
 
-function waitWorker($sleeptime = 1, $mpdUpdate = false) {
+function waitWorker($sleeptime = 1) {
 	logWorker('[client] waiting for worker');
 
 	$wait = 0;
@@ -700,18 +700,10 @@ function waitWorker($sleeptime = 1, $mpdUpdate = false) {
 		do {
 			sleep($sleeptime);
 			logWorker('[client] waitWorker (' . $wait++ . ')');
-			logWorker('$_SESSION[w_active]' . $_SESSION['w_active']);
 			session_start();
 			session_write_close();
 		}
 		while ($_SESSION['w_active'] != 0);
-
-		// update MPD db after worker finishes
-		if ($mpdUpdate) {
-			$mpd = openMpdSocket(MPD_HOST, 6600);
-			execMpdCommand($mpd, 'update');
-			closeMpdSocket($mpd);
-		}
 	}
 
 	logWorker('[client] worker finished');
@@ -743,9 +735,9 @@ function render($template, $headers = true) {
 		include('_header.php');
 	}
 
-	// ugly build-string hack
-	@eval('$var = "' . str_replace('"', '\"', $str) . '";');
-	echo $var;
+	// ugly globals vars to string hack - don't try this at home
+	extract($GLOBALS);
+	@eval('echo("' . str_replace('"', '\"', $str) . '");');
 
 	if ($headers) {
 		include('_footer.php');

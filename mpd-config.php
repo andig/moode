@@ -26,17 +26,17 @@ require_once dirname(__FILE__) . '/inc/worker.php';
 
 
 Session::open();
-ConfigDB::connect();
 
 $workerSuccess = false;
 
 // Handle reset
 if (isset($_POST['reset']) && $_POST['reset'] == 1) {
-	$mpdconfdefault = ConfigDB::read('','mpdconfdefault');
+	$mpdconfdefault = ConfigDB::read('', 'mpdconfdefault');
 
 	foreach ($mpdconfdefault as $element) {
 		ConfigDB::update('cfg_mpd',$element['param'],$element['value_default']);
 	}
+
 	// Tell worker to write new MPD config
 	if ($workerSuccess = workerPushTask('mpdcfg')) {
 		uiSetNotification('MPD config reset', 'Restarting MPD server...');
@@ -81,7 +81,8 @@ Session::close();
 
 
 // Wait for worker output if $_SESSION['w_active'] = 1
-waitWorker(1);
+waitWorker();
+
 
 $mpdconf = ConfigDB::read('','mpdconf');
 // Prepare array
@@ -166,9 +167,6 @@ $_mpd_select['dsd_usb'] .= "<option value=\"no\" ".(($_mpd['dsd_usb'] == 'no') ?
 $_mpd_select['volume_normalization'] .= "<option value=\"yes\" ".(($_mpd['volume_normalization'] == 'yes') ? "selected" : "")." >yes</option>\n";
 $_mpd_select['volume_normalization'] .= "<option value=\"no\" ".(($_mpd['volume_normalization'] == 'no') ? "selected" : "")." >no</option>\n";
 
-// Audio buffer size
-// $_mpd[audio_buffer_size]
-
 // Buffer fill percentage before play
 $_mpd_select['buffer_before_play'] .= "<option value=\"0%\" ".(($_mpd['buffer_before_play'] == '0%') ? "selected" : "")." >disabled</option>\n";
 $_mpd_select['buffer_before_play'] .= "<option value=\"10%\" ".(($_mpd['buffer_before_play'] == '10%') ? "selected" : "")." >10%</option>\n";
@@ -183,12 +181,7 @@ $_mpd_select['auto_update'] .= "<option value=\"no\" ".(($_mpd['auto_update'] ==
 $_mpd_select['zeroconf_enabled'] .= "<option value=\"yes\" ".(($_mpd['zeroconf_enabled'] == 'yes') ? "selected" : "").">yes</option>\n";
 $_mpd_select['zeroconf_enabled'] .= "<option value=\"no\" ".(($_mpd['zeroconf_enabled'] == 'no') ? "selected" : "").">no</option>\n";
 
-// Zeroconf name
-// $_mpd[zeroconf_name]
-
 // Audio output format (none or sample rate conversion)
-// TC (Tim Curtis) 2014-08-23: added new sample rates 48000:16:2, 88200:16:2, 48000:24:2, 88200:24:2
-// TC (Tim Curtis) 2014-12-23: added new sample rates 176400:16:2 and 176400:24:2
 $_mpd_select['audio_output_format'] .= "<option value=\"disabled\" ".(($_mpd['audio_output_format'] == 'disabled' OR $_mpd['audio_output_format'] == '') ? "selected" : "").">disabled</option>\n";
 $_mpd_select['audio_output_format'] .= "<option value=\"44100:16:2\" ".(($_mpd['audio_output_format'] == '44100:16:2') ? "selected" : "").">16 bit / 44.1 kHz</option>\n";
 $_mpd_select['audio_output_format'] .= "<option value=\"48000:16:2\" ".(($_mpd['audio_output_format'] == '48000:16:2') ? "selected" : "").">16 bit / 48 kHz</option>\n";
@@ -209,9 +202,6 @@ $_mpd_select['audio_output_format'] .= "<option value=\"192000:32:2\" ".(($_mpd[
 $_mpd_select['audio_output_format'] .= "<option value=\"384000:32:2\" ".(($_mpd['audio_output_format'] == '384000:32:2') ? "selected" : "").">32 bit / 384 kHz</option>\n";
 
 // Samplerate converter
-// TC (Tim Curtis) 2015-02-25: added SoX prefixes
-// TC (Tim Curtis) 2015-02-25: updated SRC text
-// SoX
 $_mpd_select['samplerate_converter'] .= "<option value=\"soxr medium\" ".(($_mpd['samplerate_converter'] == 'soxr medium') ? "selected" : "")." >SoX: Medium Quality</option>\n";
 $_mpd_select['samplerate_converter'] .= "<option value=\"soxr high\" ".(($_mpd['samplerate_converter'] == 'soxr high') ? "selected" : "")." >SoX: High Quality</option>\n";
 $_mpd_select['samplerate_converter'] .= "<option value=\"soxr very high\" ".(($_mpd['samplerate_converter'] == 'soxr very high') ? "selected" : "")." >SoX: Very High Quality</option>\n";
@@ -224,7 +214,6 @@ $_mpd_select['samplerate_converter'] .= "<option value=\"Best Sinc Interpolator\
 // TC (Tim Curtis) 2015-04-29: is this code used anymore?
 if (wrk_checkStrSysfile('/proc/asound/card0/pcm0p/info','bcm2835')) {
 	$_audioout = "<select id=\"audio-output-interface\" name=\"conf[audio-output-interface]\" class=\"input-large\">\n";
-	//$_audioout .= "<option value=\"disabled\">disabled</option>";
 	$_audioout .= "<option value=\"jack\">Analog Jack</option>\n";
 	$_audioout .= "<option value=\"hdmi\">HDMI</option>\n";
 	$_audioout .= "</select>\n";
@@ -234,6 +223,6 @@ else {
 	$_audioout .= "<input class=\"input-large\" class=\"input-large\" type=\"text\" id=\"port\" name=\"\" value=\"USB Audio\" data-trigger=\"change\" disabled>\n";
 }
 
-waitWorker(1);
+waitWorker();
 
 render("mpd-config");

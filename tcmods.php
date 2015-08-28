@@ -21,7 +21,6 @@ require_once dirname(__FILE__) . '/inc/connection.php';
 require_once dirname(__FILE__) . '/inc/worker.php';
 
 Session::open();
-ConfigDB::connect();
 
 /*
  * System commands

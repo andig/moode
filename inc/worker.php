@@ -80,7 +80,6 @@ function wrk_mpdconf($kernelver = null, $i2s = null) {
 	$_tcmods_conf = getTcmodsConf();
 
 	// $mpdcfg = ConfigDB::read('', 'mpdconf');
-	ConfigDB::connect();
 	$mpdcfg = array_column(ConfigDB::read('', 'mpdconf'), 'value_player', 'param');
 
 	// set mpd.conf file header
@@ -159,8 +158,8 @@ function wrk_sourcemount($action,$id = null) {
 
 	switch ($action) {
 		case 'mount':
-			ConfigDB::connect();
 			$mp = ConfigDB::read('cfg_source','',$id);
+
 			sysCmd("mkdir \"/mnt/NAS/".$mp[0]['name']."\"");
 			$mountstr = ($mp[0]['type'] == 'cifs')
 				// smb/cifs mount
@@ -187,8 +186,8 @@ function wrk_sourcemount($action,$id = null) {
 			break;
 
 		case 'mountall':
-			ConfigDB::connect();
 			$mounts = ConfigDB::read('cfg_source');
+
 			foreach ($mounts as $mp) {
 				if (!wrk_checkStrSysfile('/proc/mounts',$mp['name']) ) {
 					$return = wrk_sourcemount('mount',$mp['id']);
@@ -205,18 +204,18 @@ function wrk_sourcecfg($queueargs) {
 	unset($queueargs['mount']['action']);
 	switch ($action) {
 		case 'reset':
-			ConfigDB::connect();
 			$source = ConfigDB::read('cfg_source');
-				foreach ($source as $mp) {
-					sysCmd("umount -f \"/mnt/NAS/".$mp['name']."\"");
-					sysCmd("rmdir \"/mnt/NAS/".$mp['name']."\"");
-				}
+
+			foreach ($source as $mp) {
+				sysCmd("umount -f \"/mnt/NAS/".$mp['name']."\"");
+				sysCmd("rmdir \"/mnt/NAS/".$mp['name']."\"");
+			}
+
 			$return = (ConfigDB::delete('cfg_source')) ? 1 : 0;
 
 			break;
 
 		case 'add':
-			ConfigDB::connect();
 			print_r($queueargs);
 			unset($queueargs['mount']['id']);
 
@@ -227,7 +226,6 @@ function wrk_sourcecfg($queueargs) {
 			break;
 
 		case 'edit':
-			ConfigDB::connect();
 			$mp = ConfigDB::read('cfg_source','',$queueargs['mount']['id']);
 			ConfigDB::update('cfg_source','',$queueargs['mount']);
 			sysCmd("umount -f \"/mnt/NAS/".$mp[0]['name']."\"");
@@ -242,7 +240,6 @@ function wrk_sourcecfg($queueargs) {
 			break;
 
 		case 'delete':
-			ConfigDB::connect();
 			$mp = ConfigDB::read('cfg_source','',$queueargs['mount']['id']);
 			sysCmd("umount -f \"/mnt/NAS/".$mp[0]['name']."\"");
 			sysCmd("rmdir \"/mnt/NAS/".$mp[0]['name']."\"");
