@@ -61,9 +61,20 @@ function getImage($path) {
 
 		case 'mp3':
 			require_once 'Zend/Media/Id3v2.php';
-
 			try {
 				$id3 = new Zend_Media_Id3v2($path);
+
+				if (isset($id3->apic)) {
+					outImage($id3->apic->mimeType, $id3->apic->imageData);
+				}
+			}
+			catch (Zend_Media_Id3_Exception $e) {
+				// catch any parse errors
+			}
+
+			require_once 'Zend/Media/Id3v1.php';
+			try {
+				$id3 = new Zend_Media_Id3v1($path);
 
 				if (isset($id3->apic)) {
 					outImage($id3->apic->mimeType, $id3->apic->imageData);
@@ -76,7 +87,6 @@ function getImage($path) {
 
 		case 'flac':
 			require_once 'Zend/Media/Flac.php';
-
 			try {
 				$flac = new Zend_Media_Flac($path);
 
@@ -91,18 +101,22 @@ function getImage($path) {
 			break;
 
 		case 'm4a':
-			require_once 'getid3/getid3.php';
-
+			require_once 'Zend/Media/Iso14496.php';
 			try {
-				$id3 = new getID3();
-				$id3 = $id3->analyze($path);
-
-				if (isset($id3['comments']) && isset($id3['comments']['picture']) && sizeof($id3['comments']['picture'])) {
-					$picture = $id3['comments']['picture'][0];
-					outImage($picture['image_mime'], $picture['data']);
+				$id3 = new Zend_Media_Iso14496($path);
+				$picture = $id3->moov->udta->meta->ilst->covr;
+				$mime = ($picture->getFlags() & Zend_Media_Iso14496_Box_Data::JPEG == Zend_Media_Iso14496_Box_Data::JPEG)
+					? 'image/jpeg'
+					: (
+						($picture->getFlags() & Zend_Media_Iso14496_Box_Data::PNG == Zend_Media_Iso14496_Box_Data::PNG)
+						? 'image/png'
+						: null
+					);
+				if ($mime) {
+					outImage($mime, $picture->getValue());
 				}
 			}
-			catch (Exception $e) {
+			catch (Zend_Media_Iso14496_Exception $e) {
 				// catch any parse errors
 			}
 			break;
