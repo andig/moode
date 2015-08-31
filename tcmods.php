@@ -75,47 +75,49 @@ if (isset($_GET['cmd']) && $_GET['cmd'] != '') {
 	switch ($cmd = $_GET['cmd']) {
 		case 'getaudiodevdesc':
 			$result = ConfigDB::read('cfg_audiodev', $_POST['audiodev']);
-			echo json_encode($result[0]);
-			break;
-
-		case 'getradioinfo':
-			$result = ConfigDB::read('cfg_radio', $_POST['station']);
-			echo json_encode($result[0]);
+			$res = $result[0];
 			break;
 
 		case 'getupnpcoverurl':
 			$rtn = sysCmd('upexplorer --album-art "' . $_SESSION['upnp_name'] . '"');
-			echo json_encode(array('coverurl' => $rtn[0]));
+			$res = array('coverurl' => $rtn[0]);
 			break;
 
 		case 'readtcmconf':
-			echo json_encode(getTcmodsConf());
+			$res = getTcmodsConf();
 			break;
 
 		case 'updatetcmconf':
-			echo json_encode(_updTcmodsConf($_POST));
+			$res = _updTcmodsConf($_POST);
 			break;
 
 		case 'getmpdstatus':
-			echo json_encode(_parseStatusResponse(mpdStatus($mpd)));
+			$res = _parseStatusResponse(mpdStatus($mpd));
 			break;
 
 		case 'readstationfile':
 			// misuse mpd function to split lines
-			echo json_encode(parseMpdKeyedResponse(file_get_contents(MPD_LIB . $_POST['path'])), '=');
+			$res = parseMpdKeyedResponse(file_get_contents(MPD_LIB . $_POST['path']), '=');
 			break;
 
 		case 'readplayhistory':
-			echo json_encode(explode("\n", file_get_contents('/var/www/playhistory.log')));
+			$res = explode("\n", file_get_contents('/var/www/playhistory.log'));
 			break;
 
 		// TC (Tim Curtis) 2015-06-26: TESTING ALSA-Direct volume control, requires www-data user in visudo
 		case 'sendalsacmd':
 			$mixername = getMixerName(getKernelVer($_SESSION['kernelver']), $_SESSION['i2s']);
 			$rtn = sysCmd("sudo ".$_POST['alsacmd']." ".$mixername." ".$_POST['volumelevel'].$_POST['scale']);
-			echo json_encode($rtn[0]);
+			$res = $rtn[0];
 			break;
-	} // End switch
+
+		default:
+			http_reponse_code(500); // internal server error
+			exit();
+	}
+
+	header('Content-type: application/json');
+	echo json_encode($res, JSON_PRETTY_PRINT);
 
 	exit();
 }

@@ -27,6 +27,61 @@ function mpdTouchFiles() {
 	return sysCmd("find '" . MPD_LIB . 'WEBRADIO' . "' -name \"" . "*.pls" . "\"" . " -exec touch {} \+");
 }
 
+/**
+ * Similar to daemon.php#391
+ */
+function isRadioStation($song) {
+	return substr($song['file'], 0, 4) == "http" &! isset($song['Artist']);
+}
+
+/**
+ * Determine MPD playlist item type- radio, upnp or song
+ *
+ * Similar to daemon.php#391
+ */
+function mpdItemType($song) {
+	if (substr($song['file'], 0, 4) == "http") {
+		$type = isset($song['Artist']) ? 'upnp' : 'radio';
+	}
+	else {
+		// TODO check if playlist should be separate
+		$type = 'song';
+	}
+	return $type;
+}
+
+/**
+ * Enhance MPD playlist info with database information
+ */
+function mpdAddItemInfo(&$res) {
+	if ('radio' == $res['type'] = mpdItemType($res)) {
+		// TODO make this a define
+		$res['coverurl'] = 'images/webradio-cover.jpg';
+		$res['Name'] = "Radio station";
+
+		// TODO remove numerical indexes
+		// TODO check if we want to parse Title into Artist - Title
+		if (count($db = ConfigDB::read('cfg_radio', $res['file']))) {
+			$res['x_radio'] = array();
+			foreach ($db[0] as $key => $value) {
+				if (!is_numeric($key)) {
+					$res[$key] = $value;
+					$res['x_radio'][$key] = $value;
+				}
+			}
+
+			// set coverurl
+			$res['coverurl'] = 'local' == $res['logo'] ? 'images/webradio-logos/' + $res['name'] + '.png' : $res['logo'];
+			unset($res['logo']); // TODO not needed
+
+			if (isset($res['name'])) {
+				$res['Name'] = $res['name'];
+				unset($res['name']); // TODO not needed
+			}
+		}
+	}
+}
+
 // Get options- cmd line or GET
 $options = getopt('c:p:', array('cmd:', 'path:'));
 $cmd = isset($options['c']) ? $options['c'] : (isset($options['cmd']) ? $options['cmd'] : null);
@@ -104,10 +159,6 @@ switch ($cmd) {
 		if (null !== $path) {
 			$res = mpdRemovePlayList($mpd, $path);
 		}
-		break;
-
-	case 'playlist':
-		$res = mpdQueueInfo($mpd);
 		break;
 
 	case 'add':
@@ -201,6 +252,14 @@ switch ($cmd) {
 
 	case 'currentsong':
 		$res = _parseMpdCurrentSong(execMpdCommand($mpd, 'currentsong'));
+		mpdAddItemInfo($res);
+		break;
+
+	case 'playlist':
+		$res = mpdQueueInfo($mpd);
+		foreach ($res as &$song) {
+			mpdAddItemInfo($song);
+		}
 		break;
 
 	default:
@@ -211,4 +270,4 @@ switch ($cmd) {
 closeMpdSocket($mpd);
 
 header('Content-type: application/json');
-echo json_encode($res);
+echo json_encode($res, JSON_PRETTY_PRINT);

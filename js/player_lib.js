@@ -61,14 +61,6 @@ var MPDCS = {
 	coverimg: ''
 };
 
-// TC (Tim Curtis) 2014-11-30: global for tcmods.conf file
-// TC (Tim Curtis) 2015-01-27: add element volume_warning_limit
-// TC (Tim Curtis) 2015-01-27: remove timer_knob_radiocount
-// TC (Tim Curtis) 2015-01-27: add search_auto_focus
-// TC (Tim Curtis) 2015-02-25: add sys_ items
-// TC (Tim Curtis) 2015-04-29: add theme_color
-// TC (Tim Curtis) 2015-05-30: add play_history_currentsong
-// TC (Tim Curtis) 2015-06-26: add volume_ elements and albumart_lookup_method
 var TCMCONF = {
 	json: 0
 };
@@ -82,66 +74,54 @@ var timeKnobPaintComplete = false;
 // FUNCTIONS SECTION
 
 // Get MPD currentsong data and format for GUI display as either Webradio or file source
-// TC (Tim Curtis) 2014-08-23: initial version 
-// TC (Tim Curtis) 2014-08-23: construct URL to cover art using song file path
-// TC (Tim Curtis) 2014-10-31: use makeCoverURL() function instead of inline code
-// TC (Tim Curtis) 2014-10-31: remove any embedded dbl quotes in webradio station names for display
-// TC (Tim Curtis) 2014-10-31: add makeWebradioLogoURL() function for webradio station logo
-// TC (Tim Curtis) 2015-06-26: add work-around logic to handle NTS Live station that sometimes does not xmit Name and Title, only file
-// TC (Tim Curtis) 2015-07-31: updated logic throughout
 function mpdCurrentSong() {
 	$.ajax({
 		type: 'GET',
 		url: 'db/?cmd=currentsong',
 		async: false, // Ensure data is current
 		cache: false,
-		success: function(data){
+		success: function(data) {
 			GUI.halt = 1;
 			MPDCS.json = data;
-			//console.log('MPDCS.json=', MPDCS.json);
+// console.log('MPDCS.json=', MPDCS.json);
+
+			MPDCS.coverurl = MPDCS.defaultcover; // default cover
 
 			// TC (Tim Curtis) 2015-07-31: updated logic
-			if (typeof MPDCS.json.file != 'undefined') {
-				// RADIO STATION
-				if (typeof(MPDCS.json.Name) != 'undefined' || MPDCS.json.file.substr(0,4) == "http" && typeof(MPDCS.json.Artist) == 'undefined') {
-					MPDCS.artist = 'Radio Station';
-					MPDCS.title = (typeof(MPDCS.json.Title) == 'undefined') ? MPDCS.json.file : MPDCS.json.Title;
+			if (MPDCS.json.file === undefined) {
+				return;
+			}
 
-					var obj = getRadioInfo(MPDCS.json.file);
-					if (obj == null) { // station not in db
-						MPDCS.album = (typeof(MPDCS.json.Name) == 'undefined') ? "Unknown station name" : MPDCS.json.Name;
-						MPDCS.coverurl = MPDCS.webradiocover; // default radio cover
-					} else {
-						MPDCS.album = (obj.name.substr(0,4) == "Soma") ? MPDCS.json.Name : obj.name; // use transmitted name for Soma stations
-						if (obj.logo == "local") {
-							MPDCS.coverurl = MPDCS.stnlogoroot + obj.name + ".png";
-						} else {
-							MPDCS.coverurl = obj.logo; // Soma stations
-						}
-					}
+			if (MPDCS.json.type == 'radio') {
+				// RADIO STATION
+				MPDCS.artist = 'Radio Station';
+				MPDCS.title = (MPDCS.json.Title === undefined) ? MPDCS.json.file : MPDCS.json.Title;
+				MPDCS.album = (MPDCS.json.Name === undefined) ? "Unknown station" : MPDCS.json.Name;
+				MPDCS.coverurl = MPDCS.json.coverurl;
+			}
+			else {
 				// SONG FILE OR UPNP SONG URL
-				} else {
-					MPDCS.artist = (typeof(MPDCS.json.Artist) == 'undefined') ? "Unknown artist" : MPDCS.json.Artist;
-					MPDCS.album = (typeof(MPDCS.json.Album) == 'undefined') ? "Unknown album" : MPDCS.json.Album;
-					 // UPnP song url
-					if (MPDCS.json.file.substr(0,4) == "http") {
-						MPDCS.title = (typeof(MPDCS.json.Title) == 'undefined') ? MPDCS.json.file : MPDCS.json.Title;
-						MPDCS.coverurl = makeUPNPCoverURL();
+				MPDCS.artist = (MPDCS.json.Artist === undefined) ? "Unknown artist" : MPDCS.json.Artist;
+				MPDCS.album = (MPDCS.json.Album === undefined) ? "Unknown album" : MPDCS.json.Album;
+
+				if (MPDCS.json.file.substr(0,4) == "http") {
+				 	// UPnP song url
+					MPDCS.title = (MPDCS.json.Title === undefined) ? MPDCS.json.file : MPDCS.json.Title;
+					MPDCS.coverurl = makeUPNPCoverURL();
+				}
+				else {
 					// song file
-					} else {
-						if (typeof(MPDCS.json.Title) == 'undefined') { // use file name
-							var pos = MPDCS.json.file.lastIndexOf(".");
-							var filename = MPDCS.json.file.slice(0, pos);
-							pos = filename.lastIndexOf("/");
-							MPDCS.title = filename.slice(pos + 1);
-						} else {
-							MPDCS.title = MPDCS.json.Title; // use title
-						}
-						MPDCS.coverurl = makeCoverURL(MPDCS.json.file);
+					if (MPDCS.json.Title === undefined) { // use file name
+						var pos = MPDCS.json.file.lastIndexOf(".");
+						var filename = MPDCS.json.file.slice(0, pos);
+						pos = filename.lastIndexOf("/");
+						MPDCS.title = filename.slice(pos + 1);
 					}
-				} 
-			} else {
-				MPDCS.coverurl = MPDCS.defaultcover; // default cover
+					else {
+						MPDCS.title = MPDCS.json.Title; // use title
+					}
+					MPDCS.coverurl = makeCoverURL(MPDCS.json.file);
+				}
 			}
 		},
 		error: function() {
@@ -154,7 +134,7 @@ function mpdCurrentSong() {
  * Convert song file path to a URL for cover art display
  */
 function makeCoverURL(filepath) {
-	var cover = '/mpodcover.php/' + encodeURIComponent(filepath);
+	var cover = '/coverart.php/' + encodeURIComponent(filepath);
 	return cover;
 }
 
@@ -205,13 +185,6 @@ function makeUPNPCoverURL() {
 function getAudioDevDesc(audiodev) {
 	return tcmodsPostCmd('getaudiodevdesc', {
 		'audiodev': audiodev
-	});
-}
-
-// TC (Tim Curtis) 2015-07-31: query cfg_radio table, return radio info fields
-function getRadioInfo(station) {
-	return tcmodsPostCmd('getradioinfo', {
-		'station': station
 	});
 }
 
@@ -350,47 +323,33 @@ function getPlaylist(json) {
 		var output = '';
 
 		// Store num of playlist items in global for use by delete/move pl item modals
-		if (typeof(data.length) != 'undefined') {
-			GUI.DBentry[4] = data.length;
-		} else {
-			GUI.DBentry[4] = 0;
-		}
+		GUI.DBentry[4] = (typeof(data.length) != 'undefined') ? data.length : 0;
 
 		// Format playlist item
 		if (data) {
 			for (i = 0; i < data.length; i++) {
 				// Playlist item active state
-				if (json['state'] != 'stop' && i == parseInt(json['song'])) {
-					content = '<li id="pl-' + (i + 1) + '" class="active clearfix">';
-					//content = '<li id="pl-' + (i + 1) + '" class="active clearfix" draggable="true" ondragstart="drag(event)">';
-				} else {
-					content = '<li id="pl-' + (i + 1) + '" class="clearfix">';
-					//content = '<li id="pl-' + (i + 1) + '" class="clearfix" draggable="true" ondragstart="drag(event)">';
-				}
-				// Action menu
-				content += '<div class="pl-action"><a class="btn" href="#notarget" title="Actions" data-toggle="context" data-target="#context-menu-playlist-item"><i class="icon-reorder"></i></a></div>';
+				content = '<li id="pl-' + (i + 1) + '" class="' +
+					((json['state'] != 'stop' && i == parseInt(json['song'])) ? 'active ' : '')
+					+ 'clearfix">'
+					+ '<div class="pl-action"><a class="btn" href="#notarget" title="Actions" data-toggle="context" data-target="#context-menu-playlist-item"><i class="icon-reorder"></i></a></div>';
 
 				// TC (Tim Curtis) 2015-07-31: updated logic throughout
 				// RADIO STATION
-				if (typeof(data[i].Name) != 'undefined' || (data[i].file.substr(0,4) == "http" && typeof(data[i].Artist) == 'undefined')) {
+				if (data[i].type == "radio") {
 					// Playlist item 1st line, song title
 					content += '<div class="pl-entry">';
-					if (typeof(data[i].Title) == 'undefined') { // title
-						content += "Streaming source";
-					} else {
-						content += data[i].Title + (typeof(data[i].Time) == 'undefined' ? '<em class="songtime"></em>' : ' <em class="songtime">' + timeConvert(data[i].Time) + '</em>');
-					} 
+					content += (typeof(data[i].Title) == 'undefined')
+						? "Streaming source"
+						: data[i].Title + (typeof(data[i].Time) == 'undefined' ? '<em class="songtime"></em>' : ' <em class="songtime">' + timeConvert(data[i].Time) + '</em>');
+
 					// Playlist item 2nd line, radio station name
 					content += ' <span>';
 					content += '<i class="icon-microphone"></i> '; // artist
-					var obj = getRadioInfo(data[i].file);
-					if (obj == null) { // station not in db
-						content += (typeof(data[i].Name) == 'undefined') ? "Radio station" : data[i].Name;
-					} else {
-						content +=  obj.name;
-					}
+					content +=  data[i].Name;
+				}
 				// SONG FILE OR UPNP SONG URL
-				} else {
+				else {
 					// Playlist item 1st line, song title
 					content += '<div class="pl-entry">';
 					if (typeof(data[i].Title) == 'undefined') { // use file name
@@ -412,47 +371,6 @@ function getPlaylist(json) {
 					content += (typeof(data[i].Album) == 'undefined') ?  "Unknown album" : data[i].Album;
 				}
 
-				/*
-				// ORIGINAL
-				// Playlist item 1st line, song title
-				content += '<div class="pl-entry">';
-				if (typeof(data[i].Title) != 'undefined') {
-					content += data[i].Title + (typeof(data[i].Time) == 'undefined' ? '<em class="songtime"></em>' : ' <em class="songtime">' + timeConvert(data[i].Time) + '</em>');
-				} else {
-					// TC (Tim Curtis) 2015-07-31: song file w/o title tag assigned to file instead of "Streaming source"
-					if (typeof(data[i].Artist) == 'undefined') { // radio station
-						content += "Streaming source";
-					} else { // song file w/o title tag
-						content += data[i].file;
-					}
-				}
-
-				// Playlist item 2nd line, artist - album or radio station name
-				content += ' <span>';
-				if (typeof(data[i].Artist) == 'undefined') { // radio station
-					content += '<i class="icon-microphone"></i> ';
-				} else { // song file
-					content += data[i].Artist;
-				}
-
-				// TC (Tim Curtis) 2015-07-31: get station name from db
-				if (typeof(data[i].Album)  == 'undefined') { // radio station
-					if (typeof(data[i].Name)  == 'undefined') {
-						content += "Radio Station";
-					} else {
-						var obj = getRadioInfo(data[i].file);
-						if (obj != null) { // station in db
-							content +=  obj['name'];
-						} else {
-							content +=  data[i].Name;
-						}
-						//console.log('getRadioInfo3 obj=', obj);
-					}
-				} else { // song file
-					content += ' - ' + data[i].Album;
-				}
-				*/
-
 				content += '</span></div></li>';
 				output = output + content;
 			} // end for loop
@@ -465,12 +383,7 @@ function getPlaylist(json) {
 // Parse file path
 function parsePath(str) {
 	var cutpos=str.lastIndexOf("/");
-
-	if (cutpos !=-1) {
-		var songpath = str.slice(0,cutpos);
-	}  else {
-		songpath = '';
-	}
+	var songpath = (cutpos !=-1) ? str.slice(0,cutpos) : '';
 
 	return songpath;
 }
@@ -478,10 +391,6 @@ function parsePath(str) {
 // Parse response returned from MPD
 function parseResponse(inputArr,respType,i,inpath) {
 	switch (respType) {
-		case 'playlist':
-			// Placeholder
-			break;
-
 		case 'db':
 			if (inpath == '' && typeof inputArr[i].file != 'undefined') {
 				inpath = parsePath(inputArr[i].file)
@@ -743,32 +652,13 @@ function updateGUI(json){
 
 	refreshState(GUI.state); // Update state of certain GUI elements
 
-	// Check song update
-	// TC (Tim Curtis) 2015-05-30: moved this code to after the code that makes the search url
-
-	// Common actions
-	// TC (Tim Curtis) 2014-11-30: add volume-2 updater line for 2nd voume control
-	// TC (Tim Curtis) 2015-01-27: chg ? 100 to 0 (never programatically set vol = 100)
-
-	// TC (Tim Curtis) 2015-06-26: Original code
-	// vol = -1 is when MPD mixer_type = disabled
-	//$('#volume').val((json['volume'] == '-1') ? 0 : json['volume']).trigger('change');
-	//$('#volume-2').val((json['volume'] == '-1') ? 0 : json['volume']).trigger('change');
-
 	// TC (Tim Curtis) 2015-06-26: for new setVolume() volume control
 	// vol = -1 is when MPD mixer_type = disabled
 	// Note: using the value from tcmods.conf means user ALSAMIXER changes will not be picked up by the UI
-	$('#volume').val((json['volume'] == '-1') ? 0 : TCMCONF.json['volume_knob_setting']).trigger('change');
-	$('#volume-2').val((json['volume'] == '-1') ? 0 : TCMCONF.json['volume_knob_setting']).trigger('change');
+	$('#volume, #volume-2').val((json['volume'] == '-1') ? 0 : TCMCONF.json['volume_knob_setting']).trigger('change');
 
 	// TC (Tim Curtis) 2015-06-26: new mute state management
-	if (TCMCONF.json['volume_muted'] == 0) { // Unmuted
-		$('#volumemute').removeClass('btn-primary');
-		$('#volumemute-2').removeClass('btn-primary');
-	} else {
-		$('#volumemute').addClass('btn-primary'); // Muted
-		$('#volumemute-2').addClass('btn-primary');
-	}
+	$('#volumemute, #volumemute-2')[TCMCONF.json['volume_muted'] !== 0 ? 'addClass' : 'removeClass']('btn-primary');
 
 	// TC (Tim Curtis) 2014-08-23: update gui with mpd currentSong data
 	$('#currentartist').html(MPDCS.artist);
@@ -778,21 +668,22 @@ function updateGUI(json){
 	// TC (Tim Curtis) 2014-08-23: prevent unnecessary image reloads
 	if (MPDCS.title != MPDCS.lasttitle) {
 		// TC (Tim Curtis) 2014-08-23: add Search lookup unless title is a url (Webradio) or default-cover is diaplayed (playlist empty)
-		if (MPDCS.title.substr(0, 4) == "http" || MPDCS.coverurl == MPDCS.defaultcover) {
+		// if (MPDCS.title.substr(0, 4) == "http" || MPDCS.coverurl == MPDCS.defaultcover) {
+		if (MPDCS.json.type == "radio" || MPDCS.coverurl == MPDCS.defaultcover) {
 			$('#coverart-url').html('<img class="coverart" ' + 'src="' + MPDCS.coverurl + '" ' + 'alt="Cover art not found"' + '>');
-		} else {
+		}
+		else {
 			var searchStr = '';
 			if (MPDCS.artist == 'Radio Station') {
 				searchStr = MPDCS.title.replace(/-/g, " ");
 				searchStr = searchStr.replace(/&/g, " ");
 				searchStr = searchStr.replace(/\s+/g, "+");
-			} else {
+			}
+			else {
 				searchStr = MPDCS.artist + "+" + MPDCS.album
 			}
-			// TC (Tim Curtis) 2014-12-23: change coverart-click search engine from Amazon to Google
 			// var searchEngine = "http://www.amazon.com/s?url=search-alias%3Daps&field-keywords=";
-			var searchEngine = "http://www.google.com/search?q=";
-			$('#coverart-url').html('<a id="coverart-link" href=' + '"' + searchEngine + searchStr + '"' + ' target="_blank"> <img class="coverart" ' + 'src="' + MPDCS.coverurl + '" ' + 'alt="Cover art not found"' + '></a>');
+			$('#coverart-url').html('<a id="coverart-link" href="http://www.google.com/search?q=' + searchStr + '" target="_blank"> <img class="coverart" src="' + MPDCS.coverurl + '" alt="Cover art not found"></a>');
 		}
 
 		MPDCS.lasttitle = MPDCS.title;
@@ -810,26 +701,11 @@ function updateGUI(json){
 		}
 	}
 
-	if (json['repeat'] == 1) {
-		$('#repeat').addClass('btn-primary');
-	} else {
-		$('#repeat').removeClass('btn-primary');
-	}
-	if (json['random'] == 1) {
-		$('#random').addClass('btn-primary');
-	} else {
-		$('#random').removeClass('btn-primary');
-	}
-	if (json['consume'] == 1) {
-		$('#consume').addClass('btn-primary');
-	} else {
-		$('#consume').removeClass('btn-primary');
-	}
-	if (json['single'] == 1) {
-		$('#single').addClass('btn-primary');
-	} else {
-		$('#single').removeClass('btn-primary');
-	}
+	// shorthand toggle http://stackoverflow.com/questions/5390598/jquery-help-me-make-this-shorthand-more-verbose
+	$('#repeat')[json['repeat'] == 1 ? 'addClass' : 'removeClass']('btn-primary');
+	$('#random')[json['random'] == 1 ? 'addClass' : 'removeClass']('btn-primary');
+	$('#consume')[json['consume'] == 1 ? 'addClass' : 'removeClass']('btn-primary');
+	$('#single')[json['single'] == 1 ? 'addClass' : 'removeClass']('btn-primary');
 
 	// TC (Tim Curtis) 2015-05-30: legacy code
 	GUI.halt = 0;
