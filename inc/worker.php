@@ -160,16 +160,14 @@ function wrk_sourcemount($action,$id = null) {
 		case 'mount':
 			$mp = ConfigDB::read('cfg_source','',$id);
 
-			sysCmd("mkdir \"/mnt/NAS/".$mp[0]['name']."\"");
-			$mountstr = ($mp[0]['type'] == 'cifs')
+			sysCmd("mkdir '/mnt/NAS/".$mp[0]['name']."'");
+			$mountstr = 'mount -t ' . ($mp[0]['type'] == 'cifs')
 				// smb/cifs mount
-				? "mount -t cifs \"//".$mp[0]['address']."/".$mp[0]['remotedir']."\" -o username=".$mp[0]['username'].",password='".$mp[0]['password']."',rsize=".$mp[0]['rsize'].",wsize=".$mp[0]['wsize'].",iocharset=".$mp[0]['charset'].",".$mp[0]['options']." \"/mnt/NAS/".$mp[0]['name']."\""
-				: "mount -t nfs -o ".$mp[0]['options']." \"".$mp[0]['address'].":/".$mp[0]['remotedir']."\" \"/mnt/NAS/".$mp[0]['name']."\"";
+				? "cifs '//".$mp[0]['address']."/".$mp[0]['remotedir']."' -o username=".$mp[0]['username'].",password='".$mp[0]['password']."',rsize=".$mp[0]['rsize'].",wsize=".$mp[0]['wsize'].",iocharset=".$mp[0]['charset'].",".$mp[0]['options']." '/mnt/NAS/".$mp[0]['name']."'"
+				: "nfs -o ".$mp[0]['options']." '".$mp[0]['address'].":/".$mp[0]['remotedir']."' '/mnt/NAS/".$mp[0]['name']."'";
 
 			// debug
-			error_log(">>>>> mount string >>>>> ".$mountstr,0);
 			$sysoutput = sysCmd($mountstr);
-			error_log(var_dump($sysoutput),0);
 			if (empty($sysoutput)) {
 				if (!empty($mp[0]['error'])) {
 					$mp[0]['error'] = '';
@@ -178,7 +176,7 @@ function wrk_sourcemount($action,$id = null) {
 				$return = 1;
 			}
 			else {
-				sysCmd("rmdir \"/mnt/NAS/".$mp[0]['name']."\"");
+				sysCmd("rmdir '/mnt/NAS/".$mp[0]['name']."'");
 				$mp[0]['error'] = implode("\n",$sysoutput);
 				ConfigDB::update('cfg_source','',$mp[0]);
 				$return = 0;
@@ -202,13 +200,14 @@ function wrk_sourcemount($action,$id = null) {
 function wrk_sourcecfg($queueargs) {
 	$action = $queueargs['mount']['action'];
 	unset($queueargs['mount']['action']);
+
 	switch ($action) {
 		case 'reset':
 			$source = ConfigDB::read('cfg_source');
 
 			foreach ($source as $mp) {
-				sysCmd("umount -f \"/mnt/NAS/".$mp['name']."\"");
-				sysCmd("rmdir \"/mnt/NAS/".$mp['name']."\"");
+				sysCmd("umount -f '/mnt/NAS/".$mp['name']."'");
+				sysCmd("rmdir '/mnt/NAS/".$mp['name']."'");
 			}
 
 			$return = (ConfigDB::delete('cfg_source')) ? 1 : 0;
@@ -228,21 +227,20 @@ function wrk_sourcecfg($queueargs) {
 		case 'edit':
 			$mp = ConfigDB::read('cfg_source','',$queueargs['mount']['id']);
 			ConfigDB::update('cfg_source','',$queueargs['mount']);
-			sysCmd("umount -f \"/mnt/NAS/".$mp[0]['name']."\"");
+			sysCmd("umount -f '/mnt/NAS/".$mp[0]['name']."'");
 
 			if ($mp[0]['name'] != $queueargs['mount']['name']) {
-				sysCmd("rmdir \"/mnt/NAS/".$mp[0]['name']."\"");
-				sysCmd("mkdir \"/mnt/NAS/".$queueargs['mount']['name']."\"");
+				sysCmd("rmdir '/mnt/NAS/".$mp[0]['name']."'");
+				sysCmd("mkdir '/mnt/NAS/".$queueargs['mount']['name']."'");
 			}
 
 			$return = (wrk_sourcemount('mount',$queueargs['mount']['id'])) ? 1 : 0;
-			error_log(">>>>> wrk_sourcecfg(edit) exit status = >>>>> ".$return, 0);
 			break;
 
 		case 'delete':
 			$mp = ConfigDB::read('cfg_source','',$queueargs['mount']['id']);
-			sysCmd("umount -f \"/mnt/NAS/".$mp[0]['name']."\"");
-			sysCmd("rmdir \"/mnt/NAS/".$mp[0]['name']."\"");
+			sysCmd("umount -f '/mnt/NAS/".$mp[0]['name']."'");
+			sysCmd("rmdir '/mnt/NAS/".$mp[0]['name']."'");
 			$return = (ConfigDB::delete('cfg_source',$queueargs['mount']['id'])) ? 1 : 0;
 			break;
 	}
