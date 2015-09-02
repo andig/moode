@@ -140,10 +140,54 @@ function mpdRemovePlayList($sock, $plname) {
 	return $resp;
 }
 
-function libLog($str, $overwrite = false) {
-	$debug_fhand = fopen("/var/www/liblog.txt", $overwrite ? 'w' : 'a'); // write or append
-	fwrite($debug_fhand, $str."\n");
-	fclose($debug_fhand);
+
+/**
+ * Determine MPD playlist item type- radio, upnp or song
+ *
+ * Similar to daemon.php#391
+ */
+function mpdItemType($song) {
+	if (substr($song['file'], 0, 4) == "http") {
+		$type = isset($song['Artist']) ? 'upnp' : 'radio';
+	}
+	else {
+		// TODO check if playlist should be separate
+		$type = 'song';
+	}
+	return $type;
+}
+
+/**
+ * Enhance MPD playlist info with database information
+ */
+function mpdAddItemInfo(&$res) {
+	if ('radio' == $res['type'] = mpdItemType($res)) {
+		// TODO make this a define
+		$res['coverurl'] = 'images/webradio-cover.jpg';
+		$res['Name'] = "Radio station";
+
+		// TODO remove numerical indexes
+		// TODO check if we want to parse Title into Artist - Title
+		if (count($db = ConfigDB::read('cfg_radio', $res['file']))) {
+			$res['x_radio'] = array();
+			foreach ($db[0] as $key => $value) {
+				if (!is_numeric($key)) {
+					$res[$key] = $value;
+					$res['x_radio'][$key] = $value;
+				}
+			}
+			$res['x_db'] = $db;	// TODO remove
+
+			// set coverurl
+			$res['coverurl'] = 'local' == $res['logo'] ? 'images/webradio-logos/' . $res['name'] . '.png' : $res['logo'];
+			unset($res['logo']); // TODO not needed
+
+			if (isset($res['name'])) {
+				$res['Name'] = $res['name'];
+				unset($res['name']); // TODO not needed
+			}
+		}
+	}
 }
 
 // TC (Tim Curtis) 2015-06-26: add debug logging
@@ -692,21 +736,84 @@ function getMixerName($kernelver, $i2s) {
 	return $mixername;
 }
 
-function waitWorker($sleeptime = 1) {
-	logWorker('[client] waiting for worker');
 
-	$wait = 0;
-	if ($_SESSION['w_active'] == 1) {
-		do {
-			sleep($sleeptime);
-			logWorker('[client] waitWorker (' . $wait++ . ')');
-			session_start();
-			session_write_close();
-		}
-		while ($_SESSION['w_active'] != 0);
+/*
+ * Worker session management
+ *
+ * w_active == 1	Indicate task available to worker
+ * w_lock == 1		Worker has picked task from queue - worker has queue token
+ * w_queue(args)	Next worker task
+ */
+
+/**
+ * Check if worker available for next task
+ */
+function workerIsFree() {
+	return !(isset($_SESSION['w_lock']) && isset($_SESSION['w_queue']))
+		|| $_SESSION['w_lock'] !== 1 && $_SESSION['w_queue'] == '';
+}
+
+/**
+ * Add task to queue
+ */
+function workerPushTask($task, $args = null) {
+	if (!workerIsFree()) {
+		return false;
 	}
 
-	logWorker('[client] worker finished');
+	$_SESSION['w_active'] = 1;
+	$_SESSION['w_queue'] = $task;
+	$_SESSION['w_queueargs'] = $args;
+
+	return true;
+}
+
+/**
+ * Get task from queue
+ */
+function workerPopTask(&$args) {
+	if ($task =
+		isset($_SESSION['w_active']) && $_SESSION['w_active'] == 1 &&
+		isset($_SESSION['w_lock']) && $_SESSION['w_lock'] == 0)
+	{
+		$_SESSION['w_lock'] = 1;			// lock queue
+		$task = $_SESSION['w_queue'];		// get task from queue
+		$args = $_SESSION['w_queueargs'];	// get args from queue
+	}
+
+	return $task;
+}
+
+/**
+ * Remove task from queue
+ */
+function workerFinishTask() {
+	$_SESSION['w_active'] = 0;			// mark worker inactive
+	$_SESSION['w_lock'] = 0;			// unlock queue
+	$_SESSION['w_queue'] = '';			// remove task from queue
+	$_SESSION['w_queueargs'] = '';		// remove task from queue
+}
+
+/**
+ * Wait for worker to finish task
+ */
+function waitWorker($sleeptime = 1) {
+	if ($_SESSION['w_active'] == 1) {
+		logWorker('[client] waiting for worker');
+		$wait = 0;
+
+		do {
+			sleep($sleeptime);
+			if (++$wait % 5 === 0) {
+				logWorker(sprintf('[client] waitWorker (%d)', $wait));
+			}
+			Session::open();
+			Session::close();
+		}
+		while ($_SESSION['w_active'] == 1);
+
+		logWorker('[client] worker finished');
+	}
 }
 
 function logWorker($o) {
