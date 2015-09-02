@@ -26,9 +26,47 @@ require_once dirname(__FILE__) . '/inc/connection.php';
 require_once dirname(__FILE__) . '/inc/timezone.php';
 
 
+/**
+ * Update on/off session setting
+ */
+function sessionToggle($switch) {
+	if (isset($_POST[$switch])) {
+		$val = (int)$_POST[$switch];
+
+		if ($val != $_SESSION[$switch]) {
+			if ($val == 0 || $val == 1) {
+				Session::update($switch, $val);
+				return true;
+			}
+		}
+	}
+
+	return false;
+}
+
+/**
+ * Update on/off session setting
+ */
+function sessionUpdate($switch, $setting, &$val, &$oldval) {
+	if (isset($_POST[$switch]) && isset($_POST[$setting])) {
+		$val = $_POST[$setting];
+		$oldval = $_SESSION[$setting];
+
+		if ($val != $oldval) {
+			// TODO move update to daemon.php or after pushing worker task
+			Session::update($setting, $val);
+			return true;
+		}
+	}
+
+	return false;
+}
+
+
 Session::open();
 
-$workerSuccess = false;
+$workerSuccess = null;	// true/false indicates worker call success
+$skipWait = false;		// allow skip waiting for worker
 
 // theme change via system command
 if (isset($_POST['syscmd'])) {
@@ -39,187 +77,142 @@ if (isset($_POST['syscmd'])) {
 }
 
 
-// audio device update
-if (isset($_POST['update_i2s_device'])) {
-	if (isset($_POST['i2s']) && $_POST['i2s'] != $_SESSION['i2s']) {
-		if ($workerSuccess = workerPushTask('i2sdriver', $_POST['i2s'])) {
-			uiSetNotification('Setting change', "I2S device has been changed, REBOOT for setting to take effect.", 5);
+/*
+ * Session value updates
+ */
+$val = $oldval = null;
 
-			// TC (Tim Curtis) 2015-03-21: Adjust message depending on selected device
-			if ($_POST['i2s'] == "IQaudIO Pi-AMP+") {
-				uiSetNotification('', "<br><br>This device REQUIRES hardware volume control. After rebooting, set MPD Volume control to Hardware.");
-			}
-			elseif (
-				$_POST['i2s'] == "HiFiBerry DAC+" ||
-				$_POST['i2s'] == "HiFiBerry Amp(Amp+)" ||
-				$_POST['i2s'] == "IQaudIO Pi-DAC" ||
-				$_POST['i2s'] == "IQaudIO Pi-DAC+" ||
-				$_POST['i2s'] == "RaspyPlay4")
-			{
-				uiSetNotification('', "<br><br>This device supports hardware volume control. After rebooting, optionally set MPD Volume control to Hardware.");
-			}
-			// TC (Tim Curtis) 2015-04-29: update cfg_engine table, moved from daemon.php, fixes field not updating when page echos back
-			Session::update('i2s',$_POST['i2s']);
+if (sessionUpdate('update_kernel_version', 'kernelver', $val, $oldval)) {
+	if ($workerSuccess = workerPushTask('kernelver', $val)) {
+		uiSetNotification('Kernel change', "Version " . $val . " install initiated...<br><br>The process can take 5+ minutes to<br>complete after which the CONNECTING<br>screen will appear and the system will<br>be POWERED OFF.", 600);
+		// dont wait if kernel select so page returns and uiShowNotification message appears
+		$skipWait = true;
+	}
+}
+if (sessionUpdate('update_time_zone', 'timezone', $val, $oldval)) {
+	if ($workerSuccess = workerPushTask('timezone', $val)) {
+		uiSetNotification('Setting change', "Timezone " . $val . " has been set.", 4);
+	}
+}
+if (sessionUpdate('update_latency_setting', 'orionprofile', $val, $oldval)) {
+	if ($workerSuccess = workerPushTask('orionprofile', $val)) {
+		uiSetNotification('Setting change', 'Kernel latency setting has been changed to: '.$val.', REBOOT for setting to take effect.', 4);
+	}
+}
+if (sessionUpdate('update_browser_title', 'browser_title', $val, $oldval)) {
+	if ($workerSuccess = workerPushTask('browser_title', '"' . $oldval . '" "' . $val . '"')) {
+		uiSetNotification('Setting change', "Browser title has been changed, REBOOT for setting to take effect.", 4);
+	}
+}
+if (sessionUpdate('update_airplay_name', 'airplay_name', $val, $oldval)) {
+	if ($workerSuccess = workerPushTask('airplay_name', '"' . $oldval . '" "' . $val . '"')) {
+		uiSetNotification('Setting change', "Airplay receiver name has been changed, REBOOT for setting to take effect.", 4);
+	}
+}
+if (sessionUpdate('update_upnp_name', 'upnp_name', $val, $oldval)) {
+	if ($workerSuccess = workerPushTask('upnp_name', '"' . $oldval . '" "' . $val . '"')) {
+		uiSetNotification('Setting change', "UPnP renderer name has been changed, REBOOT for setting to take effect.", 4);
+	}
+}
+if (sessionUpdate('update_dlna_name', 'dlna_name', $val, $oldval)) {
+	if ($workerSuccess = workerPushTask('dlna_name', '"' . $oldval . '" "' . $val . '"')) {
+		uiSetNotification('Setting change', "DLNA server name has been changed, REBOOT for setting to take effect.", 4);
+	}
+}
+if (sessionUpdate('update_pcm_volume', 'pcm_volume', $val, $oldval)) {
+	if ($workerSuccess = workerPushTask('pcm_volume', $val)) {
+		uiSetNotification('Setting change', "PCM volume has been set.", 4);
+	}
+}
+if (sessionUpdate('update_host_name', 'host_name', $val, $oldval)) {
+	if (preg_match("/[^A-Za-z0-9-]/", $val) == 1) {
+		uiSetNotification('Invalid input', "Host name can only contain A-Z, a-z, 0-9 or hyphen (-).", 4);
+	}
+	else {
+		if ($workerSuccess = workerPushTask('host_name', '"' . $oldval . '" "' . $val . '"')) {
+			uiSetNotification('Setting change', "Host name has been changed, REBOOT for setting to take effect.", 4);
 		}
 	}
 }
-// TC (Tim Curtis) 2015-02-25: kernel select handler
-// TC (Tim Curtis) 2015-06-26: use unique notify Title in update_kernel_version for Waitworker(1) test at end of script to allow the Notify message to appear
-// TC (Tim Curtis) 2015-06-26: change notify message duration from 5 to 10 mins
-if (isset($_POST['update_kernel_version'])) {
-	if (isset($_POST['kernelver']) && $_POST['kernelver'] != $_SESSION['kernelver']) {
-		if ($workerSuccess = workerPushTask('kernelver', $_POST['kernelver'])) {
-			uiSetNotification('Kernel change', "Version ".$_POST['kernelver']." install initiated...<br><br>The process can take 5+ minutes to<br>complete after which the CONNECTING<br>screen will appear and the system will<br>be POWERED OFF.", 600);
-			// TC (Tim Curtis) 2015-04-29: update cfg_engine table, added, fixes field not updating when page echos back
-			Session::update('kernelver',$_POST['kernelver']);
-		}
-	}
-}
-// TC (Tim Curtis) 2015-04-29: timezone select handler
-if (isset($_POST['update_time_zone'])) {
-	if (isset($_POST['timezone']) && $_POST['timezone'] != $_SESSION['timezone']) {
-		if ($workerSuccess = workerPushTask('timezone', $_POST['timezone'])) {
-			uiSetNotification('Setting change', "Timezone ".$_POST['timezone']." has been set.", 4);
-			// TC (Tim Curtis) 2015-04-29: update cfg_engine table, moved from daemon.php, fixes field not updating when page echos back
-			Session::update('timezone',$_POST['timezone']);
-		}
-	}
-}
-if (isset($_POST['update_latency_setting'])) {
-	if (isset($_POST['orionprofile']) && $_POST['orionprofile'] != $_SESSION['orionprofile']) {
-		if ($workerSuccess = workerPushTask('orionprofile', $_POST['orionprofile'])) {
-			uiSetNotification('Setting change', 'Kernel latency setting has been changed to: '.$_POST['orionprofile'].', REBOOT for setting to take effect.', 4);
-		}
+if (sessionUpdate('update_i2s_device', 'i2s', $val, $oldval)) {
+	if ($workerSuccess = workerPushTask('i2sdriver', $val)) {
+		uiSetNotification('Setting change', "I2S device has been changed, REBOOT for setting to take effect.", 5);
 
-		if ($_SESSION['w_lock'] != 1) {
-			Session::update('orionprofile',$_POST['orionprofile']);
+		// TC (Tim Curtis) 2015-03-21: Adjust message depending on selected device
+		if ($val == "IQaudIO Pi-AMP+") {
+			uiSetNotification('', "<br><br>This device REQUIRES hardware volume control. After rebooting, set MPD Volume control to Hardware.");
+		}
+		elseif (in_array($val, array(
+			"HiFiBerry DAC+",
+			"HiFiBerry Amp(Amp+)",
+			"IQaudIO Pi-DAC",
+			"IQaudIO Pi-DAC+",
+			"RaspyPlay4"
+		))) {
+			uiSetNotification('', "<br><br>This device supports hardware volume control. After rebooting, optionally set MPD Volume control to Hardware.");
 		}
 	}
 }
+
+
+/*
+ * On/off settings
+ */
 
 // shairport
-if (isset($_POST['shairport']) && $_POST['shairport'] != $_SESSION['shairport']) {
-	if ($_POST['shairport'] == 1 OR $_POST['shairport'] == 0) {
-		Session::update('shairport',$_POST['shairport']);
-	}
+if (sessionToggle('shairport')) {
 	uiSetNotification('Setting change', ($_POST['shairport'] == 1)
 		? 'Airplay receiver enabled, REBOOT for setting to take effect.'
 		: 'Airplay receiver disabled, REBOOT for setting to take effect.',
 	4);
 }
 
-
-if (isset($_POST['upnpmpdcli']) && $_POST['upnpmpdcli'] != $_SESSION['upnpmpdcli']) {
-	if ($_POST['upnpmpdcli'] == 1 OR $_POST['upnpmpdcli'] == 0) {
-		Session::update('upnpmpdcli',$_POST['upnpmpdcli']);
-	}
+// upnp
+if (sessionToggle('upnpmpdcli')) {
 	uiSetNotification('Setting change', ($_POST['upnpmpdcli'] == 1)
 		? 'UPnP renderer enabled, REBOOT for setting to take effect.'
 		: 'UPnP renderer disabled, REBOOT for setting to take effect.',
 	4);
 }
 
-if (isset($_POST['djmount']) && $_POST['djmount'] != $_SESSION['djmount']) {
-	if ($_POST['djmount'] == 1 OR $_POST['djmount'] == 0) {
-		Session::update('djmount',$_POST['djmount']);
-	}
+// djmount
+if (sessionToggle('djmount')) {
 	uiSetNotification('Setting change', ($_POST['djmount'] == 1)
 		? 'DLNA server enabled, REBOOT for setting to take effect.'
 		: 'DLNA server disabled, REBOOT for setting to take effect.',
 	4);
 }
 
-// TC (Tim Curtis) 2015-04-29: host and network service name change handlers
-if (isset($_POST['update_host_name'])) {
-	if (isset($_POST['host_name']) && $_POST['host_name'] != $_SESSION['host_name']) {
-		if (preg_match("/[^A-Za-z0-9-]/", $_POST['host_name']) == 1) {
-			uiSetNotification('Invalid input', "Host name can only contain A-Z, a-z, 0-9 or hyphen (-).", 4);
-		}
-		else {
-			if ($workerSuccess = workerPushTask('host_name', "\"".$_SESSION['host_name']."\" "."\"".$_POST['host_name']."\"")) {
-				uiSetNotification('Setting change', "Host name has been changed, REBOOT for setting to take effect.", 4);
-				Session::update('host_name',$_POST['host_name']);
-			}
-		}
-	}
-}
-if (isset($_POST['update_browser_title'])) {
-	if (isset($_POST['browser_title']) && $_POST['browser_title'] != $_SESSION['browser_title']) {
-		if ($workerSuccess = workerPushTask('browser_title', "\"".$_SESSION['browser_title']."\" "."\"".$_POST['browser_title']."\"")) {
-			uiSetNotification('Setting change', "Browser title has been changed, REBOOT for setting to take effect.", 4);
-			Session::update('browser_title',$_POST['browser_title']);
-		}
-	}
-}
-if (isset($_POST['update_airplay_name'])) {
-	if (isset($_POST['airplay_name']) && $_POST['airplay_name'] != $_SESSION['airplay_name']) {
-		if ($workerSuccess = workerPushTask('airplay_name', "\"".$_SESSION['airplay_name']."\" "."\"".$_POST['airplay_name']."\"")) {
-			uiSetNotification('Setting change', "Airplay receiver name has been changed, REBOOT for setting to take effect.", 4);
-			Session::update('airplay_name',$_POST['airplay_name']);
-		}
-	}
-}
-if (isset($_POST['update_upnp_name'])) {
-	if (isset($_POST['upnp_name']) && $_POST['upnp_name'] != $_SESSION['upnp_name']) {
-		if ($workerSuccess = workerPushTask('upnp_name', "\"".$_SESSION['upnp_name']."\" "."\"".$_POST['upnp_name']."\"")) {
-			uiSetNotification('Setting change', "UPnP renderer name has been changed, REBOOT for setting to take effect.", 4);
-			Session::update('upnp_name',$_POST['upnp_name']);
-		}
-	}
 
-}
-if (isset($_POST['update_dlna_name'])) {
-	if (isset($_POST['dlna_name']) && $_POST['dlna_name'] != $_SESSION['dlna_name']) {
-		if ($workerSuccess = workerPushTask('dlna_name', "\"".$_SESSION['dlna_name']."\" "."\"".$_POST['dlna_name']."\"")) {
-			uiSetNotification('Setting change', "DLNA server name has been changed, REBOOT for setting to take effect.", 4);
-			Session::update('dlna_name',$_POST['dlna_name']);
-		}
+/*
+ * One-time tasks
+ */
+
+if (isset($_POST['update_clear_syslogs']) && $_POST['clearsyslogs'] == 1) {
+	if ($workerSuccess = workerPushTask('clearsyslogs')) {
+		uiSetNotification('Log maintenance', "System logs have been cleared.", 4);
 	}
-
 }
-
-// TC (Tim Curtis) 2015-04-29: handle PCM volume change
-if (isset($_POST['update_pcm_volume'])) {
-	if (isset($_POST['pcm_volume'])) {
-		if ($workerSuccess = workerPushTask('pcm_volume', $_POST['pcm_volume'])) {
-			uiSetNotification('Setting change', "PCM volume has been set.", 4);
-			Session::update('pcm_volume',$_POST['pcm_volume']);
-		}
+if (isset($_POST['update_clear_playhistory']) && $_POST['clearplayhistory'] == 1) {
+	if ($workerSuccess = workerPushTask('clearplayhistory')) {
+		uiSetNotification('Log maintenance', "Playback history log hase been cleared.", 4);
+	}
+}
+if (isset($_POST['update_expand_sdcard']) && $_POST['expandsdcard'] == 1) {
+	if ($workerSuccess = workerPushTask('expandsdcard')) {
+		uiSetNotification('Expand SD Card Storage', "Storage expansion request has been queued. REBOOT has been initiated.", 6);
 	}
 }
 
-// TC (Tim Curtis) 2015-05-30: handle log maintenance for system and play history logs
-if (isset($_POST['update_clear_syslogs'])) {
-	if ($_POST['clearsyslogs'] == 1) {
-		if ($workerSuccess = workerPushTask('clearsyslogs')) {
-			uiSetNotification('Log maintenance', "System logs have been cleared.", 4);
-		}
-	}
-}
-if (isset($_POST['update_clear_playhistory'])) {
-	if ($_POST['clearplayhistory'] == 1) {
-		if ($workerSuccess = workerPushTask('clearplayhistory')) {
-			uiSetNotification('Log maintenance', "Playback history log hase been cleared.", 4);
-		}
-	}
-}
-
-// TC (Tim Curtis) 2015-07-31: expand sd card storage
-if (isset($_POST['update_expand_sdcard'])) {
-	if ($_POST['expandsdcard'] == 1) {
-		if ($workerSuccess = workerPushTask('expandsdcard')) {
-			uiSetNotification('Expand SD Card Storage', "Storage expansion request has been queued. REBOOT has been initiated.", 6);
-		}
-	}
-}
-
-
-Session::close();
 
 if (false === $workerSuccess) {
-	echo "background worker busy";
+	uiSetNotification('Job failed', 'Background worker is busy');
 }
 
+
+/*
+ * Render template
+ */
 
 // configure html select elements
 $kernelver = getKernelVer($_SESSION['kernelver']);
@@ -305,7 +298,7 @@ else {
 }
 
 // kernel tweak profiles
-$_system_select['orionprofile'] .= "<option value=\"Default\" ".(($_SESSION['orionprofile'] == 'Default') ? "selected" : "").">Default</option>\n";
+$_system_select['orionprofile'] = "<option value=\"Default\" ".(($_SESSION['orionprofile'] == 'Default') ? "selected" : "").">Default</option>\n";
 $_system_select['orionprofile'] .= "<option value=\"ACX\" ".(($_SESSION['orionprofile'] == 'ACX') ? "selected" : "").">ACX</option>\n";
 $_system_select['orionprofile'] .= "<option value=\"Orion\" ".(($_SESSION['orionprofile'] == 'Orion') ? "selected" : "").">Orion</option>\n";
 // airplay receiver
@@ -328,21 +321,19 @@ $_system_select['clearplayhistory1'] .= "<input type=\"radio\" name=\"clearplayh
 $_system_select['clearplayhistory0'] .= "<input type=\"radio\" name=\"clearplayhistory\" id=\"toggleclearplayhistory2\" value=\"0\" "."checked=\"checked\"".">\n";
 // TC (Tim Curtis) 2015-07-31: expand sd card storage
 $_system_select['expandsdcard1'] .= "<input type=\"radio\" name=\"expandsdcard\" id=\"toggleexpandsdcard1\" value=\"1\" ".">\n";
-
 $_system_select['expandsdcard0'] .= "<input type=\"radio\" name=\"expandsdcard\" id=\"toggleexpandsdcard2\" value=\"0\" "."checked=\"checked\"".">\n";
 
 // TC (Tim Curtis) 2015-04-29: timezones
 $_timezone['timezone'] = buildTimezoneSelect($_SESSION['timezone']);
 
 
-// TC (Tim Curtis) 2015-02-25: dont wait if kernel select so page returns and uiShowNotification message appears
-// TC (Tim Curtis) 2015-02-25: use notify title as the check since its not cleared by worker (daemon.php)
-if (!isset($_SESSION['notify']['title']) ||
-	isset($_SESSION['notify']['title']) && $_SESSION['notify']['title'] !== 'Kernel change')
-{
+// close session for waitWorker()
+Session::close();
+
+
+if (!$skipWait) {
 	waitWorker();
 }
 
-Session::close();
 
 render("settings");
