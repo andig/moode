@@ -11,7 +11,7 @@
  * make sure client is configured to hand cover requests to /mpodcover.php
  * or setup and nginx catch-all rule:
  *
- * 		try_files $uri $uri/ /mpodcover.php;
+ * 		try_files $uri $uri/ /coverart.php;
  *
  * Copyright (c) 2015 Andreas Goetz <cpuidle@gmx.de>
  */
@@ -34,9 +34,7 @@ function outImage($mime, $data) {
 }
 
 function getImage($path) {
-	global $getid3;
-
-	if (!file_exists($path)) {
+	if (!file_exists($path) || !is_readable($path)) {
 		return false;
 	}
 
@@ -162,7 +160,7 @@ if (null === $path) {
 	$self = $_SERVER['SCRIPT_NAME'];
 	$path = urldecode($_SERVER['REQUEST_URI']);
 	if (substr($path, 0, strlen($self)) === $self) {
-		// strip script name if called as /mpodcover.php/path/to/file
+		// strip script name if called as /coverart.php/path/to/file
 		$path = substr($path, strlen($self)+1);
 	}
 	$path = '/mnt/' . $path;
@@ -187,5 +185,5 @@ else {
 	parseFolder($path);
 }
 
-// nothong found -> default cover
+// nothing found -> default cover
 header('Location: /images/default-cover.jpg');
