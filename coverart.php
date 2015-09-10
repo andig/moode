@@ -103,10 +103,10 @@ function getImage($path) {
 			try {
 				$id3 = new Zend_Media_Iso14496($path);
 				$picture = $id3->moov->udta->meta->ilst->covr;
-				$mime = ($picture->getFlags() & Zend_Media_Iso14496_Box_Data::JPEG == Zend_Media_Iso14496_Box_Data::JPEG)
+				$mime = ($picture->getFlags() & Zend_Media_Iso14496_Box_Data::JPEG) == Zend_Media_Iso14496_Box_Data::JPEG
 					? 'image/jpeg'
 					: (
-						($picture->getFlags() & Zend_Media_Iso14496_Box_Data::PNG == Zend_Media_Iso14496_Box_Data::PNG)
+						($picture->getFlags() & Zend_Media_Iso14496_Box_Data::PNG) == Zend_Media_Iso14496_Box_Data::PNG
 						? 'image/png'
 						: null
 					);
@@ -168,6 +168,7 @@ if (null === $path) {
 
 // does file exist and contain image?
 getImage($path);
+echo("done");die;
 
 // directory - try all files
 if (is_dir($path)) {
