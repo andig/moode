@@ -103,11 +103,31 @@
  *	- updated logic for playback history log
  *	- shovel & broom 
  *
+ *	TC (Tim Curtis) 2015-08-30, r2.2
+ *	- update release id to r22
+ *	- replace shaorport with shairport-sync
+ *	- set IQaudIO+ device analog volume controls to 100
+ *	- add max usb current 2x
+ *	- add rotary encoder
+ *
+ *	TC (Tim Curtis) 2015-09-05, r2.3
+ *	- update release id to r23
+ *	- brighten Bluejeans theme color
+ *	- add volume_mixer_name
+ *
+ *	TC (Tim Curtis) 2015-10-DD, r2.4
+ *	- update release id to r24
+ *	- auto play last played item at startup based on 'autoplay' setting
+ *	- for playback hist log, parse iTunes AAC file, uses Name instead of Title
+ *	- get release version of MPD instead of package version
+ *  - add check for kernel 4.1.10+
+ *	- set HifiBerry+ analog volume controls to 0dB
+ *
  */
 
 // Common TCMODS
 // TC (Tim Curtis) 2014-12-23: initial
-$TCMODS_REL = "r21"; // Current release, used in path for theme change
+$TCMODS_REL = "r24"; // Current release, used in path for theme change
 $TCMODS_CONSUMEMODE_ON = "1"; // Used for run-once fix for mpd consume mode sometimes being on after boot/reboot
 $TCMODS_CLOCKRAD_RETRY = 3; // Num times to retry the stop cmd
  
@@ -302,6 +322,7 @@ if (isset($_SESSION['playerid']) && $_SESSION['playerid'] == '') {
 	//if ($arch != '--') {
 	//	wrk_sysEnvCheck($arch,0);
 	//}
+	
 	// start samba
 	// TC (Tim Curtis) 2015-07-31: shovel & broom change to /etc/samba/smb.conf instead of _OS_SETTINGS/etc/...
 	sysCmd('/usr/sbin/smbd -D --configfile=/var/www/etc/samba/smb.conf');
@@ -401,28 +422,6 @@ if (isset($_SESSION['cmediafix']) && $_SESSION['cmediafix'] == 1) {
 	closeMpdSocket($mpd);
 } 
 
-// Shairport (Airplay receiver service)
-if (isset($_SESSION['shairport']) && $_SESSION['shairport'] == 1) {
-	$dbh = cfgdb_connect($db);
-	$query_cfg = "SELECT param,value_player FROM cfg_mpd WHERE value_player!=''";
-	$mpdcfg = sdbquery($query_cfg,$dbh);
-	$dbh = null;
-	foreach ($mpdcfg as $cfg) {
-		if ($cfg['param'] == 'audio_output_format' && $cfg['value_player'] == 'disabled'){
-			$output .= '';
-		} else if ($cfg['param'] == 'device') {
-			$device = $cfg['value_player'];
-			var_export($device);
-		} else {
-			$output .= $cfg['param']." \t\"".$cfg['value_player']."\"\n";
-		}
-	}
-	// Start Shairport
-	// TC (Tim Curtis) 2014-08-23: set shairport friendly name
-	$cmd = '/usr/local/bin/shairport -a "Moode" -w -B "mpc stop" -o alsa -- -d "hw:"'.$device.'",0" > /dev/null 2>&1 &';
-	sysCmd($cmd);
-} 
-
 // DLNA server
 if (isset($_SESSION['djmount']) && $_SESSION['djmount'] == 1) {
 	$cmd = 'djmount -o allow_other,nonempty,iocharset=utf-8 /mnt/UPNP > /dev/null 2>&1 &';
@@ -434,6 +433,13 @@ if (isset($_SESSION['upnpmpdcli']) && $_SESSION['upnpmpdcli'] == 1) {
 	$cmd = '/etc/init.d/upmpdcli start > /dev/null 2>&1 &';
 	sysCmd($cmd);
 } 
+
+// TC (Tim Curtis) 2015-08-30: Rotary encoder
+if (isset($_SESSION['rotaryenc']) && $_SESSION['rotaryenc'] == 1) {
+	$cmd = '/usr/local/bin/IQ_rot > /dev/null 2>&1 &';
+	sysCmd($cmd);
+} 
+
 // TC (Tim Curtis) 2014-12-23: read tcmods.conf file for clock radio settings
 $_tcmods_conf = _parseTcmodsConf(shell_exec('cat /var/www/tcmods.conf'));
 $clock_radio_starttime = $_tcmods_conf['clock_radio_starttime'];
@@ -442,8 +448,11 @@ $clock_radio_stoptime = $_tcmods_conf['clock_radio_stoptime'];
 // TC (Tim Curtis) 2015-02-25: update tcmods.conf sys_ items
 $_tcmods_conf['sys_kernel_ver'] = strtok(shell_exec('uname -r'),"\n");
 $_tcmods_conf['sys_processor_arch'] = strtok(shell_exec('uname -m'),"\n");
-$_ver_str = explode(": ", strtok(shell_exec('dpkg-query -p mpd | grep Version'),"\n"));
-$_tcmods_conf['sys_mpd_ver'] = $_ver_str[1];
+// TC (Tim Curtis) 2015-10-DD: get release version instead of package version
+$_ver_str = explode(" ", strtok(shell_exec('mpd -V | grep "Music Player Daemon"'),"\n"));
+$_tcmods_conf['sys_mpd_ver'] = $_ver_str[3];
+//$_ver_str = explode(": ", strtok(shell_exec('dpkg-query -p mpd | grep Version'),"\n"));
+//$_tcmods_conf['sys_mpd_ver'] = $_ver_str[1];
 $rtn = _updTcmodsConf($_tcmods_conf); 
 // store in DB and $_SESSION[kernelver], $_SESSION[procarch] vars
 playerSession('write',$db,'kernelver',$_tcmods_conf['sys_kernel_ver']);
@@ -462,17 +471,63 @@ if ($_SESSION['i2s'] == 'IQaudIO Pi-AMP+') {
 	sysCmd("/var/www/command/unmute.sh default");
 }
 
-// TC (Tim Curtis) 2015-04-29: store PCM (alsamixer) volume, picked up by settings.php ALSA volume field
+// TC (Tim Curtis) 2015-08-30: set IQaudIO+ device analog volume controls to 0dB
+// TC (Tim Curtis) 2015-10-DD: set HifiBerry+ device analog volume controls to 0dB
+if ($_SESSION['i2s'] == 'IQaudIO Pi-DAC+' || $_SESSION['i2s'] == 'IQaudIO Pi-AMP+' || $_SESSION['i2s'] == 'IQaudIO Pi-DigiAMP+') {
+	sysCmd('amixer set "Analogue" 100');
+	sysCmd('amixer set "Analogue Playback Boost" 100');
+} else if ($_SESSION['i2s'] == 'HiFiBerry DAC+' || $_SESSION['i2s'] == 'HiFiBerry DAC+ Pro') {
+	sysCmd('amixer set "Analogue" 100');
+	sysCmd('amixer set "Analogue Playback Boost" 0');
+}	
+
+// TC (Tim Curtis) 2015-04-29: store PCM (alsamixer) volume level, picked up by settings.php ALSA volume field
 // TC (Tim Curtis) 2015-06-26: set simple mixer name based on kernel version and i2s vs USB
 $mixername = getMixerName(getKernelVer($_SESSION['kernelver']), $_SESSION['i2s']);
+
+// TC (Tim Curtis) 2015-09-05: store mixer name in tcmods.conf for use in knob.sh cli
+
+// check $hdwrvol if "no" then $_tcmods_conf['volume_mixer_name'] = "none"
+
+$_tcmods_conf['volume_mixer_name'] = $mixername;
+$rtn = _updTcmodsConf($_tcmods_conf); 
 
 $cmd = "/var/www/tcmods/".$TCMODS_REL."/cmds/tcmods.sh get-pcmvol ".$mixername;
 $rtn = sysCmd($cmd);
 if (substr($rtn[0], 0, 6 ) == 'amixer') {
-	playerSession('write',$db,'pcm_volume', 'none');
+	playerSession('write',$db,'pcm_volume', 'none'); // hardware volume controller not detected
+	$hdwrvol = "no"; // for shairport-sync
 } else {
 	$rtn[0] = str_replace("%", "", $rtn[0]);
-	playerSession('write',$db,'pcm_volume', $rtn[0]);
+	playerSession('write',$db,'pcm_volume', $rtn[0]); // volume level
+	$hdwrvol = "yes";
+}
+
+// TC (Tim Curtis) 2015-08-30: shairport-sync
+if (isset($_SESSION['shairport']) && $_SESSION['shairport'] == 1) {
+	// get device#
+	$mpdcfg = sdbquery("SELECT param,value_player FROM cfg_mpd WHERE value_player != ''",cfgdb_connect($db));
+	foreach ($mpdcfg as $cfg) {
+		if ($cfg['param'] == 'device') {
+			$device = $cfg['value_player'];
+			var_export($device);
+		}
+	}
+	// use hardware volume if present
+	if ($hdwrvol == "yes") {
+		$cmd = '/usr/local/bin/shairport-sync -a "Moode Airplay" -w -B "/usr/bin/mpc stop" -- -d hw:'.$device.' -t hardware'.' -c '.$mixername.' > /dev/null 2>&1 &';
+	} else {
+		$cmd = '/usr/local/bin/shairport-sync -a "Moode Airplay" -w -B "/usr/bin/mpc stop" -- -d hw:'.$device.' > /dev/null 2>&1 &';
+	}
+
+	sysCmd($cmd);
+}
+
+// TC (Tim Curtis) 2015-10-DD: auto play last played item
+if ($_SESSION['autoplay'] == 1) {
+	sysCmd('mpc play');
+} else {
+	sysCmd('mpc stop');
 }
 
 // --- END NORMAL STARTUP --- //
@@ -551,11 +606,38 @@ while (1) {
 		$currentsong = _parseMpdCurrentSong($mpd);
 		closeMpdSocket($mpd);
 		
-		// TC (Tim Curtis) 2015-07-31: updated logic
 		// Logic modeled after player_lib.js getPlaylist();
+		// TC (Tim Curtis) 2015-07-31: updated logic
+		// TC (Tim Curtis) 2015-10-DD: parse iTunes AAC file, uses Name instead of Title
+		// ITUNES AAC FILE
+		if (isset($currentsong['Name']) && parseFileStr($currentsong['file'], ".") == "m4a") {
+			$title = $currentsong['Name']; 
+			if (!isset($currentsong['Artist'])) {
+				$artist = "Unknown artist";
+			} else {
+				$artist = $currentsong['Artist'];
+			}                
+			if (!isset($currentsong['Album'])) {
+				$album = "Unknown album";
+			} else {
+				$album = $currentsong['Album'];
+			}                
+			
+			// search string
+			if ($artist == "Unknown artist" && $album == "Unknown album") {
+				$searchStr = $title;
+			} else if ($artist == "Unknown artist") {
+				$searchStr = $album."+".$title;
+			} else if ($album == "Unknown album") {
+				$searchStr = $artist."+".$title;
+			} else {
+				$searchStr = $artist."+".$album;				
+			}
+
 		// RADIO STATION
-		if (isset($currentsong['Name']) || (substr($currentsong['file'], 0, 4) == "http" && !isset($currentsong['Artist']))) {
-			if (!isset($currentsong['Title'])) {
+		// TC (Tim Curtis) 2015-10-DD: add test for || blank Title tag
+		} else if (isset($currentsong['Name']) || (substr($currentsong['file'], 0, 4) == "http" && !isset($currentsong['Artist']))) {
+			if (!isset($currentsong['Title']) || trim($currentsong['Title']) == '') {
 				$title = "Streaming source";
 			} else {
 				$title = $currentsong['Title']; 
@@ -618,57 +700,6 @@ while (1) {
 			$searchUrl = "<a href=\"".$searchEngine.$searchStr."\" class=\"playhistory-link\" target=\"_blank\"><i class=\"icon-external-link-sign\"></i></a>";
 		}
 		
-		/*
-		// ORIGINAL		
-		// Logic from player_lib.js mpdCurrentSong();
-		if (!isset($currentsong['Name'])) {
-			if (isset($currentsong['file'])) {
-				if (substr($currentsong['file'], 0, 4) != "http") { // song
-					$artist = $currentsong['Artist']; 
-					$title = $currentsong['Title']; 
-					$album = $currentsong['Album'];
-				} else { // file= http://
-					if (isset($currentsong['Artist'])) { // UPnP song file
-						$artist = $currentsong['Artist']; 
-						$title = $currentsong['Title']; 
-						$album = $currentsong['Album'];
-					} else { // radio station
-						$artist = "Radio Station"; 
-						$title = $currentsong['file']; 
-						$album = $currentsong['Title'];
-					}
-				}
-			} else { } // we should never get here (no file)
-		} else { // radio station
-			$artist = "Radio Station"; 
-			$title = $currentsong['Title']; 
-			$album = str_replace('"', '', $currentsong['Name']); // remove any dbl quotes from station name e.g., AddictedToRadio names
-		}
-		// Title might not be transmitted by some web radio stations, use file (streaming url) instead
-		if (!isset($currentsong['Title'])) {
-			$title = $currentsong['file']; 
-		}
-		// End - Logic from player_lib.js mpdCurrentSong();
-
-		// Logic from player_lib.js UpdateGUI();
-		if (substr($title, 0, 4) == "http") {
-			$title_log = "Streaming source"; // if $title is used directly then all http:// sources will log as "Streaming source"
-			$searchUrl = "<span class=\"playhistory-link\"><i class=\"icon-external-link\"></i></span>";
-		} else {
-			$title_log = $title;
-			if ($artist == 'Radio Station') {
-				$searchStr = str_replace('-', ' ', $title);
-				$searchStr = str_replace('&', ' ', $searchStr);
-				$searchStr = preg_replace('!\s+!', '+', $searchStr);
-			} else {
-				$searchStr = $artist."+".$album;				
-			}
-			$searchEngine = "http://www.google.com/search?q=";
-			$searchUrl = "<a href=\"".$searchEngine.$searchStr."\" class=\"playhistory-link\" target=\"_blank\"><i class=\"icon-external-link-sign\"></i></a>";
-		}
-		// End Logic from player_lib.js UpdateGUI();
-		*/
-
 		// When song changes, update playback history log
 		// TC (Tim Curtis) 2015-07-31: add $title not blank test
 		if ($title != '' && $title != $_tcmods_conf['play_history_currentsong']) {
@@ -824,7 +855,8 @@ while (1) {
 			case 'themechange':
 				// set colov values
 				if ($_SESSION['w_queueargs'] == "amethyst") {$hexlight = "9b59b6"; $hexdark = "8e44ad";}
-				else if ($_SESSION['w_queueargs'] == "bluejeans") {$hexlight = "436bab"; $hexdark = "1f4788";}
+				//else if ($_SESSION['w_queueargs'] == "bluejeans") {$hexlight = "436bab"; $hexdark = "1f4788";}
+				else if ($_SESSION['w_queueargs'] == "bluejeans") {$hexlight = "335db6"; $hexdark = "1a439c";}
 				else if ($_SESSION['w_queueargs'] == "carrot") {$hexlight = "e67e22"; $hexdark = "d35400";}
 				else if ($_SESSION['w_queueargs'] == "emerald") {$hexlight = "2ecc71"; $hexdark = "27ae60";}
 				else if ($_SESSION['w_queueargs'] == "fallenleaf") {$hexlight = "e5a646"; $hexdark = "cb8c3e";}
@@ -858,13 +890,15 @@ while (1) {
 				sysCmd('sed -i /dtoverlay/d /boot/config.txt');
 				// Set i2s driver
 				// TC (Tim Curtis) 2015-06-26: use getKernelVer()  
+				// TC (Tim Curtis) 2015-06-26: add check for kernel 4.1.10+
 				$kernelver = getKernelVer($_SESSION['kernelver']);
-				if ($kernelver == '3.18.5+' || $kernelver == '3.18.11+' || $kernelver == '3.18.14+') {
+				if ($kernelver == '3.18.5+' || $kernelver == '3.18.11+' || $kernelver == '3.18.14+' || $kernelver == '4.1.10+') {
 					_setI2sDtoverlay($db, $_SESSION['w_queueargs']); // Dtoverlay (/boot/config.txt)
 				} else {
 					_setI2sModules($db, $_SESSION['w_queueargs']); // Modules (/etc/modules)
 				}
 				break;
+				
 			// TC (Tim Curtis) 2015-02-25: process kernel select request
 			case 'kernelver':
 				// TC (Tim Curtis) 2015-06-26: use getKernelVer()  
@@ -902,20 +936,7 @@ while (1) {
 			// TC (Tim Curtis) 2015-04-29: handle PCM volume change
 			case 'pcm_volume':
 				// TC (Tim Curtis) 2015-06-26: set simple mixer name based on kernel version and i2s vs USB
-				
-				//$kernelver = getKernelVer($_SESSION['kernelver']);
 				$mixername = getMixerName(getKernelVer($_SESSION['kernelver']), $_SESSION['i2s']);
-				/*
-				if ($kernelver == '3.18.5+' || $kernelver == '3.18.11+' || $kernelver == '3.18.14+') {
-					if ($_SESSION['i2s'] != 'I2S Off') {
-						$mixername = 'Digital'; // i2s device 
-					} else {
-						$mixername = 'PCM'; // USB device 
-					}
-				} else {
-					$mixername = 'PCM'; // i2s and USB devices
-				}
-				*/
 				$cmd = "/var/www/tcmods/".$TCMODS_REL."/cmds/tcmods.sh set-pcmvol ".$mixername." ".$_SESSION['w_queueargs'];
 				$rtn = sysCmd($cmd);
 				break;
@@ -934,7 +955,14 @@ while (1) {
 				$cmd = "/var/www/tcmods/".$TCMODS_REL."/cmds/resizefs.sh start";
 				$rtn = sysCmd($cmd);
 				break;
-				
+			// TC (Tim Curtis) 2015-08-30: process usb max current 2x request
+			case 'maxusbcurrent':
+				if ($_SESSION['w_queueargs'] == 1) {
+					sysCmd('echo max_usb_current=1 >> /boot/config.txt');
+				} else {
+					sysCmd('sed -i /max_usb_current/d /boot/config.txt');
+				}
+				break;
 		} // end switch
 
 		// reset locking and command queue

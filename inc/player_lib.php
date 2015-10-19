@@ -1,5 +1,111 @@
 <?php
-
+/*
+ *  This Program is free software; you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation; either version 3, or (at your option)
+ *  any later version.
+ *
+ *  This Program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with TsunAMP; see the file COPYING.  If not, see
+ *  <http://www.gnu.org/licenses/>.
+ *
+ *	PlayerUI Copyright (C) 2013 Andrea Coiutti & Simone De Gregori
+ *	Tsunamp Team
+ *	http://www.tsunamp.com
+ *
+ *	UI-design/JS code by: 	Andrea Coiutti (aka ACX)
+ *	PHP/JS code by:			Simone De Gregori (aka Orion)
+ * 
+ *	file:					player_lib.php
+ * 	version:				1.1
+ *
+ *	TCMODS Edition 
+ *
+ *	TC (Tim Curtis) 2014-09-17, r1.0
+ *	- in the functions listed below I added limit 2 to explode() to avoid incorrect parsing where string contains more than one ":" (colon)
+ *	- this fixes bad parsing of song titles that contain a colon ":" (commonly found in the Classical genre)
+ * 	- _loadDirForLib
+ *	- _parseFileListResponse
+ *	- _parseStatusResponse
+ *	- differentiate saved playlists from WEBRADIO playlist files (in _parseFileListResponse)
+ *	- added new function listPlayList() to enumerate contents of saved playlist
+ *	- added new function playAllReplace() for Library panel btn
+ *	- changed code in playAll() to enable song pos to be set in caller (index.php)
+ *
+ *	TC (Tim Curtis) 2014-12-23
+ *	- modify remTrackQueue() for track range begpos:endpos
+ *	- add functions from tcmods.php
+ *	- ui_notify() add delay: 2000 (2 secs)
+ *	- shovel & broom
+ *
+ *	TC (Tim Curtis) 2015-01-01, r1.4
+ *	- organizeJsonLib() add time (secs) and time2 (mm:ss) to songDataLight 
+ *
+ *	TC (Tim Curtis) 2015-01-27, r1.5
+ *	- set perms for command/unmute.sh
+ *
+ *	TC (Tim Curtis) 2015-02-25, r1.6
+ *	- add single quotes around cifs mount password in case special chars like ; are used in pwd
+ *	- add function _updTcmodsConf() update tcmods.conf file
+ *	- add optional delay duration (secs) arg to ui_notify()
+ *	- add _setI2sDtoverlay() and _setI2sModules() functions
+ *
+ *	TC (Tim Curtis) 2015-03-21, r1.7
+ *	- add section to cfgdb_read() for audio device lookup
+ *	- add IQaudIO Pi-AMP+ to _setI2sDtoverlay()
+ *
+ *	TC (Tim Curtis) 2015-04-29: r1.8
+ *	- add element theme_color to tcmods.conf
+ *	- wrk_mpdconf() remove tabs, cleanup formatting
+ *	- in _setI2sDtoverlay() add RaspyPlay4
+ *	- in _setI2sDtoverlay() add Durio Sound PRO
+ *
+ *	TC (Tim Curtis) 2015-05-30: r1.9
+ *	- _parseMpdCurrentSong() add limit 2 to explode to avoid incorrect parsing where string contains more than one ":" (colon)
+ *	- add play_history_ elements to tcmods.conf
+ *	- add _parsePlayHistory()
+ *
+ *	TC (Tim Curtis) 2015-06-26: r2.0
+ *	- add case 22050, 32000 and 384000 to _parseHwParams(), _parseStatusResponse()
+ *	- add case 384000 to to _parseMpdConf()
+ *	- add getKernelVer(), return kernel version number without "-v7" suffix
+ *	- add getMixerName(), return mixer name based on kernel version and i2s vs USB
+ *	- add volume_ elements to tcmods.conf for logarithmic volume control and improved mute
+ *	- set mixer name to "Master" for Hifiberry Amp(Amp+)
+ *	- add IQaudIO Pi-DigiAMP+ and Hifimediy ES9023
+ *	- add debug logging for Library loader, config file is /var/www/liblog.conf, log file is /var/www/liblog.txt
+ *
+ *	TC (Tim Curtis) 2015-07-31: r2.1
+ *	- _loadDirForLib() let MPD generate the flat list via the find command
+ *	- in cfgdb_read() specify fields instead of * for cfg_audiodev query
+ *	- include cfg_radio, radio station table
+ *	- add Audiophonics I-Sabre DAC ES9023 TCXO (I2S)
+ *
+ *	TC (Tim Curtis) 2015-08-30: r2.2
+ *	- change liblog.conf to debug.conf
+ *	- remove albumart_lookup_method
+ *	- add rotary_encoder_enabled
+ *
+ *	TC (Tim Curtis) 2015-09-05: r2.3
+ *	- add volume_mixer_name
+ *
+ *	TC (Tim Curtis) 2015-10-DD: r2.4
+ *	- add new lib loader debug find date
+ *	- turned off MPD logging in function wrk_mpdconf()	
+ *	- add Audiophonics PCM5122 DAC, Lucid Labs Raspberry Pi DAC, PlainDAC, PlainDAC+ and HifiBerry DAC+ Pro
+ *	- handle cue extension to functions addQueue(), _parseFileListResponse()
+ *	- function _parseStationFile() add limit 2 to explode to hande more than one "+"
+ *	- add workaround in _parseStatusResponse() for AAC files that show "f" for bit depth, assume decoded to 24 bit
+ *	- add check for kernel 4.1.10+ in getMixerName()
+ *	- automatically update audio device fields in tcmods.conf when setting i2s overlay
+ *
+ */
+ 
 // Predefined MPD Response messages
 define("MPD_RESPONSE_ERR", "ACK");
 define("MPD_RESPONSE_OK",  "OK");
@@ -328,7 +434,8 @@ function remTrackQueue($sock,$songpos) {
 
 function addQueue($sock,$path) {
 	$fileext = parseFileStr($path,'.');
-	if ($fileext == 'm3u' OR $fileext == 'pls' OR strpos($path, '/') === false) {
+	//  TC (Tim Curtis) 2015-10-DD: add cue extension
+	if ($fileext == 'm3u' OR $fileext == 'pls' OR $fileext == 'cue' OR strpos($path, '/') === false) {
 		sendMpdCommand($sock,"load \"".html_entity_decode($path)."\"");
 	} else {
 		sendMpdCommand($sock,"add \"".html_entity_decode($path)."\"");
@@ -402,10 +509,10 @@ function _parseFileListResponse($resp) {
 				$dirCounter++;
 				$plistFile = $value;
 				$plistArray[$plCounter]["directory"] = $plistFile;
-			// TC (Tim Curtis) 2014-09-17
-			// - differentiate saved playlists from WEBRADIO playlist files
+			// TC (Tim Curtis) 2014-09-17: differentiate between saved playlists and radio station pls files
+			// TC (Tim Curtis) 2015-10-DD: handle cue sheet files, treat as file and not playlist
 			} else if ( $element == "playlist" ) {
-				if ( substr($value, 0, 8 ) == "WEBRADIO") {
+				if ( substr($value, 0, 8 ) == "WEBRADIO" || strtolower(pathinfo($value, PATHINFO_EXTENSION)) == 'cue') {
 					$plCounter++;
 					$plistFile = $value;
 					$plistArray[$plCounter]["file"] = $plistFile;
@@ -484,7 +591,8 @@ function _parseStatusResponse($resp) {
 			break;
 		}
 		// format "audio_sample_depth" string
-	 	$plistArray['audio_sample_depth'] = $audio_format[1];
+		// TC (Tim Curtis) 2015-10-DD: workaround for AAC files that show "f" for bit depth, assume decoded to 24 bit
+	 	$plistArray['audio_sample_depth'] = $audio_format[1] == "f" ? "24" : $audio_format[1];
 	 	// format "audio_channels" string
 	 	if ($audio_format[2] == "2") $plistArray['audio_channels'] = "Stereo";
 	 	if ($audio_format[2] == "1") $plistArray['audio_channels'] = "Mono";
@@ -502,7 +610,7 @@ function parseFileStr($strFile,$delimiter) {
 }
 
 // cfg engine and session management
-function playerSession($action,$db,$var = null, $value = null) {
+function playerSession($action,$db,$var,$value) {
 	$status = session_status();	
 	// open new PHP SESSION
 	if ($action == 'open') {
@@ -1108,26 +1216,6 @@ function wrk_mpdconf($outpath, $db, $kernelver, $i2s) {
 	$output .= "# the Player via MPD Configuration page. \n";
 	$output .= "#########################################\n";
 	$output .= "\n";
-	/*
-	// parse DB output (original)
-	foreach ($mpdcfg as $cfg) {
-		if ($cfg['param'] == 'audio_output_format' && $cfg['value_player'] == 'disabled'){
-			$output .= '';
-		} else if ($cfg['param'] == 'dsd_usb') {
-			$dsd = $cfg['value_player'];
-		} else if ($cfg['param'] == 'device') {
-			$device = $cfg['value_player'];
-			var_export($device);
-			// $output .= '';
-		} else if ($cfg['param'] == 'mixer_type' && $cfg['value_player'] == 'hardware' ) { 
-			// $hwmixer['device'] = 'hw:0';
-			$hwmixer['control'] = alsa_findHwMixerControl($device, $kernelver, $i2s);
-			// $hwmixer['index'] = '1';
-		}  else {
-			$output .= $cfg['param']." \"".$cfg['value_player']."\"\n";
-		}
-	}
-	*/
 	
 	// parse DB output
 	// TC (Tim Curtis) 2015-06-26; store volume mixer type in tcmods.conf
@@ -1155,6 +1243,9 @@ function wrk_mpdconf($outpath, $db, $kernelver, $i2s) {
 			} else {
 				$output .= $cfg['param']." \"".$cfg['value_player']."\"\n";
 			}
+		// TC (Tim Curtis) 2015-10-DD: turn off logging	
+		} else if ($cfg['param'] == 'log_file') {
+			$output .= "#".$cfg['param']." \"".$cfg['value_player']."\"\n";
 		} else {
 			$output .= $cfg['param']." \"".$cfg['value_player']."\"\n";
 		}
@@ -1816,8 +1907,8 @@ function _parseTcmodsConf($resp) {
 	return $tcArray;
 }
 
-// TC (Tim Curtis) 2014-12-23
-// parse radio station file
+// TC (Tim Curtis) 2014-12-23: parse radio station file
+// TC (Tim Curtis) 2015-10-DD: add limit 2 to explode to avoid incorrect parsing where string contains more than one "+"
 function _parseStationFile($resp) {
 		if (is_null($resp) ) {
 			return 'Error, _parseStationFile response is null';
@@ -1827,7 +1918,7 @@ function _parseStationFile($resp) {
 			$tcFile = "";
 
 			while ( $tcLine ) {
-				list ( $element, $value ) = explode("=",$tcLine);
+				list ( $element, $value ) = explode("=",$tcLine, 2);
 				$tcArray[$element] = $value;
 				$tcLine = strtok("\n");
 			} 
@@ -1840,13 +1931,15 @@ function _parseStationFile($resp) {
 // TC (Tim Curtis) 2015-05-30: add play_history_ elements
 // TC (Tim Curtis) 2015-06-26: add volume_ elements to tcmods.conf for logarithmic volume control and improved mute
 // TC (Tim Curtis) 2015-06-26: add albumart_lookup_method
+// TC (Tim Curtis) 2015-08-30: remove albumart_lookup_method
+// TC (Tim Curtis) 2015-08-30: add rotary_encioder
+// TC (Tim Curtis) 2015-09-05: add volume_mixer_name
 function _updTcmodsConf($tcmconf) {
 	// Open file for write, clears contents
 	$_file = '/var/www/tcmods.conf';
 	$handle = fopen($_file, 'w') or die('tcmods.php: file open failed on '.$_file); // creates file if none exists
 	// format conf lines
-	$data = 'albumart_lookup_method: '.$tcmconf['albumart_lookup_method']."\n";
-	$data .= 'audio_device_name: '.$tcmconf['audio_device_name']."\n";
+	$data = 'audio_device_name: '.$tcmconf['audio_device_name']."\n";
 	$data .= 'audio_device_dac: '.$tcmconf['audio_device_dac']."\n";
 	$data .= 'audio_device_arch: '.$tcmconf['audio_device_arch']."\n";
 	$data .= 'audio_device_iface: '.$tcmconf['audio_device_iface']."\n";
@@ -1860,6 +1953,7 @@ function _updTcmodsConf($tcmconf) {
 	$data .= 'clock_radio_shutdown: '.$tcmconf['clock_radio_shutdown']."\n";
 	$data .= 'play_history_currentsong: '.$tcmconf['play_history_currentsong']."\n";
 	$data .= 'play_history_enabled: '.$tcmconf['play_history_enabled']."\n";
+	$data .= 'rotary_encoder_enabled: '.$tcmconf['rotary_encoder_enabled']."\n";
 	$data .= 'search_autofocus_enabled: '.$tcmconf['search_autofocus_enabled']."\n";
 	$data .= 'sys_kernel_ver: '.$tcmconf['sys_kernel_ver']."\n";
 	$data .= 'sys_processor_arch: '.$tcmconf['sys_processor_arch']."\n";
@@ -1870,6 +1964,7 @@ function _updTcmodsConf($tcmconf) {
 	$data .= 'volume_curve_logarithmic: '.$tcmconf['volume_curve_logarithmic']."\n";
 	$data .= 'volume_knob_setting: '.$tcmconf['volume_knob_setting']."\n";
 	$data .= 'volume_max_percent: '.$tcmconf['volume_max_percent']."\n";
+	$data .= 'volume_mixer_name: '.$tcmconf['volume_mixer_name']."\n";
 	$data .= 'volume_mixer_type: '.$tcmconf['volume_mixer_type']."\n";
 	$data .= 'volume_muted: '.$tcmconf['volume_muted']."\n";
 	$data .= 'volume_warning_limit: '.$tcmconf['volume_warning_limit']."\n";
@@ -1918,6 +2013,17 @@ function _updatePlayHistory($currentsong) {
 // TC (Tim Curtis) 2015-06-26: add IQaudIO Pi-DigiAMP+ and Hifimediy ES9023 
 // TC (Tim Curtis) 2015-07-31: add Audiophonics I-Sabre DAC ES9023 TCXO
 function _setI2sDtoverlay($db, $device) {
+	$dbh = cfgdb_connect($db);
+	$result = cfgdb_read('cfg_audiodev', $dbh, $device);
+	
+	$_tcmods_conf = _parseTcmodsConf(shell_exec('cat /var/www/tcmods.conf')); // read in conf file
+	$_tcmods_conf['audio_device_name'] = $result[0]['name'];
+	$_tcmods_conf['audio_device_dac'] = $result[0]['dacchip'];
+	$_tcmods_conf['audio_device_arch'] = $result[0]['arch'];
+	$_tcmods_conf['audio_device_iface'] = $result[0]['iface'];
+	$_tcmods_conf['audio_device_other'] = $result[0]['other'];
+	$rtn = _updTcmodsConf($_tcmods_conf);
+
 	$file = '/etc/modules';
 	if ($device == 'I2S Off') {
 		$text = "# I2S output deactivated\n";
@@ -2069,6 +2175,7 @@ function getKernelVer($kernel) {
 
 // TC (Tim Curtis) 2015-06-26: return mixer name based on kernel version and i2s vs USB
 // TC (Tim Curtis) 2015-06-26: set mixer name to "Master" for Hifiberry Amp(Amp+)
+// TC (Tim Curtis) 2015-10-DD: add check for kernel 4.1.10+
 function getMixerName($kernelver, $i2s) {
 	if ($i2s != 'I2S Off') {
 		if ($i2s == 'HiFiBerry Amp(Amp+)') {

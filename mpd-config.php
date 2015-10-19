@@ -52,6 +52,11 @@
  *	TC (Tim Curtis) 2015-07-31 r2.1
  *	- add friendly name check for "Audio" (CM6631A USB/SPDIF converter)
  *
+ *	TC (Tim Curtis) 2015-08-30 r2.2
+ *	- new logic for making text for Audio output field
+ *	- set vol = 0 if mixer 'disabled', prior to restarting MPD
+ *	
+ *
  */
  
 // Common include
@@ -112,6 +117,13 @@ if(isset($_POST['conf']) && !empty($_POST['conf'])) {
 	foreach ($_POST['conf'] as $key => $value) {
 		cfgdb_update('cfg_mpd',$dbh,$key,$value);
 	}
+
+	// TC (Tim Curtis) 2015-08-30: set vol = 0 if mixer 'disabled'
+	if ($_POST['conf']['mixer_type'] == 'disabled') {
+		sendMpdCommand($mpd, 'setvol 0');
+		$resp = readMpdResponse($mpd);
+	}
+
 	// Tell worker to write new MPD config
 	if ($_SESSION['w_lock'] != 1 && $_SESSION['w_queue'] == '') {
 		session_start();
@@ -192,35 +204,10 @@ if(!hashCFG('check_mpd',$db)) {
 	$dev2 = file_get_contents('/proc/asound/card1/id');
 	$dev3 = file_get_contents('/proc/asound/card2/id');
 	
-	// TC (Tim Curtis) 2015-04-29: add friendly name check for "CODEC" (Behringer audio device)
-	// TC (Tim Curtis) 2015-05-30: add friendly name check for "Interf" (Wyred4Sound DAC)
-	// TC (Tim Curtis) 2015-05-30: add friendly name check for "x20" (Eastern Electric Minimax Junior DAC)
-	// TC (Tim Curtis) 2015-06-26: add friendly name check for "G1V5" (Geek Pulse X-Fi DAC)
-	// TC (Tim Curtis) 2015-07-31: add friendly name check for "Audio" (CM6631A USB/SPDIF converter)
-	if ($dev1 == "") {		
-	} else if ($dev1 == "DAC\n" || $dev1 == "CODEC\n" || $dev1 == "Interf\n" || $dev1 == "x20\n" || $dev1 == "G1V5\n" || $dev1 == "Audio\n") {
-		$dev1 = "USB audio device";
-	} else if ($dev1 == "ALSA\n") {
-		$dev1 = "On-board audio device";
-	} else {
-		$dev1 = "I2S audio device";
-	}
-	if ($dev2 == "") {		
-	} else if ($dev2 == "DAC\n" || $dev2 == "CODEC\n" || $dev2 == "Interf\n" || $dev2 == "x20\n" || $dev2 == "G1V5\n" || $dev2 == "Audio\n") {
-		$dev2 = "USB audio device";
-	} else if ($dev2 == "ALSA\n") {
-		$dev2 = "On-board audio device";
-	} else {
-		$dev2 = "I2S audio device";
-	}
-	if ($dev3 == "") {		
-	} else if ($dev3 == "DAC\n" || $dev3 == "CODEC\n" || $dev3 == "Interf\n" || $dev3 == "x20\n" || $dev3 == "G1V5\n" || $dev3 == "Audio\n") {
-		$dev3 = "USB audio device";
-	} else if ($dev3 == "ALSA\n") {
-		$dev3 = "On-board audio device";
-	} else {
-		$dev3 = "I2S audio device";
-	}
+	// TC (Tim Curtis) 2015-08-30: new logic for making text for Audio output field
+	if ($dev1 == "") {} else if ($dev1 == "ALSA\n") {$dev1 = "On-board audio device";} else if ($_SESSION['i2s'] != "I2S Off") {$dev1 = "I2S audio device";} else {$dev1 = "USB audio device";}
+	if ($dev2 == "") {} else if ($dev2 == "ALSA\n") {$dev2 = "On-board audio device";} else if ($_SESSION['i2s'] != "I2S Off") {$dev2 = "I2S audio device";} else {$dev2 = "USB audio device";}
+	if ($dev3 == "") {} else if ($dev3 == "ALSA\n") {$dev3 = "On-board audio device";} else if ($_SESSION['i2s'] != "I2S Off") {$dev3 = "I2S audio device";} else {$dev3 = "USB audio device";}
 	
 	// Load template values
 

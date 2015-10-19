@@ -81,9 +81,24 @@
  *	- add sd card storage expand
  *	- add Audiophonics I-Sabre DAC ES9023 TCXO (I2S)
  *
+ *	TC (Tim Curtis) 2015-08-30, r2.2
+ *	- update release id to r22
+ *	- add Pi-DigiAMP+ to update_i2s_device
+ *	- add max usb current 2x
+ *	- add rotary encoder
+ *
+ *	TC (Tim Curtis) 2015-09-05, r2.3
+ *	- update release id to r23
+ *
+ *	TC (Tim Curtis) 2015-10-DD, r2.4
+ *	- update release id to r24
+ *	- add autoplay after start
+ *	- add Audiophonics PCM5122 DAC, Lucid Labs Raspberry Pi DAC, PlainDAC, PlainDAC+ and HifiBerry DAC+ Pro
+ *	- add check for kernel 4.1.10+ in various places
+ *
  */
  
-$TCMODS_REL = "r21"; // Current release
+$TCMODS_REL = "r24"; // Current release
  
 // common include
 include('inc/connection.php');
@@ -133,6 +148,9 @@ if (isset($_POST['syscmd'])) {
 // TC (Tim Curtis) 2015-02-25: i2s driver select handler
 // TC (Tim Curtis) 2015-04-29: add RaspyPlay4 to i2s select list
 // TC (Tim Curtis) 2015-04-29: add update btn check
+// TC (Tim Curtis) 2015-08-30: add Pi-DigiAMP+
+// TC (Tim Curtis) 2015-10-DD: add Audiophonics PCM5122 DAC, PlainDAC+ and HifiBerry DAC+ Pro
+
 if (isset($_POST['update_i2s_device'])) {
 	if (isset($_POST['i2s']) && $_POST['i2s'] != $_SESSION['i2s']) {
 		if ($_SESSION['w_lock'] != 1 && $_SESSION['w_queue'] == '') {
@@ -146,10 +164,14 @@ if (isset($_POST['update_i2s_device'])) {
 			// TC (Tim Curtis) 2015-03-21: Adjust message depending on selected device
 			if ($_POST['i2s'] == "IQaudIO Pi-AMP+") {
 				$_SESSION['notify']['msg'] = $_SESSION['notify']['msg']."<br><br>This device REQUIRES hardware volume control. After rebooting, set MPD Volume control to Hardware.";
-			} else if ($_POST['i2s'] == "HiFiBerry DAC+" || 
-				$_POST['i2s'] == "HiFiBerry Amp(Amp+)" || 
+			} else if ($_POST['i2s'] == "Audiophonics PCM5122 DAC" || 
+				$_POST['i2s'] == "HiFiBerry Amp(Amp+)" ||
+				$_POST['i2s'] == "HiFiBerry DAC+" || 
+				$_POST['i2s'] == "HiFiBerry DAC+ Pro" || 
 				$_POST['i2s'] == "IQaudIO Pi-DAC" ||
 				$_POST['i2s'] == "IQaudIO Pi-DAC+" ||
+				$_POST['i2s'] == "IQaudIO Pi-DigiAMP+" ||
+				$_POST['i2s'] == "PlainDAC+" ||
 				$_POST['i2s'] == "RaspyPlay4") {
 				$_SESSION['notify']['msg'] = $_SESSION['notify']['msg']."<br><br>This device supports hardware volume control. After rebooting, optionally set MPD Volume control to Hardware.";
 			}
@@ -453,6 +475,72 @@ if (isset($_POST['update_expand_sdcard'])) {
 	}
 }
 
+// TC (Tim Curtis) 2015-08-30: max usb current 2x
+if (isset($_POST['maxusbcurrent']) && $_POST['maxusbcurrent'] != $_SESSION['maxusbcurrent']) {
+	if ($_SESSION['w_lock'] != 1 && $_SESSION['w_queue'] == '') {
+		session_start();
+		playerSession('write',$db,'maxusbcurrent',$_POST['maxusbcurrent']);
+
+		$_SESSION['w_queue'] = 'maxusbcurrent';
+		$_SESSION['w_queueargs'] = $_POST['maxusbcurrent'];
+		$_SESSION['w_active'] = 1;
+		$_SESSION['notify']['duration'] = 4; // secs
+	
+		if ($_POST['maxusbcurrent'] == 1) {
+			$_SESSION['notify']['title'] = 'Setting change';
+			$_SESSION['notify']['msg'] = 'Max USB current set to 2x, REBOOT for setting to take effect.';
+		} else {
+			$_SESSION['notify']['title'] = 'Setting change';
+			$_SESSION['notify']['msg'] = 'Max USB current set to 1x, REBOOT for setting to take effect.';
+		}
+		
+		playerSession('unlock');
+	} else {
+		echo "background worker busy";
+	}
+}
+
+// TC (Tim Curtis) 2015-08-30: rotary encoder
+if (isset($_POST['rotaryenc']) && $_POST['rotaryenc'] != $_SESSION['rotaryenc']) {
+	session_start();
+	if ($_POST['rotaryenc'] == 1 OR $_POST['rotaryenc'] == 0) {
+		playerSession('write',$db,'rotaryenc',$_POST['rotaryenc']);
+		
+		// write to tcmods.conf file to allow vol knob disable check in scripts-playback.js
+		$_tcmods_conf = _parseTcmodsConf(shell_exec('cat /var/www/tcmods.conf')); // read
+		$_tcmods_conf['rotary_encoder_enabled'] = $_POST['rotaryenc']; // update setting
+		$rtn = _updTcmodsConf($_tcmods_conf); // write
+	}
+	$_SESSION['notify']['duration'] = 4; // secs
+
+	if ($_POST['rotaryenc'] == 1) {
+		$_SESSION['notify']['title'] = 'Setting change';
+		$_SESSION['notify']['msg'] = 'Rotary encoder enabled, REBOOT for setting to take effect.';
+	} else {
+		$_SESSION['notify']['title'] = 'Setting change';
+		$_SESSION['notify']['msg'] = 'Rotary encoder disabled, REBOOT for setting to take effect.';
+	}
+	playerSession('unlock');
+} 
+
+// TC (Tim Curtis) 2015-10-DD: autoplay after start
+if (isset($_POST['autoplay']) && $_POST['autoplay'] != $_SESSION['autoplay']) {
+	session_start();
+	if ($_POST['autoplay'] == 1 OR $_POST['autoplay'] == 0) {
+		playerSession('write',$db,'autoplay',$_POST['autoplay']);
+	}
+	$_SESSION['notify']['duration'] = 4; // secs
+
+	if ($_POST['autoplay'] == 1) {
+		$_SESSION['notify']['title'] = 'Setting change';
+		$_SESSION['notify']['msg'] = 'Autoplay after player start up enabled.';
+	} else {
+		$_SESSION['notify']['title'] = 'Setting change';
+		$_SESSION['notify']['msg'] = 'Autoplay after player start up disabled.';
+	}
+	playerSession('unlock');
+} 
+
 // configure html select elements
 // TC (Tim Curtis) 2015-01-27: add i2s driver list
 // TC (Tim Curtis) 2015-02-25: filter driver list by kernel version(s)
@@ -462,22 +550,29 @@ if (isset($_POST['update_expand_sdcard'])) {
 // TC (Tim Curtis) 2015-06-26: use getKernelVer()  
 // TC (Tim Curtis) 2015-06-26: add IQaudIO Pi-DigiAMP+ and Hifimediy ES9023
 // TC (Tim Curtis) 2015-07-31: add Audiophonics I-Sabre DAC ES9023 TCXO
+// TC (Tim Curtis) 2015-10-DD: add Audiophonics PCM5122 DAC, Lucid Labs Raspberry Pi DAC, PlainDAC, PlainDAC+ and HifiBerry DAC+ Pro 
+// TC (Tim Curtis) 2015-10-DD: add check for kernel 4.1.10+
 $kernelver = getKernelVer($_SESSION['kernelver']);
-if ($kernelver == '3.18.5+' || $kernelver == '3.18.11+' || $kernelver == '3.18.14+') {
+if ($kernelver == '3.18.5+' || $kernelver == '3.18.11+' || $kernelver == '3.18.14+' || $kernelver == '4.1.10+') {
 	$_i2s['i2s'] .= "<option value=\"I2S Off\" ".(($_SESSION['i2s'] == 'I2S Off') ? "selected" : "").">None</option>\n";
 	$_i2s['i2s'] .= "<option value=\"Audiophonics I-Sabre DAC ES9023 TCXO\" ".(($_SESSION['i2s'] == 'Audiophonics I-Sabre DAC ES9023 TCXO') ? "selected" : "").">Audiophonics I-Sabre DAC ES9023 TCXO</option>\n";
+	$_i2s['i2s'] .= "<option value=\"Audiophonics PCM5122 DAC\" ".(($_SESSION['i2s'] == 'Audiophonics PCM5122 DAC') ? "selected" : "").">Audiophonics PCM5122 DAC</option>\n";
 	$_i2s['i2s'] .= "<option value=\"Durio Sound PRO\" ".(($_SESSION['i2s'] == 'Durio Sound PRO') ? "selected" : "").">Durio Sound PRO</option>\n";
 	$_i2s['i2s'] .= "<option value=\"G2 Labs BerryNOS\" ".(($_SESSION['i2s'] == 'G2 Labs BerryNOS') ? "selected" : "").">G2 Labs BerryNOS</option>\n";
 	$_i2s['i2s'] .= "<option value=\"G2 Labs BerryNOS Red\" ".(($_SESSION['i2s'] == 'G2 Labs BerryNOS Red') ? "selected" : "").">G2 Labs BerryNOS Red</option>\n";
 	$_i2s['i2s'] .= "<option value=\"HiFiBerry Amp(Amp+)\" ".(($_SESSION['i2s'] == 'HiFiBerry Amp(Amp+)') ? "selected" : "").">HiFiBerry Amp(Amp+)</option>\n";
 	$_i2s['i2s'] .= "<option value=\"HiFiBerry DAC\" ".(($_SESSION['i2s'] == 'HiFiBerry DAC') ? "selected" : "").">HiFiBerry DAC</option>\n";
 	$_i2s['i2s'] .= "<option value=\"HiFiBerry DAC+\" ".(($_SESSION['i2s'] == 'HiFiBerry DAC+') ? "selected" : "").">HiFiBerry DAC+</option>\n";
+	$_i2s['i2s'] .= "<option value=\"HiFiBerry DAC+ Pro\" ".(($_SESSION['i2s'] == 'HiFiBerry DAC+ Pro') ? "selected" : "").">HiFiBerry DAC+ Pro</option>\n";
 	$_i2s['i2s'] .= "<option value=\"HiFiBerry Digi(Digi+)\" ".(($_SESSION['i2s'] == 'HiFiBerry Digi(Digi+)') ? "selected" : "").">HiFiBerry Digi(Digi+)</option>\n";
 	$_i2s['i2s'] .= "<option value=\"Hifimediy ES9023\" ".(($_SESSION['i2s'] == 'Hifimediy ES9023') ? "selected" : "").">Hifimediy ES9023</option>\n";
 	$_i2s['i2s'] .= "<option value=\"IQaudIO Pi-AMP+\" ".(($_SESSION['i2s'] == 'IQaudIO Pi-AMP+') ? "selected" : "").">IQaudIO Pi-AMP+</option>\n";
 	$_i2s['i2s'] .= "<option value=\"IQaudIO Pi-DAC\" ".(($_SESSION['i2s'] == 'IQaudIO Pi-DAC') ? "selected" : "").">IQaudIO Pi-DAC</option>\n";
 	$_i2s['i2s'] .= "<option value=\"IQaudIO Pi-DAC+\" ".(($_SESSION['i2s'] == 'IQaudIO Pi-DAC+') ? "selected" : "").">IQaudIO Pi-DAC+</option>\n";
 	$_i2s['i2s'] .= "<option value=\"IQaudIO Pi-DigiAMP+\" ".(($_SESSION['i2s'] == 'IQaudIO Pi-DigiAMP+') ? "selected" : "").">IQaudIO Pi-DigiAMP+</option>\n";
+	$_i2s['i2s'] .= "<option value=\"Lucid Labs Raspberry Pi DAC\" ".(($_SESSION['i2s'] == 'Lucid Labs Raspberry Pi DAC') ? "selected" : "").">Lucid Labs Raspberry Pi DAC</option>\n";
+	$_i2s['i2s'] .= "<option value=\"PlainDAC\" ".(($_SESSION['i2s'] == 'PlainDAC') ? "selected" : "").">PlainDAC</option>\n";
+	$_i2s['i2s'] .= "<option value=\"PlainDAC+\" ".(($_SESSION['i2s'] == 'PlainDAC+') ? "selected" : "").">PlainDAC+</option>\n";
 	$_i2s['i2s'] .= "<option value=\"RaspyPlay4\" ".(($_SESSION['i2s'] == 'RaspyPlay4') ? "selected" : "").">RaspyPlay4</option>\n";
 	$_i2s['i2s'] .= "<option value=\"RPi DAC\" ".(($_SESSION['i2s'] == 'RPi DAC') ? "selected" : "").">RPi DAC</option>\n";
 	$_i2s['i2s'] .= "<option value=\"Generic\" ".(($_SESSION['i2s'] == 'Generic') ? "selected" : "").">Generic</option>\n";
@@ -495,11 +590,12 @@ $_system_select['dlna_name'] = $_SESSION['dlna_name'];
 
 // TC (Tim Curtis) 2015-04-29: add PCM (alsamixer) volume
 // TC (Tim Curtis) 2015-06-26: updated logic
+// TC (Tim Curtis) 2015-08-30: updated text
 if ($_SESSION['pcm_volume'] == 'none') {
 	$_pcm_volume = '';
 	$_pcm_volume_readonly = 'readonly';
 	$_pcm_volume_hide = 'hide';
-	$_pcm_volume_msg = "<span class=\"help-block help-block-margin\">PCM volume mixer not detected for attached audio device</span>";
+	$_pcm_volume_msg = "<span class=\"help-block help-block-margin\">Hardware volume controller not detected</span>";
 } else {
 	// TC (Tim Curtis) 2015-06-26: get current volume setting, requires www-data user in visudo
 	// TC (Tim Curtis) 2015-06-26: set simple mixer name based on kernel version and i2s vs USB
@@ -520,11 +616,14 @@ if ($_SESSION['pcm_volume'] == 'none') {
 
 // TC (Tim Curtis) 2015-02-25: add kernel select list
 // TC (Tim Curtis) 2015-06-26: add 3.18.14 and 3.18.11 kernels to select list
+// TC (Tim Curtis) 2015-10-DD: add 4.1.10 kernel to select list
 if ($_SESSION['procarch'] == "armv7l") { // Pi-2
+	$_linux_kernel['kernelver'] .= "<option value=\"4.1.10-v7+\" ".(($_SESSION['kernelver'] == '4.1.10-v7+') ? "selected" : "").">4.1.10-v7+</option>\n";
 	$_linux_kernel['kernelver'] .= "<option value=\"3.18.14-v7+\" ".(($_SESSION['kernelver'] == '3.18.14-v7+') ? "selected" : "").">3.18.14-v7+</option>\n";
 	$_linux_kernel['kernelver'] .= "<option value=\"3.18.11-v7+\" ".(($_SESSION['kernelver'] == '3.18.11-v7+') ? "selected" : "").">3.18.11-v7+</option>\n";
 	$_linux_kernel['kernelver'] .= "<option value=\"3.18.5-v7+\" ".(($_SESSION['kernelver'] == '3.18.5-v7+') ? "selected" : "").">3.18.5-v7+</option>\n";
 } else if ($_SESSION['procarch'] == "armv6l") { // Pi-1 and Pi-B+
+	$_linux_kernel['kernelver'] .= "<option value=\"4.1.10+\" ".(($_SESSION['kernelver'] == '4.1.10+') ? "selected" : "").">4.1.10+</option>\n";
 	$_linux_kernel['kernelver'] .= "<option value=\"3.18.14+\" ".(($_SESSION['kernelver'] == '3.18.14+') ? "selected" : "").">3.18.14+</option>\n";
 	$_linux_kernel['kernelver'] .= "<option value=\"3.18.11+\" ".(($_SESSION['kernelver'] == '3.18.11+') ? "selected" : "").">3.18.11+</option>\n";
 	$_linux_kernel['kernelver'] .= "<option value=\"3.18.5+\" ".(($_SESSION['kernelver'] == '3.18.5+') ? "selected" : "").">3.18.5+</option>\n";
@@ -563,6 +662,17 @@ $_system_select['clearplayhistory0'] .= "<input type=\"radio\" name=\"clearplayh
 // TC (Tim Curtis) 2015-07-31: expand sd card storage
 $_system_select['expandsdcard1'] .= "<input type=\"radio\" name=\"expandsdcard\" id=\"toggleexpandsdcard1\" value=\"1\" ".">\n";
 $_system_select['expandsdcard0'] .= "<input type=\"radio\" name=\"expandsdcard\" id=\"toggleexpandsdcard2\" value=\"0\" "."checked=\"checked\"".">\n";
+// TC (Tim Curtis) 2015-08-30: max usb current 2x
+$_system_select['maxusbcurrent1'] .= "<input type=\"radio\" name=\"maxusbcurrent\" id=\"togglemaxusbcurrent1\" value=\"1\" ".(($_SESSION['maxusbcurrent'] == 1) ? "checked=\"checked\"" : "").">\n";
+$_system_select['maxusbcurrent0'] .= "<input type=\"radio\" name=\"maxusbcurrent\" id=\"togglemaxusbcurrent2\" value=\"0\" ".(($_SESSION['maxusbcurrent'] == 0) ? "checked=\"checked\"" : "").">\n";
+
+// TC (Tim Curtis) 2015-08-30: rotary encoder
+$_system_select['rotaryenc1'] .= "<input type=\"radio\" name=\"rotaryenc\" id=\"togglerotaryenc1\" value=\"1\" ".(($_SESSION['rotaryenc'] == 1) ? "checked=\"checked\"" : "").">\n";
+$_system_select['rotaryenc0'] .= "<input type=\"radio\" name=\"rotaryenc\" id=\"togglerotaryenc2\" value=\"0\" ".(($_SESSION['rotaryenc'] == 0) ? "checked=\"checked\"" : "").">\n";
+
+// TC (Tim Curtis) 2015-10-DD: autoplay after start
+$_system_select['autoplay1'] .= "<input type=\"radio\" name=\"autoplay\" id=\"toggleautoplay1\" value=\"1\" ".(($_SESSION['autoplay'] == 1) ? "checked=\"checked\"" : "").">\n";
+$_system_select['autoplay0'] .= "<input type=\"radio\" name=\"autoplay\" id=\"toggleautoplay2\" value=\"0\" ".(($_SESSION['autoplay'] == 0) ? "checked=\"checked\"" : "").">\n";
 
 // TC (Tim Curtis) 2015-04-29: timezones
 $_timezone['timezone'] .= "<option value=\"Africa/Abidjan\" ".(($_SESSION['timezone'] == 'Africa/Abidjan') ? "selected" : "").">Africa/Abidjan</option>\n";

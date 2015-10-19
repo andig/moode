@@ -118,10 +118,10 @@ if (isset($_POST) && !empty($_POST)) {
         $wlan0 .= "iface wlan0 inet dhcp\n";
 		$wlan0 .= "wireless-power off\n";
         if ($_POST['wifisec']['encryption'] == 'wpa') {
-	        $wlan0 .= "wpa-ssid ".$_POST['wifisec']['ssid']."\n"; // TC (Tim Curtis) 2015-08-DD: place holder, add quotes around ssid
+	        $wlan0 .= "wpa-ssid ".$_POST['wifisec']['ssid']."\n"; // TC (Tim Curtis) 2015-08-30: place holder, add quotes around ssid
 	        $wlan0 .= "wpa-psk ".$_POST['wifisec']['password']."\n";
         } else {
-	        $wlan0 .= "wireless-essid ".$_POST['wifisec']['ssid']."\n"; // TC (Tim Curtis) 2015-08-DD: place holder, add quotes around ssid
+	        $wlan0 .= "wireless-essid ".$_POST['wifisec']['ssid']."\n"; // TC (Tim Curtis) 2015-08-30: place holder, add quotes around ssid
             if ($_POST['wifisec']['encryption'] == 'wep') {
     	        $wlan0 .= "wireless-key ".bin2hex($_POST['wifisec']['password'])."\n";
             } else {

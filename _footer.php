@@ -1,4 +1,4 @@
-<!--
+<!-- 
 /*
  *  This Program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -20,11 +20,11 @@
  *
  *	UI-design/JS code by: 	Andrea Coiutti (aka ACX)
  *	PHP/JS code by:			Simone De Gregori (aka Orion)
- *
+ * 
  *	file:					_footer.php
  * 	version:				1.1
  *
- *	TCMODS Edition
+ *	TCMODS Edition 
  *
  *	TC (Tim Curtis) 2014-08-23, r1.0
  *	- call tcmods.php instead of settings.php to handle pwroff and reboot actions from the "Turn off" menu pick
@@ -51,7 +51,7 @@
  *	- add, edit radio station
  *	- delete, move playlist items
  *	- move volume popup modal to indextpl.html
- *	- remove data-trigger="change" on input fields, does not appear to be used by anything
+ *	- remove data-trigger="change" on input fields, does not appear to be used by anything 
  *
  *	TC (Tim Curtis) 2015-01-01, r1.4
  *	- update release number to 1.4
@@ -94,7 +94,7 @@
  *
  *	TC (Tim Curtis) 2015-06-26, r2.0
  *	- update release number to 2.0
- *	- add config settings popup containing Sources, MPD, Network and System config links
+ *	- add config settings popup containing Sources, MPD, Network and System config links 
  *	- add contribs for major feature ideas
  *	- add logarithmic volume control feature to Custom config
  *	- add album art lookup method to Custom config
@@ -109,9 +109,28 @@
  *	- add contrib for script to resize rootfs partition (Mike Ray)
  *	- change tcmods.org to moodeaudio.org
  *
+ *	TC (Tim Curtis) 2015-08-30, r2.2
+ *	- update release number to 2.2
+ *	- remove rel= in <li lines
+ *	- remove album art lookup method from Custom config popup
+ *	- Add AudioQuest DragonFly, TEAC UD-501 and Cyenne devices to audio device list
+ *	- Add contrib for Mike Brady (shairport-sync)
+ *  - Add contrib for Gordon Garrity (IQaudIO Rotary Encoder)
+ *  - Add contrib for Gordon Henderson (WiringPi GPIO interface)
+ *  - Add contrib for Andreas Goetz (Moode 3 project)
+ *	- Shovel & broom
+ *
+ *	TC (Tim Curtis) 2015-09-05, r2.3
+ *	- update release number to 2.3
+ *
+ *	TC (Tim Curtis) 2015-10-DD, r2.4
+ *	- update release number to 2.4
+ *	- change "delete" to "remove" playlist items
+ *	- add Audiophonics PCM5122 DAC, Lucid Labs Raspberry Pi DAC, PlainDAC, PlainDAC+ and HifiBerry DAC+ Pro
+ *
  */
 -->
-<!-- ABOUT -->
+<!-- ABOUT -->	
 <!-- TC (Tim Curtis) 2014-08-23: initial version -->
 <div id="about-modal" class="modal modal-sm hide fade" tabindex="-1" role="dialog" aria-labelledby="about-modal-label" aria-hidden="true">
 	<div class="modal-header">
@@ -121,9 +140,9 @@
 	<div class="modal-body">
 		<p>
 			<img src="images/player-logotype-v2-transparent-wt.png" style="height:48px;">
-			<p>Moode Audio Player is a derivative of the wonderful WebUI audio player client for MPD originally designed and coded by Andrea Coiutti (aka ACX) and Simone De Gregori (aka Orion) and subsequently enhanced by efforts from the RaspyFi/Volumio projects.</p>
+			<p>Moode Audio Player is a derivative of the wonderful WebUI audio player client for MPD originally designed and coded by Andrea Coiutti and Simone De Gregori, and subsequently enhanced by efforts from the RaspyFi/Volumio projects.</p>
 			<ul>
-				<li>Release: 2.1, 2015-07-31<a class="tcmods-about-link1" href="./tcmods-relnotes.txt" target="_blank"> release notes</a></li>
+				<li>Release: 2.4, 2015-10-DD<a class="tcmods-about-link1" href="./tcmods-relnotes.txt" target="_blank"> release notes</a></li>
 				<li>Coding:	Tim Curtis, &copy; 2014<a class="tcmods-about-link1" href="./tcmods-readme.txt" target="_blank"> readme: player setup</a></li>
 				<li>Download: <a class="tcmods-about-link1" href="http://moodeaudio.org" target="_blank">http://moodeaudio.org</a></li>
 				<li>License: GPL <a class="tcmods-about-link1" href="#gpl-license">(see below)</a></li>
@@ -140,57 +159,39 @@
 		</p>
 		<p>
 			<h4>Contributions and Acknowledgements</h4>
-			<p>The following is a list of contributors whose names appear in and around the original code or who contributed new ideas that resulted in major features or provided new code that I added. Links are included that provide access to more information. Note this list may not be all inclusive.</p>
-			<h6>Moode Feature Ideas</h6>
 			<p>
+				The following is a list of contributors including those whose names appeared in the original code. Note this list may not be all inclusive.
+			</p>
+			<h6>Feature Ideas</h6>
+			<p> 
 				Alan Finnie: Logarithmic volume control<br>
 				Bob Daggg: Clock radio and Playback history log<br>
 				Dr. Panagiotis Karavitis: Playback panel with integrated Playlist<br>
 				Ralf Braun: UPnP album art and metadata<br>
 			</p>
-			<h6>UPnP Explorer</h6>
-			<p>
-				Jean-Francois Dockes (author of upmpdcli, a UPnP renderer for MPD)<br>
-				Reference: <a class="tcmods-about-link1" href="http://www.lesbonscomptes.com/upmpdcli/" target="_blank">http://www.lesbonscomptes.com/upmpdcli/</a><br>
+			<h6>Moode 3 Project</h6>
+			<p> 
+				Andreas Goetz (cpuidle@gmx.de)<br>
+				<a class="tcmods-about-link1" href="https://github.com/moodeaudio" target="_blank">https://github.com/moodeaudio</a><br>
 			</p>
-			<h6>Soma FM Radio Station API and Hi-Res Logos</h6>
+			<h6>Components and Code</h6>
 			<p>
-				Rusty Hodge: SomaFM.com, LLC<br>
-				Reference: <a class="tcmods-about-link1" href="http://somafm.com" target="_blank">http://somafm.com</a><br>
-			</p>
-			<h6>TC Added 3rd Party Code</h6>
-			<p>
+				Andreas Goetz: Embedded cover art and other improvements<br>
+				<a class="tcmods-about-link1" href="https://github.com/moodeaudio" target="_blank">https://github.com/moodeaudio</a><br>
+				Gordon Garrity: author of IQ_rot, IQ_ir device drivers<br>
+				<a class="tcmods-about-link1" href="https://github.com/iqaudio" target="_blank">https://github.com/iqaudio</a><br>
+				Gordon Henderson: author of WiringPi GPIO access library<br>
+				<a class="tcmods-about-link1" href="http://wiringpi.com" target="_blank">http://wiringpi.com</a><br>
+				Jean-Francois Dockes: author of upexplorer, a UPnP interface utility<br>
+				<a class="tcmods-about-link1" href="http://www.lesbonscomptes.com/upmpdcli" target="_blank">http://www.lesbonscomptes.com/upmpdcli</a><br>
+				Rusty Hodge: founder of Soma FM and provider of high-res station logo links<br>
+				<a class="tcmods-about-link1" href="http://somafm.com" target="_blank">http://somafm.com</a><br>
 				Mike Ray: Script to resize rootfs partition<br>
 				<a class="tcmods-about-link1" href="https://github.com/lgierth/pimesh/blob/master/files/raspi-expand-rootfs.sh" target="_blank">https://github.com</a><br>
 				Anthony Ryan Delorie: JSON Sort Routine<br>
 				<a class="tcmods-about-link1" href="http://stackoverflow.com" target="_blank">http://stackoverflow.com</a><br>
 				Brad Daily: DOM Immediate Update<br>
 				<a class="tcmods-about-link1" href="http://stackoverflow.com" target="_blank">http://stackoverflow.com</a>
-			</p>
-			<h6>WebUI Design and Coding (original)</h6>
-			<p>
-				Andrea Coiutti: WebUI design, HTML/CSS/JS coding<br>
-				Simone De Gregori: PHP/MPD/JS coding and OS optimizations<br>
-				Project site: <a class="tcmods-about-link1" href="http://runeaudio.com" target="_blank">http://runeaudio.com</a>
-			</p>
-			<h6>RaspyFi/Volumio Enhancements (original)</h6>
-			<p>
-				Volumio OS Distro: Debian based<br>
-				Michelangelo Guarise: OS image build and customization<br>
-				- One and a half year of work more than Raspyfi's WebUI made by ACX and Orion<br>
-				- Work has been performed by me, Jotak and other Volumio community members<br>
-				Project site: <a class="tcmods-about-link1" href="http://volumio.org" target="_blank">http://volumio.org</a>
-			</p>
-			<p>
-				Library Panel (original)<br>
-				Joel Takvorian (jotak), Aubagne, France<br>
-				Reference: <a class="tcmods-about-link1" href="http://volumio.org/forum/web-enhancements-t1236.html" target="_blank">volumio forum post</a><br>
-			</p>
-			<p>
-				Radio Station PLS Files (original set)<br>
-				Jan Sandred (jansandred), Sweden<br>
-				Reference: <a class="tcmods-about-link1" href="http://volumio.org/forum/internet-radio-stations-volumio-t641.html" target="_blank">volumio forum post</a><br>
-				Download: <a class="tcmods-about-link1" href="https://www.dropbox.com/sh/uvoj146f907f1f4/dssh0hfZRs" target="_blank">station pls files</a>
 			</p>
 			<h6>Core Components</h6>
 			<p>
@@ -216,17 +217,33 @@
 				<a class="tcmods-about-link2" href="http://www.latofonts.com/lato-free-fonts/" target="_blank">http://www.latofonts.com/lato-free-fonts</a><br>
 				MiniDLNA by Justin Maggard<br>
 				<a class="tcmods-about-link2" href="http://minidlna.sourceforge.net/" target="_blank">http://minidlna.sourceforge.net</a><br>
-				MPD by Max Kellermann and Avuton Olrich<br>
+				MPD by Max Kellermann, Avuton Olrich and Warren Dukes<br>
 				<a class="tcmods-about-link2" href="http://www.musicpd.org/" target="_blank">http://www.musicpd.org</a><br>
 				PHP v5.4 by the PHP Team<br>
 				<a class="tcmods-about-link2" href="http://php.net" target="_blank">http://php.net</a><br>
-				Shairport by James "abrasive" Laird<br>
-				<a class="tcmods-about-link2" href="https://github.com/abrasive/shairport" target="_blank">https://github.com/abrasive/shairport</a><br>
+				Shairport-sync by Mike Brady<br>
+				<a class="tcmods-about-link2" href="https://github.com/mikebrady/shairport-sync" target="_blank">https://github.com/mikebrady/shairport-sync</a><br>
 				SQLite v3 by the SQLite Team<br>
 				<a class="tcmods-about-link2" href="http://www.sqlite.org" target="_blank">http://www.sqlite.org</a><br>
 				upmpdcli by Jean-Francois Dockes<br>
 				<a class="tcmods-about-link2" href="http://www.lesbonscomptes.com/upmpdcli/" target="_blank">http://www.lesbonscomptes.com/upmpdcli/</a><br>
-			</p>
+			</p>		
+			<div id="original-code">
+				<h6>Original Code</h6>
+				<p> 
+					Andrea Coiutti: WebUI design, HTML/CSS/JS coding<br>
+					Simone De Gregori: PHP/MPD/JS coding and OS optimizations<br>
+					<a class="tcmods-about-link1" href="http://runeaudio.com" target="_blank">http://runeaudio.com</a><br>
+					Michelangelo Guarise: RaspyFi/Volumio enhancements, OS image build<br>
+					- One and a half year of work more than Raspyfi's WebUI made by ACX and Orion<br>
+					- Work has been performed by me, Jotak and other Volumio community members<br>
+					<a class="tcmods-about-link1" href="http://volumio.org" target="_blank">http://volumio.org</a><br>
+					Joel Takvorian (jotak): Library Loader and Panel v1<br>
+					<a class="tcmods-about-link1" href="http://volumio.org/forum/web-enhancements-t1236.html" target="_blank">volumio forum post</a><br>
+					Jan Sandred (jansandred): Radio Station PLS Files (original set)<br>
+					<a class="tcmods-about-link1" href="http://volumio.org/forum/internet-radio-stations-volumio-t641.html" target="_blank">volumio forum post</a><br>
+				</p>
+			</div>
 		</p>
 		<div id="gpl-license">
 			<h4>License Information</h4>
@@ -239,14 +256,14 @@
 			<p>
 				This software is provided for free by the copyright holders and contributors and comes with no expressed or implied warranties or any other guarantees.
 			</p>
-		</div>
+		</div>	
 	</div>
 	<div class="modal-footer">
 		<button class="btn" data-dismiss="modal" aria-hidden="true">Close</button>
 	</div>
 </div>
 
-<!-- TURN OFF -->
+<!-- TURN OFF -->	
 <!-- TC (Tim Curtis) 2014-08-23: initial version -->
 <form class="form-horizontal" action="tcmods.php" method="post">
 	<div id="poweroff-modal" class="modal modal-sm hide fade" tabindex="-1" role="dialog" aria-labelledby="poweroff-modal-label" aria-hidden="true">
@@ -264,7 +281,7 @@
 	</div>
 </form>
 
-<!-- AUDIO INFORMATION -->
+<!-- AUDIO INFORMATION -->	
 <!-- TC (Tim Curtis) 2014-08-23: initial version -->
 <div id="audioinfo-modal" class="modal modal-sm hide fade" tabindex="-1" role="dialog" aria-labelledby="audioinfo-modal-label" aria-hidden="true">
 	<div class="modal-header">
@@ -280,7 +297,7 @@
 	-->
 </div>
 
-<!-- DELETE CONFIRMATION -->
+<!-- DELETE CONFIRMATION -->	
 <!-- TC (Tim Curtis) 2014-11-30: initial version -->
 <div id="deletesavedpl-modal" class="modal modal-sm hide fade" tabindex="-1" role="dialog" aria-labelledby="deletesavedpl-modal-label" aria-hidden="true">
 	<div class="modal-header">
@@ -310,7 +327,7 @@
 	</div>
 </div>
 
-<!-- RADIO STATION MAINTENANCE -->
+<!-- RADIO STATION MAINTENANCE -->	
 <!-- TC (Tim Curtis) 2014-12-23: initial version -->
 <div id="addstation-modal" class="modal modal-sm hide fade" tabindex="-1" role="dialog" aria-labelledby="addstation-modal-label" aria-hidden="true">
 	<div class="modal-header">
@@ -366,13 +383,14 @@
 	</div>
 </div>
 
-<!-- PLAYLIST MAINTENANCE -->
+<!-- PLAYLIST MAINTENANCE -->	
 <!-- TC (Tim Curtis) 2014-12-23: initial version -->
 <!-- TC (Tim Curtis) 2015-01-27: add speed buttons to set top and bottom pos -->
+<!-- TC (Tim Curtis) 2015-10-DD: change "delete" to "remove" -->
 <div id="deleteplitems-modal" class="modal modal-sm hide fade" tabindex="-1" role="dialog" aria-labelledby="deleteplitems-modal-label" aria-hidden="true">
 	<div class="modal-header">
 		<button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
-		<h3 id="deleteplitems-modal-label">Delete playlist items</h3>
+		<h3 id="deleteplitems-modal-label">Remove playlist items</h3>
 	</div>
 	<div class="modal-body">
 		<form class="form-horizontal" data-validate="parsley" action="" method="">
@@ -393,7 +411,7 @@
 		</form>
 	</div>
 	<div class="modal-footer">
-		<button class="btn btn-delete-plitem btn-primary" data-dismiss="modal">Delete items</button>
+		<button class="btn btn-delete-plitem btn-primary" data-dismiss="modal">Remove items</button>
 		<button class="btn" data-dismiss="modal" aria-hidden="true">Cancel</button>
 	</div>
 </div>
@@ -433,7 +451,7 @@
 	</div>
 </div>
 
-<!-- CLOCK RADIO -->
+<!-- CLOCK RADIO -->	
 <!-- TC (Tim Curtis) 2014-12-23: initial version -->
 <!-- TC (Tim Curtis) 2015-01-27: add class modal-action-btns hide -->
 <div id="clockradio-modal" class="modal modal-sm hide fade" tabindex="-1" role="dialog" aria-labelledby="clockradio-modal-label" aria-hidden="true">
@@ -456,24 +474,24 @@
 							</button>
 							<div class="dropdown-menu open">
 								<ul class="dropdown-menu tcmods-select inner" role="menu">
-									<li rel="0"><a href="#notarget" data-cmd="clockradio-enabled-yn"><span class="text">Yes</span></a></li>
-									<li rel="1"><a href="#notarget" data-cmd="clockradio-enabled-yn"><span class="text">No</span></a></li>
+									<li><a href="#notarget" data-cmd="clockradio-enabled-yn"><span class="text">Yes</span></a></li>
+									<li><a href="#notarget" data-cmd="clockradio-enabled-yn"><span class="text">No</span></a></li>
 								</ul>
 							</div>
 						</div>
 	                </div>
-
+	                
 	                <label class="control-label" for="clockradio-playname">Play</label>
 	                <div class="controls">
 	                    <input id="clockradio-playname" class="input-xlarge" type="text" name="clockradio_playname" value="" readonly>
 	                </div>
-
+	                
 	                <label class="control-label" for="clockradio-starttime-hh">Start time</label>
 	                <div class="controls">
 	                    <input id="clockradio-starttime-hh" class="input-mini" style="height: 20px;" type="number" maxlength="2" min="1" max="12" name="clockradio_starttime-hh" value="">
 	                    <span>:</span>
 	                    <input id="clockradio-starttime-mm" class="input-mini" style="height: 20px;" type="number" maxlength="2" min="0" max="59" name="clockradio_starttime-mm" value="">
-
+						
 						<div class="btn-group bootstrap-select bootstrap-select-mini"> <!-- handler in player_lib.js -->
 							<button type="button" class="btn btn-inverse dropdown-toggle" data-toggle="dropdown">
 								<div id="clockradio-starttime-ampm" class="filter-option pull-left">
@@ -483,19 +501,19 @@
 							</button>
 							<div class="dropdown-menu open">
 								<ul class="dropdown-menu tcmods-select inner" role="menu">
-									<li rel="0"><a href="#notarget" data-cmd="clockradio-starttime-ampm"><span class="text">AM</span></a></li>
-									<li rel="1"><a href="#notarget" data-cmd="clockradio-starttime-ampm"><span class="text">PM</span></a></li>
+									<li><a href="#notarget" data-cmd="clockradio-starttime-ampm"><span class="text">AM</span></a></li>
+									<li><a href="#notarget" data-cmd="clockradio-starttime-ampm"><span class="text">PM</span></a></li>
 								</ul>
 							</div>
 						</div>
 	                </div>
-
+	                
 	                <label class="control-label" for="clockradio-stoptime-hh">Stop time</label>
 	                <div class="controls">
 	                    <input id="clockradio-stoptime-hh" class="input-mini" style="height: 20px;" type="number" maxlength="2" min="1" max="12" name="clockradio_stoptime-hh" value="">
 	                    <span>:</span>
 	                    <input id="clockradio-stoptime-mm" class="input-mini" style="height: 20px;" type="number" maxlength="2" min="0" max="59" name="clockradio_stoptime-mm" value="">
-
+						
 						<div class="btn-group bootstrap-select bootstrap-select-mini"> <!-- handler in player_lib.js -->
 							<button type="button" class="btn btn-inverse dropdown-toggle" data-toggle="dropdown">
 								<div id="clockradio-stoptime-ampm" class="filter-option pull-left">
@@ -505,19 +523,19 @@
 							</button>
 							<div class="dropdown-menu open">
 								<ul class="dropdown-menu tcmods-select inner" role="menu">
-									<li rel="0"><a href="#notarget" data-cmd="clockradio-stoptime-ampm"><span class="text">AM</span></a></li>
-									<li rel="1"><a href="#notarget" data-cmd="clockradio-stoptime-ampm"><span class="text">PM</span></a></li>
+									<li><a href="#notarget" data-cmd="clockradio-stoptime-ampm"><span class="text">AM</span></a></li>
+									<li><a href="#notarget" data-cmd="clockradio-stoptime-ampm"><span class="text">PM</span></a></li>
 								</ul>
 							</div>
 						</div>
 	                </div>
-
+	                
 	                <label class="control-label" for="clockradio-volume">Volume</label>
 	                <div class="controls">
 	                    <input id="clockradio-volume" class="input-mini" style="height: 20px;" type="number" min="1" max="" name="clockradio_volume" value="">
 						<span id="clockradio-volume-aftertext" class="control-aftertext"></span> <!-- text set in player-scripts.js -->
 	                </div>
-
+	                
 	                <label class="control-label" for="clockradio-shutdown">Shutdown</label>
 	                <div class="controls">
    						<div class="btn-group bootstrap-select bootstrap-select-mini"> <!-- handler in player_lib.js -->
@@ -529,8 +547,8 @@
 							</button>
 							<div class="dropdown-menu open">
 								<ul class="dropdown-menu tcmods-select inner" role="menu">
-									<li rel="0"><a href="#notarget" data-cmd="clockradio-shutdown-yn"><span class="text">Yes</span></a></li>
-									<li rel="1"><a href="#notarget" data-cmd="clockradio-shutdown-yn"><span class="text">No</span></a></li>
+									<li><a href="#notarget" data-cmd="clockradio-shutdown-yn"><span class="text">Yes</span></a></li>
+									<li><a href="#notarget" data-cmd="clockradio-shutdown-yn"><span class="text">No</span></a></li>
 								</ul>
 							</div>
 						</div>
@@ -550,7 +568,7 @@
 	</div>
 </div>
 
-<!-- TCMODS CONFIG EDITOR (CUSTOM CONFIG) -->
+<!-- TCMODS CONFIG EDITOR (CUSTOM CONFIG) -->	
 <!-- TC (Tim Curtis) 2015-01-27: initial version -->
 <!-- TC (Tim Curtis) 2015-01-27: add class modal-action-btns hide -->
 <!-- TC (Tim Curtis) 2015-03-21: change TCMODS config to Custom config -->
@@ -578,7 +596,7 @@
 	                    	- Setting the limit to 100 disables the popup.
 	                    </span>
 	                </div>
-
+	                
    	                <label class="control-label" for="search-autofocus-enabled">Search auto-focus</label>
 	                <div class="controls">
    						<div class="btn-group bootstrap-select bootstrap-select-mini"> <!-- handler in player_lib.js -->
@@ -590,8 +608,8 @@
 							</button>
 							<div class="dropdown-menu open">
 								<ul class="dropdown-menu tcmods-select inner" role="menu">
-									<li rel="0"><a href="#notarget" data-cmd="search-autofocus-enabled-yn"><span class="text">Yes</span></a></li>
-									<li rel="1"><a href="#notarget" data-cmd="search-autofocus-enabled-yn"><span class="text">No</span></a></li>
+									<li><a href="#notarget" data-cmd="search-autofocus-enabled-yn"><span class="text">Yes</span></a></li>
+									<li><a href="#notarget" data-cmd="search-autofocus-enabled-yn"><span class="text">No</span></a></li>
 								</ul>
 							</div>
 						</div>
@@ -613,23 +631,23 @@
 							</button>
 							<div class="dropdown-menu open">
 								<ul class="dropdown-menu tcmods-select inner" role="menu">
-									<li rel="0"> <a href="#notarget" data-cmd="theme-color-sel"><span class="text" style="color: #e74c3c; font-weight: bold;">Alizarin</span></a></li>
-									<li rel="1"> <a href="#notarget" data-cmd="theme-color-sel"><span class="text" style="color: #9b59b6; font-weight: bold;">Amethyst</span></a></li>
-									<li rel="2"> <a href="#notarget" data-cmd="theme-color-sel"><span class="text" style="color: #436bab; font-weight: bold;">Bluejeans</span></a></li>
-									<li rel="3"> <a href="#notarget" data-cmd="theme-color-sel"><span class="text" style="color: #e67e22; font-weight: bold;">Carrot</span></a></li>
-									<li rel="4"> <a href="#notarget" data-cmd="theme-color-sel"><span class="text" style="color: #27ae60; font-weight: bold;">Emerald</span></a></li>
-									<li rel="5"> <a href="#notarget" data-cmd="theme-color-sel"><span class="text" style="color: #e5a646; font-weight: bold;">Fallenleaf</span></a></li>
-									<li rel="6"> <a href="#notarget" data-cmd="theme-color-sel"><span class="text" style="color: #90be5d; font-weight: bold;">Grass</span></a></li>
-									<li rel="7"> <a href="#notarget" data-cmd="theme-color-sel"><span class="text" style="color: #48929b; font-weight: bold;">Herb</span></a></li>
-									<li rel="8"> <a href="#notarget" data-cmd="theme-color-sel"><span class="text" style="color: #9a83d4; font-weight: bold;">Lavender</span></a></li>
-									<li rel="9"> <a href="#notarget" data-cmd="theme-color-sel"><span class="text" style="color: #2980b9; font-weight: bold;">River</span></a></li>
-									<li rel="10"><a href="#notarget" data-cmd="theme-color-sel"><span class="text" style="color: #d479ac; font-weight: bold;">Rose</span></a></li>
-									<li rel="11"><a href="#notarget" data-cmd="theme-color-sel"><span class="text" style="color: #16a085; font-weight: bold;">Turquoise</span></a></li>
+									<li><a href="#notarget" data-cmd="theme-color-sel"><span class="text" style="color: #e74c3c; font-weight: bold;">Alizarin</span></a></li>
+									<li><a href="#notarget" data-cmd="theme-color-sel"><span class="text" style="color: #9b59b6; font-weight: bold;">Amethyst</span></a></li>
+									<li><a href="#notarget" data-cmd="theme-color-sel"><span class="text" style="color: #335db6; font-weight: bold;">Bluejeans</span></a></li>
+									<li><a href="#notarget" data-cmd="theme-color-sel"><span class="text" style="color: #e67e22; font-weight: bold;">Carrot</span></a></li>
+									<li><a href="#notarget" data-cmd="theme-color-sel"><span class="text" style="color: #27ae60; font-weight: bold;">Emerald</span></a></li>
+									<li><a href="#notarget" data-cmd="theme-color-sel"><span class="text" style="color: #e5a646; font-weight: bold;">Fallenleaf</span></a></li>
+									<li><a href="#notarget" data-cmd="theme-color-sel"><span class="text" style="color: #90be5d; font-weight: bold;">Grass</span></a></li>
+									<li><a href="#notarget" data-cmd="theme-color-sel"><span class="text" style="color: #48929b; font-weight: bold;">Herb</span></a></li>
+									<li><a href="#notarget" data-cmd="theme-color-sel"><span class="text" style="color: #9a83d4; font-weight: bold;">Lavender</span></a></li>
+									<li><a href="#notarget" data-cmd="theme-color-sel"><span class="text" style="color: #2980b9; font-weight: bold;">River</span></a></li>
+									<li><a href="#notarget" data-cmd="theme-color-sel"><span class="text" style="color: #d479ac; font-weight: bold;">Rose</span></a></li>
+									<li><a href="#notarget" data-cmd="theme-color-sel"><span class="text" style="color: #16a085; font-weight: bold;">Turquoise</span></a></li>
 								</ul>
 							</div>
 						</div>
 	                </div>
-
+	                
    	                <label class="control-label" for="play-history-enabled">Playback history</label>
 	                <div class="controls">
    						<div class="btn-group bootstrap-select bootstrap-select-mini"> <!-- handler in player_lib.js -->
@@ -641,8 +659,8 @@
 							</button>
 							<div class="dropdown-menu open">
 								<ul class="dropdown-menu tcmods-select inner" role="menu">
-									<li rel="0"><a href="#notarget" data-cmd="play-history-enabled-yn"><span class="text">Yes</span></a></li>
-									<li rel="1"><a href="#notarget" data-cmd="play-history-enabled-yn"><span class="text">No</span></a></li>
+									<li><a href="#notarget" data-cmd="play-history-enabled-yn"><span class="text">Yes</span></a></li>
+									<li><a href="#notarget" data-cmd="play-history-enabled-yn"><span class="text">No</span></a></li>
 								</ul>
 							</div>
 						</div>
@@ -653,35 +671,7 @@
 	                    	- The log can be cleared from the System configuration page.
 	                    </span>
 	                </div>
-
-					<!-- TC (Tim Curtis) 2015-06-26: determine which method(s) to use for album art lookup -->
-   	                <label class="control-label" for="albumart-lookup-method">Album art lookup method</label>
-	                <div class="controls">
-   						<div class="btn-group bootstrap-select bootstrap-select" style="width: 110px;"> <!-- handler in player_lib.js -->
-							<button type="button" class="btn btn-inverse dropdown-toggle" data-toggle="dropdown">
-								<div id="albumart-lookup-method" class="filter-option pull-left">
-									<span></span> <!-- selection from dropdown gets placed here -->
-								</div>&nbsp;
-								<div class="caret"></div>
-							</button>
-							<div class="dropdown-menu open">
-								<ul class="dropdown-menu tcmods-select inner" role="menu">
-									<li rel="0"><a href="#notarget" data-cmd="albumart-lookup-method"><span class="text">Default</span></a></li>
-									<li rel="1"><a href="#notarget" data-cmd="albumart-lookup-method"><span class="text">EAC</span></a></li>
-									<li rel="2"><a href="#notarget" data-cmd="albumart-lookup-method"><span class="text">Embedded</span></a></li>
-									<li rel="3"><a href="#notarget" data-cmd="albumart-lookup-method"><span class="text">All</span></a></li>
-								</ul>
-							</div>
-						</div>
-						<a class="info-toggle" data-cmd="info-albumart-lookup-method" href="#notarget"><i class="icon-info-sign"></i></a>
-						<span id="info-albumart-lookup-method" class="help-block hide">
-	                    	This setting determines the method used to find album art.<br>
-	                    	- Default: search for folder.jpg(png), cover.jpg(png)<br>
-	                    	- EAC: search for AlbumArtist - Album.jpg<br>
-	                    	- Embedded: extract image from song file (place holder)<br>
-	                    	- All: try all the above methods.
-	                    </span>
-	                </div>
+					
 	            </div>
 	    	</fieldset>
 
@@ -699,8 +689,8 @@
 							</button>
 							<div class="dropdown-menu open">
 								<ul class="dropdown-menu tcmods-select inner" role="menu">
-									<li rel="0"><a href="#notarget" data-cmd="logarithmic-curve-enabled-yn"><span class="text">Yes</span></a></li>
-									<li rel="1"><a href="#notarget" data-cmd="logarithmic-curve-enabled-yn"><span class="text">No</span></a></li>
+									<li><a href="#notarget" data-cmd="logarithmic-curve-enabled-yn"><span class="text">Yes</span></a></li>
+									<li><a href="#notarget" data-cmd="logarithmic-curve-enabled-yn"><span class="text">No</span></a></li>
 								</ul>
 							</div>
 						</div>
@@ -719,7 +709,7 @@
 	                    </span>
 	                </div>
 	                -->
-
+	                
 	                <label class="control-label" for="volume-curve-factor">Curve slope</label>
 	                <div class="controls">
    						<div class="btn-group bootstrap-select bootstrap-select" style="width: 110px;"> <!-- handler in player_lib.js -->
@@ -731,13 +721,13 @@
 							</button>
 							<div class="dropdown-menu open">
 								<ul class="dropdown-menu tcmods-select inner" role="menu">
-									<li rel="0"><a href="#notarget" data-cmd="volume-curve-factor"><span class="text">Standard</span></a></li>
-									<li rel="1"><a href="#notarget" data-cmd="volume-curve-factor"><span class="text">Less (-10)</span></a></li>
-									<li rel="2"><a href="#notarget" data-cmd="volume-curve-factor"><span class="text">Less (-20)</span></a></li>
-									<li rel="3"><a href="#notarget" data-cmd="volume-curve-factor"><span class="text">Less (-30)</span></a></li>
-									<li rel="4"><a href="#notarget" data-cmd="volume-curve-factor"><span class="text">More (+06)</span></a></li>
-									<li rel="5"><a href="#notarget" data-cmd="volume-curve-factor"><span class="text">More (+12)</span></a></li>
-									<li rel="6"><a href="#notarget" data-cmd="volume-curve-factor"><span class="text">More (+18)</span></a></li>
+									<li><a href="#notarget" data-cmd="volume-curve-factor"><span class="text">Standard</span></a></li>
+									<li><a href="#notarget" data-cmd="volume-curve-factor"><span class="text">Less (-10)</span></a></li>
+									<li><a href="#notarget" data-cmd="volume-curve-factor"><span class="text">Less (-20)</span></a></li>
+									<li><a href="#notarget" data-cmd="volume-curve-factor"><span class="text">Less (-30)</span></a></li>
+									<li><a href="#notarget" data-cmd="volume-curve-factor"><span class="text">More (+06)</span></a></li>
+									<li><a href="#notarget" data-cmd="volume-curve-factor"><span class="text">More (+12)</span></a></li>
+									<li><a href="#notarget" data-cmd="volume-curve-factor"><span class="text">More (+18)</span></a></li>
 								</ul>
 							</div>
 						</div>
@@ -760,7 +750,7 @@
 
 	            </div>
 	    	</fieldset>
-
+	    	
 			<h4>Audio device description</h4>
 	    	<fieldset>
 		    	<!-- TC (Tim Curtis) 2015-03-21: add dropdown select for audio device -->
@@ -776,44 +766,60 @@
 							</button>
 							<div class="dropdown-menu open">
 								<ul class="dropdown-menu tcmods-select inner" role="menu">
-									<li rel="0"> <a href="#notarget" data-cmd="audio-device-name-sel"><span class="text">Audiobyte Black Dragon</span></a></li>
-									<li rel="1"> <a href="#notarget" data-cmd="audio-device-name-sel"><span class="text">Audiophonics I-Sabre DAC ES9023 TCXO</span></a></li>
-									<li rel="2"> <a href="#notarget" data-cmd="audio-device-name-sel"><span class="text">Aune s16</span></a></li>
-									<li rel="3"> <a href="#notarget" data-cmd="audio-device-name-sel"><span class="text">Behringer UCA222</span></a></li>
-									<li rel="4"> <a href="#notarget" data-cmd="audio-device-name-sel"><span class="text">Chord Hugo</span></a></li>
-									<li rel="5"> <a href="#notarget" data-cmd="audio-device-name-sel"><span class="text">CM6631A USB to S/PDIF Converter</span></a></li>
-									<li rel="6"> <a href="#notarget" data-cmd="audio-device-name-sel"><span class="text">Devialet</span></a></li>
-									<li rel="7"> <a href="#notarget" data-cmd="audio-device-name-sel"><span class="text">Durio Sound PRO</span></a></li>
-									<li rel="8"> <a href="#notarget" data-cmd="audio-device-name-sel"><span class="text">G2 Labs BerryNOS</span></a></li>
-									<li rel="9"> <a href="#notarget" data-cmd="audio-device-name-sel"><span class="text">G2 Labs BerryNOS Red</span></a></li>
-									<li rel="10"><a href="#notarget" data-cmd="audio-device-name-sel"><span class="text">HiFiBerry Amp(Amp+)</span></a></li>
-									<li rel="11"><a href="#notarget" data-cmd="audio-device-name-sel"><span class="text">HiFiBerry DAC</span></a></li>
-									<li rel="12"><a href="#notarget" data-cmd="audio-device-name-sel"><span class="text">HiFiBerry DAC+</span></a></li>
-									<li rel="13"><a href="#notarget" data-cmd="audio-device-name-sel"><span class="text">HiFiBerry Digi(Digi+)</span></a></li>
-									<li rel="14"><a href="#notarget" data-cmd="audio-device-name-sel"><span class="text">Hifimediy ES9023</span></a></li>
-									<li rel="15"><a href="#notarget" data-cmd="audio-device-name-sel"><span class="text">iFi Audio Micro iDsD</span></a></li>
-									<li rel="16"><a href="#notarget" data-cmd="audio-device-name-sel"><span class="text">IQaudIO Pi-AMP+</span></a></li>
-									<li rel="17"><a href="#notarget" data-cmd="audio-device-name-sel"><span class="text">IQaudIO Pi-DAC</span></a></li>
-									<li rel="18"><a href="#notarget" data-cmd="audio-device-name-sel"><span class="text">IQaudIO Pi-DAC+</span></a></li>
-									<li rel="19"><a href="#notarget" data-cmd="audio-device-name-sel"><span class="text">IQaudIO Pi-DigiAMP+</span></a></li>
-									<li rel="20"><a href="#notarget" data-cmd="audio-device-name-sel"><span class="text">JDS Labs Objective DAC (ODAC)</span></a></li>
-									<li rel="21"><a href="#notarget" data-cmd="audio-device-name-sel"><span class="text">LH Labs Geek Out</span></a></li>
-									<li rel="22"><a href="#notarget" data-cmd="audio-device-name-sel"><span class="text">LH Labs Geek Pulse X-Fi</span></a></li>
-									<li rel="23"><a href="#notarget" data-cmd="audio-device-name-sel"><span class="text">Marantz HD DAC 1</span></a></li>
-									<li rel="24"><a href="#notarget" data-cmd="audio-device-name-sel"><span class="text">NAD D 3020</span></a></li>
-									<li rel="25"><a href="#notarget" data-cmd="audio-device-name-sel"><span class="text">Perreaux Audiant 80i</span></a></li>
-									<li rel="26"><a href="#notarget" data-cmd="audio-device-name-sel"><span class="text">Pioneer U05</span></a></li>
-									<li rel="27"><a href="#notarget" data-cmd="audio-device-name-sel"><span class="text">RaspyPlay4</span></a></li>
-									<li rel="28"><a href="#notarget" data-cmd="audio-device-name-sel"><span class="text">RME Fireface UCX</span></a></li>
-									<li rel="29"><a href="#notarget" data-cmd="audio-device-name-sel"><span class="text">Rockna Wavedream DAC</span></a></li>
-									<li rel="30"><a href="#notarget" data-cmd="audio-device-name-sel"><span class="text">RPi-DAC</span></a></li>
-									<li rel="31"><a href="#notarget" data-cmd="audio-device-name-sel"><span class="text">Schiit Modi 2</span></a></li>
-									<li rel="32"><a href="#notarget" data-cmd="audio-device-name-sel"><span class="text">Soekris R2R</span></a></li>
+									<li><a href="#notarget" data-cmd="audio-device-name-sel"><span class="text">Arcam irDAC</span></a></li>
+									<li><a href="#notarget" data-cmd="audio-device-name-sel"><span class="text">Audiobyte Black Dragon</span></a></li>
+									<li><a href="#notarget" data-cmd="audio-device-name-sel"><span class="text">Audiophonics I-Sabre DAC ES9023 TCXO</span></a></li>
+									<li><a href="#notarget" data-cmd="audio-device-name-sel"><span class="text">Audiophonics PCM5122 DAC</span></a></li>
+									<li><a href="#notarget" data-cmd="audio-device-name-sel"><span class="text">AudioQuest DragonFly</span></a></li>
+									<li><a href="#notarget" data-cmd="audio-device-name-sel"><span class="text">Aune s16</span></a></li>
+									<li><a href="#notarget" data-cmd="audio-device-name-sel"><span class="text">Behringer UCA222</span></a></li>
+									<li><a href="#notarget" data-cmd="audio-device-name-sel"><span class="text">Burson Conductor</span></a></li>
+									<li><a href="#notarget" data-cmd="audio-device-name-sel"><span class="text">Chord 2Qute</span></a></li>
+									<li><a href="#notarget" data-cmd="audio-device-name-sel"><span class="text">Chord Hugo</span></a></li>
+									<li><a href="#notarget" data-cmd="audio-device-name-sel"><span class="text">Chord QuteHD</span></a></li>
+									<li><a href="#notarget" data-cmd="audio-device-name-sel"><span class="text">CM6631A USB to S/PDIF Converter</span></a></li>
+									<li><a href="#notarget" data-cmd="audio-device-name-sel"><span class="text">Cyenne Audio CY-3100</span></a></li>
+									<li><a href="#notarget" data-cmd="audio-device-name-sel"><span class="text">Cyenne Audio CY-3100SE</span></a></li>
+									<li><a href="#notarget" data-cmd="audio-device-name-sel"><span class="text">Cyenne Audio CY-5100dsd MK-II</span></a></li>
+									<li><a href="#notarget" data-cmd="audio-device-name-sel"><span class="text">Devialet</span></a></li>
+									<li><a href="#notarget" data-cmd="audio-device-name-sel"><span class="text">Durio Sound PRO</span></a></li>
+									<li><a href="#notarget" data-cmd="audio-device-name-sel"><span class="text">Emotiva Stealth DC-1</span></a></li>
+									<li><a href="#notarget" data-cmd="audio-device-name-sel"><span class="text">G2 Labs BerryNOS</span></a></li>
+									<li><a href="#notarget" data-cmd="audio-device-name-sel"><span class="text">G2 Labs BerryNOS Red</span></a></li>
+									<li><a href="#notarget" data-cmd="audio-device-name-sel"><span class="text">HiFiBerry Amp(Amp+)</span></a></li>
+									<li><a href="#notarget" data-cmd="audio-device-name-sel"><span class="text">HiFiBerry DAC</span></a></li>
+									<li><a href="#notarget" data-cmd="audio-device-name-sel"><span class="text">HiFiBerry DAC+</span></a></li>
+									<li><a href="#notarget" data-cmd="audio-device-name-sel"><span class="text">HiFiBerry DAC+ Pro</span></a></li>
+									<li><a href="#notarget" data-cmd="audio-device-name-sel"><span class="text">HiFiBerry Digi(Digi+)</span></a></li>
+									<li><a href="#notarget" data-cmd="audio-device-name-sel"><span class="text">Hifimediy ES9023</span></a></li>
+									<li><a href="#notarget" data-cmd="audio-device-name-sel"><span class="text">iFi Audio Micro iDsD</span></a></li>
+									<li><a href="#notarget" data-cmd="audio-device-name-sel"><span class="text">IQaudIO Pi-AMP+</span></a></li>
+									<li><a href="#notarget" data-cmd="audio-device-name-sel"><span class="text">IQaudIO Pi-DAC</span></a></li>
+									<li><a href="#notarget" data-cmd="audio-device-name-sel"><span class="text">IQaudIO Pi-DAC+</span></a></li>
+									<li><a href="#notarget" data-cmd="audio-device-name-sel"><span class="text">IQaudIO Pi-DigiAMP+</span></a></li>
+									<li><a href="#notarget" data-cmd="audio-device-name-sel"><span class="text">JDS Labs Objective DAC (ODAC)</span></a></li>
+									<li><a href="#notarget" data-cmd="audio-device-name-sel"><span class="text">LH Labs Geek Out</span></a></li>
+									<li><a href="#notarget" data-cmd="audio-device-name-sel"><span class="text">LH Labs Geek Pulse X-Fi</span></a></li>
+									<li><a href="#notarget" data-cmd="audio-device-name-sel"><span class="text">Lucid Labs Raspberry Pi DAC</span></a></li>
+									<li><a href="#notarget" data-cmd="audio-device-name-sel"><span class="text">Marantz HD DAC 1</span></a></li>
+									<li><a href="#notarget" data-cmd="audio-device-name-sel"><span class="text">Matrix Mini-i Pro</span></a></li>
+									<li><a href="#notarget" data-cmd="audio-device-name-sel"><span class="text">NAD D 3020</span></a></li>
+									<li><a href="#notarget" data-cmd="audio-device-name-sel"><span class="text">Perreaux Audiant 80i</span></a></li>
+									<li><a href="#notarget" data-cmd="audio-device-name-sel"><span class="text">Pioneer U05</span></a></li>
+									<li><a href="#notarget" data-cmd="audio-device-name-sel"><span class="text">PlainDAC</span></a></li>
+									<li><a href="#notarget" data-cmd="audio-device-name-sel"><span class="text">PlainDAC+</span></a></li>
+									<li><a href="#notarget" data-cmd="audio-device-name-sel"><span class="text">RaspyPlay4</span></a></li>
+									<li><a href="#notarget" data-cmd="audio-device-name-sel"><span class="text">RME Fireface UCX</span></a></li>
+									<li><a href="#notarget" data-cmd="audio-device-name-sel"><span class="text">Rockna Wavedream DAC</span></a></li>
+									<li><a href="#notarget" data-cmd="audio-device-name-sel"><span class="text">RPi-DAC</span></a></li>
+									<li><a href="#notarget" data-cmd="audio-device-name-sel"><span class="text">Schiit Modi 2</span></a></li>
+									<li><a href="#notarget" data-cmd="audio-device-name-sel"><span class="text">Soekris R2R</span></a></li>
+									<li><a href="#notarget" data-cmd="audio-device-name-sel"><span class="text">TEAC UD-501</span></a></li>
 								</ul>
 							</div>
 						</div>
 	                </div>
-
+					
 	                <label class="control-label" for="audio-device-dac">Chip</label>
 	                <div class="controls">
 	                    <input id="audio-device-dac" class="input-xlarge" type="text" name="audio_device_dac" value="" readonly>
@@ -848,7 +854,7 @@
 	</div>
 </div>
 
-<!-- VIEW PLAY HISTORY -->
+<!-- VIEW PLAY HISTORY -->	
 <!-- TC (Tim Curtis) 2015-05-30: initial version -->
 <div id="playhistory-modal" class="modal modal-sm hide fade" tabindex="-1" role="dialog" aria-labelledby="playhistory-modal-label" aria-hidden="true">
 	<div class="modal-header">
@@ -876,7 +882,7 @@
 </div>
 
 
-<!-- VOLUME WARNING -->
+<!-- VOLUME WARNING -->	
 <!-- TC (Tim Curtis) 2015-01-27: initial version -->
 <div id="volumewarning-modal" class="modal modal-sm hide fade" tabindex="-1" role="dialog" aria-labelledby="volumewarning-modal-label" aria-hidden="true">
 	<div class="modal-header">
@@ -895,7 +901,7 @@
 	</div>
 </div>
 
-<!-- CONFIG SETTINGS LIST -->
+<!-- CONFIG SETTINGS LIST -->	
 <!-- TC (Tim Curtis) 2015-06-26: initial version -->
 <div id="configure-modal" class="modal modal-sm hide fade" tabindex="-1" role="dialog" aria-labelledby="configure-modal-label" aria-hidden="true">
 	<div class="modal-header">
@@ -939,11 +945,10 @@
 <script src="js/jquery-ui-1.10.0.custom.min.js"></script>
 <script src="js/bootstrap.min.js"></script>
 <script src="js/bootstrap-select.min.js"></script>
+<script src="js/notify.js"></script>
 <script src="js/jquery.countdown.js"></script>
 <script src="js/jquery.countdown-it.js"></script>
 <script src="js/jquery.scrollTo.min.js"></script>
-<!-- <script src="js/notify.js"></script> -->
-<script src="js/moode.js"></script>
 <script src="js/player_lib.js"></script>
 
 <!-- TC (Tim Curtis) 2014-11-30: modify config page (external) links so they stay within homescreen app on IOS -->
@@ -953,7 +958,6 @@
 	<script src="js/jquery.knob.js"></script>
 	<script src="js/bootstrap-contextmenu.js"></script>
 	<script src="js/jquery.pnotify.min.js"></script>
-	<!-- <script src="js/scripts-playback.js"></script> -->
 	<script src="js/scripts-playback.js"></script>
 <?php } else { ?>
 	<script src="js/custom_checkbox_and_radio.js"></script>
