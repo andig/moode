@@ -75,6 +75,8 @@ var timeKnobPaintComplete = false;
 
 // Get MPD currentsong data and format for GUI display as either Webradio or file source
 function mpdCurrentSong() {
+	M.log('mpdCurrentSong', GUI.json);
+
 	$.ajax({
 		type: 'GET',
 		url: 'db/?cmd=currentsong',
@@ -95,7 +97,7 @@ function mpdCurrentSong() {
 			if (MPDCS.json.type == 'radio') {
 				// RADIO STATION
 				MPDCS.artist = 'Radio Station';
-				MPDCS.title = (MPDCS.json.Title === undefined) ? MPDCS.json.file : MPDCS.json.Title;
+				// MPDCS.title = (MPDCS.json.Title === undefined) ? MPDCS.json.file : MPDCS.json.Title;
 				MPDCS.album = (MPDCS.json.Name === undefined) ? "Unknown station" : MPDCS.json.Name;
 				MPDCS.coverurl = MPDCS.json.coverurl;
 			}
@@ -104,22 +106,23 @@ function mpdCurrentSong() {
 				MPDCS.artist = (MPDCS.json.Artist === undefined) ? "Unknown artist" : MPDCS.json.Artist;
 				MPDCS.album = (MPDCS.json.Album === undefined) ? "Unknown album" : MPDCS.json.Album;
 
-				if (MPDCS.json.file.substr(0,4) == "http") {
+				// if (MPDCS.json.file.substr(0,4) == "http") {
+				if (MPDCS.json.type == 'upnp') {
 				 	// UPnP song url
-					MPDCS.title = (MPDCS.json.Title === undefined) ? MPDCS.json.file : MPDCS.json.Title;
+					// MPDCS.title = (MPDCS.json.Title === undefined) ? MPDCS.json.file : MPDCS.json.Title;
 					MPDCS.coverurl = makeUPNPCoverURL();
 				}
 				else {
 					// song file
-					if (MPDCS.json.Title === undefined) { // use file name
-						var pos = MPDCS.json.file.lastIndexOf(".");
-						var filename = MPDCS.json.file.slice(0, pos);
-						pos = filename.lastIndexOf("/");
-						MPDCS.title = filename.slice(pos + 1);
-					}
-					else {
-						MPDCS.title = MPDCS.json.Title; // use title
-					}
+					// if (MPDCS.json.Title === undefined) { // use file name
+					// 	var pos = MPDCS.json.file.lastIndexOf(".");
+					// 	var filename = MPDCS.json.file.slice(0, pos);
+					// 	pos = filename.lastIndexOf("/");
+					// 	MPDCS.title = filename.slice(pos + 1);
+					// }
+					// else {
+					// 	MPDCS.title = MPDCS.json.Title; // use title
+					// }
 					MPDCS.coverurl = makeCoverURL(MPDCS.json.file);
 				}
 			}
@@ -280,7 +283,7 @@ function renderUI(json) {
 	// Update global GUI array
 	GUI.json = json;
 	GUI.state = GUI.json['state'];
-	//console.log('renderUI() GUI.json=', GUI.json);
+	M.log('renderUI', json);
 
 	// Update UI
 	updateGUI(GUI.json);
@@ -313,6 +316,69 @@ function renderUI(json) {
 		GUI.playlist = GUI.json['playlist'];
 	}
 	GUI.halt = 0;
+}
+
+// Update GUI
+function updateGUI(json){
+	M.log('updateGUI', json);
+
+	mpdCurrentSong(); // TC (Tim Curtis) 2014-08-23: get mpd currentSong data
+	TCMCONF.json = readTcmConf(); // TC (Tim Curtis) 2015-05-30: get saved currentSong title for Playback history log
+
+	refreshState(GUI.state); // Update state of certain GUI elements
+
+	// TC (Tim Curtis) 2015-06-26: for new setVolume() volume control
+	// vol = -1 is when MPD mixer_type = disabled
+	// Note: using the value from tcmods.conf means user ALSAMIXER changes will not be picked up by the UI
+	$('#volume, #volume-2').val((json['volume'] == '-1') ? 0 : TCMCONF.json['volume_knob_setting']).trigger('change');
+
+	// TC (Tim Curtis) 2015-06-26: new mute state management
+	$('#volumemute, #volumemute-2')[TCMCONF.json['volume_muted'] !== 0 ? 'addClass' : 'removeClass']('btn-primary');
+
+	// TC (Tim Curtis) 2014-08-23: update gui with mpd currentSong data
+	$('#currentartist').html(MPDCS.artist);
+	$('#currentsong').html(MPDCS.title);
+	$('#currentalbum').html(MPDCS.album);
+
+	// TC (Tim Curtis) 2014-08-23: add Search lookup unless title is a url (Webradio) or default-cover is diaplayed (playlist empty)
+	if (MPDCS.json.type == "radio" || MPDCS.coverurl == MPDCS.defaultcover) {
+		$('#coverart-url').html('<img class="coverart" ' + 'src="' + MPDCS.coverurl + '" ' + 'alt="Cover art not found"' + '>');
+	}
+	else {
+		var searchStr = '';
+		if (MPDCS.artist == 'Radio Station') {
+			searchStr = MPDCS.title.replace(/-/g, " ");
+			searchStr = searchStr.replace(/&/g, " ");
+			searchStr = searchStr.replace(/\s+/g, "+");
+		}
+		else {
+			searchStr = MPDCS.artist + "+" + MPDCS.album;
+		}
+		// var searchEngine = "http://www.amazon.com/s?url=search-alias%3Daps&field-keywords=";
+		$('#coverart-url').html('<a id="coverart-link" href="http://www.google.com/search?q=' + searchStr + '" target="_blank"> <img class="coverart" src="' + MPDCS.coverurl + '" alt="Cover art not found"></a>');
+	}
+
+	// Check song update
+	//if (GUI.currentsong != json['currentsong']) {
+	// TC (Tim Curtis) 2015-05-30: use this test instead since play_history_currentsong is persistent even if page is reloaded
+	if (MPDCS.title != TCMCONF.json['play_history_currentsong']) {
+		countdownRestart(0);
+		if ($('#open-playback').hasClass('active')) { // TC (Tim Curtis) 2015-04-29: automatic scrollto when song changes
+		//if ($('#open-panel-dx').hasClass('active')) {
+			var current = parseInt(json['song']);
+			customScroll('pl', current);
+		}
+	}
+
+	// shorthand toggle http://stackoverflow.com/questions/5390598/jquery-help-me-make-this-shorthand-more-verbose
+	$('#repeat')[json['repeat'] == 1 ? 'addClass' : 'removeClass']('btn-primary');
+	$('#random')[json['random'] == 1 ? 'addClass' : 'removeClass']('btn-primary');
+	$('#consume')[json['consume'] == 1 ? 'addClass' : 'removeClass']('btn-primary');
+	$('#single')[json['single'] == 1 ? 'addClass' : 'removeClass']('btn-primary');
+
+	// TC (Tim Curtis) 2015-05-30: legacy code
+	GUI.halt = 0;
+	GUI.currentsong = json['currentsong'];
 }
 
 // Get playlist
@@ -641,75 +707,6 @@ function populateDB(data, path, uplevel, keyword){
 	} else {
 		customScroll('db', 0, 0);
 	}
-}
-
-// Update GUI
-function updateGUI(json){
-	//console.log('updateGUI() json=', json);
-
-	mpdCurrentSong(); // TC (Tim Curtis) 2014-08-23: get mpd currentSong data
-	TCMCONF.json = readTcmConf(); // TC (Tim Curtis) 2015-05-30: get saved currentSong title for Playback history log
-
-	refreshState(GUI.state); // Update state of certain GUI elements
-
-	// TC (Tim Curtis) 2015-06-26: for new setVolume() volume control
-	// vol = -1 is when MPD mixer_type = disabled
-	// Note: using the value from tcmods.conf means user ALSAMIXER changes will not be picked up by the UI
-	$('#volume, #volume-2').val((json['volume'] == '-1') ? 0 : TCMCONF.json['volume_knob_setting']).trigger('change');
-
-	// TC (Tim Curtis) 2015-06-26: new mute state management
-	$('#volumemute, #volumemute-2')[TCMCONF.json['volume_muted'] !== 0 ? 'addClass' : 'removeClass']('btn-primary');
-
-	// TC (Tim Curtis) 2014-08-23: update gui with mpd currentSong data
-	$('#currentartist').html(MPDCS.artist);
-	$('#currentsong').html(MPDCS.title);
-	$('#currentalbum').html(MPDCS.album);
-
-	// TC (Tim Curtis) 2014-08-23: prevent unnecessary image reloads
-	if (MPDCS.title != MPDCS.lasttitle) {
-		// TC (Tim Curtis) 2014-08-23: add Search lookup unless title is a url (Webradio) or default-cover is diaplayed (playlist empty)
-		// if (MPDCS.title.substr(0, 4) == "http" || MPDCS.coverurl == MPDCS.defaultcover) {
-		if (MPDCS.json.type == "radio" || MPDCS.coverurl == MPDCS.defaultcover) {
-			$('#coverart-url').html('<img class="coverart" ' + 'src="' + MPDCS.coverurl + '" ' + 'alt="Cover art not found"' + '>');
-		}
-		else {
-			var searchStr = '';
-			if (MPDCS.artist == 'Radio Station') {
-				searchStr = MPDCS.title.replace(/-/g, " ");
-				searchStr = searchStr.replace(/&/g, " ");
-				searchStr = searchStr.replace(/\s+/g, "+");
-			}
-			else {
-				searchStr = MPDCS.artist + "+" + MPDCS.album
-			}
-			// var searchEngine = "http://www.amazon.com/s?url=search-alias%3Daps&field-keywords=";
-			$('#coverart-url').html('<a id="coverart-link" href="http://www.google.com/search?q=' + searchStr + '" target="_blank"> <img class="coverart" src="' + MPDCS.coverurl + '" alt="Cover art not found"></a>');
-		}
-
-		MPDCS.lasttitle = MPDCS.title;
-	}
-
-	// Check song update
-	//if (GUI.currentsong != json['currentsong']) {
-	// TC (Tim Curtis) 2015-05-30: use this test instead since play_history_currentsong is persistent even if page is reloaded
-	if (MPDCS.title != TCMCONF.json['play_history_currentsong']) {
-		countdownRestart(0);
-		if ($('#open-playback').hasClass('active')) { // TC (Tim Curtis) 2015-04-29: automatic scrollto when song changes
-		//if ($('#open-panel-dx').hasClass('active')) {
-			var current = parseInt(json['song']);
-			customScroll('pl', current);
-		}
-	}
-
-	// shorthand toggle http://stackoverflow.com/questions/5390598/jquery-help-me-make-this-shorthand-more-verbose
-	$('#repeat')[json['repeat'] == 1 ? 'addClass' : 'removeClass']('btn-primary');
-	$('#random')[json['random'] == 1 ? 'addClass' : 'removeClass']('btn-primary');
-	$('#consume')[json['consume'] == 1 ? 'addClass' : 'removeClass']('btn-primary');
-	$('#single')[json['single'] == 1 ? 'addClass' : 'removeClass']('btn-primary');
-
-	// TC (Tim Curtis) 2015-05-30: legacy code
-	GUI.halt = 0;
-	GUI.currentsong = json['currentsong'];
 }
 
 // Update status on playback and playlist panels

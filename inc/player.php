@@ -160,33 +160,46 @@ function mpdItemType($song) {
 /**
  * Enhance MPD playlist info with database information
  */
-function mpdAddItemInfo(&$res) {
-	if ('radio' == $res['type'] = mpdItemType($res)) {
-		// TODO make this a define
-		$res['coverurl'] = 'images/webradio-cover.jpg';
-		$res['Name'] = "Radio station";
+function mpdEnrichItemInfo(&$res) {
+	switch ($res['type'] = mpdItemType($res)) {
+		case 'radio':
+			// TODO make this a define
+			$res['coverurl'] = 'images/webradio-cover.jpg';
+			$res['Name'] = "Radio station";
 
-		// TODO remove numerical indexes
-		// TODO check if we want to parse Title into Artist - Title
-		if (count($db = ConfigDB::read('cfg_radio', $res['file']))) {
-			$res['x_radio'] = array();
-			foreach ($db[0] as $key => $value) {
-				if (!is_numeric($key)) {
-					$res[$key] = $value;
-					$res['x_radio'][$key] = $value;
+			// TODO remove numerical indexes
+			// TODO check if we want to parse Title into Artist - Title
+			if (count($db = ConfigDB::read('cfg_radio', $res['file']))) {
+				$res['x_radio'] = array();
+				foreach ($db[0] as $key => $value) {
+					if (!is_numeric($key)) {
+						$res[$key] = $value;
+						$res['x_radio'][$key] = $value;
+					}
+				}
+				$res['x_db'] = $db;	// TODO remove
+
+				// set coverurl
+				$res['coverurl'] = 'local' == $res['logo'] ? 'images/webradio-logos/' . $res['name'] . '.png' : $res['logo'];
+				unset($res['logo']); // TODO not needed
+
+				if (isset($res['name'])) {
+					$res['Name'] = $res['name'];
+					unset($res['name']); // TODO not needed
 				}
 			}
-			$res['x_db'] = $db;	// TODO remove
-
-			// set coverurl
-			$res['coverurl'] = 'local' == $res['logo'] ? 'images/webradio-logos/' . $res['name'] . '.png' : $res['logo'];
-			unset($res['logo']); // TODO not needed
-
-			if (isset($res['name'])) {
-				$res['Name'] = $res['name'];
-				unset($res['name']); // TODO not needed
+			// break; // fallthrough
+		case 'upnp':
+			// upnp + radio: fill title with full filename
+			if (!isset($res['Title'])) {
+				$res['Title'] = $res['file'];
 			}
-		}
+			break;
+		default:
+			// song: fill title with filename without extension
+			if (!isset($res['Title'])) {
+				$res['Title'] = pathinfo($res['file'], PATHINFO_FILENAME);
+			}
 	}
 }
 
@@ -248,7 +261,7 @@ function searchDB($sock, $type, $query = '') {
 
 	switch ($type) {
 		case "filepath":
-			$resp = execMpdCommand($sock, "lsinfo" . $query);
+			$resp = execMpdCommand($sock, "lsinfo " . $query);
 			break;
 		case "album":
 		case "artist":
