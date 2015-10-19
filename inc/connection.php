@@ -1,5 +1,5 @@
 <?php
-/*
+/**
  *      PlayerUI Copyright (C) 2013 Andrea Coiutti & Simone De Gregori
  *		 Tsunamp Team
  *      http://www.tsunamp.com
@@ -21,11 +21,8 @@
  * Rewrite by Tim Curtis and Andreas Goetz
  */
 
-// config
 require_once dirname(__FILE__) . '/config.inc';
+require_once dirname(__FILE__) . '/../inc/player.php';
 
-// player lib
-require_once dirname(__FILE__) . '/../inc/player_lib.php';
-
-// configuro parametri di connessione con demone MPD
-$mpd = openMpdSocket(DAEMONIP, 6600);
+// mpd socket/port
+$mpd = openMpdSocket(MPD_HOST, 6600);

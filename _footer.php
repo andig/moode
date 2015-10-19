@@ -1,5 +1,5 @@
 <!-- 
-/*
+/**
  *  This Program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
  *  the Free Software Foundation; either version 3, or (at your option)
@@ -18,97 +18,7 @@
  *	Tsunamp Team
  *	http://www.tsunamp.com
  *
- *	UI-design/JS code by: 	Andrea Coiutti (aka ACX)
- *	PHP/JS code by:			Simone De Gregori (aka Orion)
- * 
- *	file:					_footer.php
- * 	version:				1.1
- *
- *	TCMODS Edition 
- *
- *	TC (Tim Curtis) 2014-08-23, r1.0
- *	- call tcmods.php instead of settings.php to handle pwroff and reboot actions from the "Turn off" menu pick
- *	- add modal popup for the INFO header btn
- *	- add modal popup for the About menu pick
- *
- *	TC (Tim Curtis) 2014-09-17, r1.1
- *	- add contrib for Anthony Ryan Delorie, author of JSON Sort routine used in js/player_lib.js
- *	- add contrib for jotak, author of the Library Panel
- *	- add contrib for Brad Daily, author of DOM Immediate Update used in js/player_lib.js
- *	- change <a id="tcmods-about-... to <a class="tcmods-about-...
- *	- update release number to 1.1
- *
- *	TC (Tim Curtis) 2014-10-31, r1.2
- *	- update release number to 1.2
- *
- *	TC (Tim Curtis) 2014-12-23, r1.3
- *	- update release number to 1.3
- *	- add modal popup for 2nd volume control
- *	- add modal popup for delete saved playlist action
- *	- add modal popups for Webradio create/edit/delete/import actions
- *	- apply modal-sm class to all modals for automatic resize on small screens
- *  - enable links.js script so config page (external) links stay within homescreen app on IOS
- *	- add, edit radio station
- *	- delete, move playlist items
- *	- move volume popup modal to indextpl.html
- *	- remove data-trigger="change" on input fields, does not appear to be used by anything 
- *
- *	TC (Tim Curtis) 2015-01-01, r1.4
- *	- update release number to 1.4
- *
- *	TC (Tim Curtis) 2015-01-27, r1.5
- *	- update release number to 1.5
- *	- change clock radio max minutes to 59 from 60
- *	- speed btns on move and delete modals to set top and bottom pos
- *	- tcmods config editor modal
- *	- volume limit warning modal
- *	- add contrib from SomaFM
- *	- add control aftertext to certain controls
- *	- Move action buttons to modal footer
- *	- modal-action-btns class for show/hide on small screens
- *	- shovel & broom
- *
- *	TC (Tim Curtis) 2015-02-25, r1.6
- *	- update release number to 1.6
- *	- add warranty statement
- *	- add platform info section to About
- *	- cleanup some text
- *
- *	TC (Tim Curtis) 2015-03-21, r1.7
- *	- update release number to 1.7
- *	- add new player logotype and text
- *	- change TCMODS config to Custom config
- *	- add dropdown select for audio device
- *	- enable volume warning limit setting change directly from popup
- *
- *	TC (Tim Curtis) 2015-04-29, r1.8
- *	- update release number to 1.8
- *	- add dropdown select for theme color
- *	- remove tabindex= from select lists
- *	- update audio device list
- *
- *	TC (Tim Curtis) 2015-05-30, r1.9
- *	- update release number to 1.9
- *	- update contributions section of About
- *	- add playback history feature to Custom config
- *
- *	TC (Tim Curtis) 2015-06-26, r2.0
- *	- update release number to 2.0
- *	- add config settings popup containing Sources, MPD, Network and System config links 
- *	- add contribs for major feature ideas
- *	- add logarithmic volume control feature to Custom config
- *	- add album art lookup method to Custom config
- *	- add IQaudIO Pi-DigiAMP+, Hifimediy ES9023, Perreaux Audiant 80i to Audio device description list
- *	- add LH Labs Geek Pulse X-Fi and Schiit Modi 2 to Audio device description list
- *	- add first/last page btns to Customization settings popup
- *
- *	TC (Tim Curtis) 2015-07-31, r2.1
- *	- update release number to 2.1
- *	- Add CM6631A USB to S/PDIF Converter to audio device list
- *  - Add Audiophonics I-Sabre DAC ES9023 TCXO to audio device list
- *	- add contrib for script to resize rootfs partition (Mike Ray)
- *	- change tcmods.org to moodeaudio.org
- *
+ * Rewrite by Tim Curtis and Andreas Goetz
  *	TC (Tim Curtis) 2015-08-30, r2.2
  *	- update release number to 2.2
  *	- remove rel= in <li lines
@@ -131,7 +41,6 @@
  */
 -->
 <!-- ABOUT -->	
-<!-- TC (Tim Curtis) 2014-08-23: initial version -->
 <div id="about-modal" class="modal modal-sm hide fade" tabindex="-1" role="dialog" aria-labelledby="about-modal-label" aria-hidden="true">
 	<div class="modal-header">
 		<button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
@@ -975,22 +884,12 @@
 <!-- Write backend response on UI Notify popup -->
 <?php
 if (isset($_SESSION['notify']) && $_SESSION['notify'] != '') {
-	sleep(1);
-	ui_notify($_SESSION['notify']);
+	uiShowNotification($_SESSION['notify']);
 	session_start();
 	$_SESSION['notify'] = '';
 	session_write_close();
 }
 ?>
-
-<!-- Debug footer -->
-<div id="debug" <?php if ($_SESSION['hiddendebug'] == 1 OR $_SESSION['debug'] == 0) {echo "class=\"hide\"";} ?>>
-	<pre>
-		<?php
-		debug_footer($db);
-		?>
-	</pre>
-</div>
 
 </body>
 </html>

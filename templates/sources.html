@@ -1,0 +1,38 @@
+<!-- 
+/*
+ *  This Program is free software; you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation; either version 3, or (at your option)
+ *  any later version.
+ *
+ *  This Program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with TsunAMP; see the file COPYING.  If not, see
+ *  <http://www.gnu.org/licenses/>.
+ *
+ *	PlayerUI Copyright (C) 2013 Andrea Coiutti & Simone De Gregori
+ *	Tsunamp Team
+ *	http://www.tsunamp.com
+ *
+ * Rewrite by Tim Curtis and Andreas Goetz
+ */
+-->	
+<div class="container">
+	<h1>Music Source Configuration</h1>
+	<p>
+		<legend>NAS Sources &nbsp;<a href="sources.php?p=add" class="btn btn-small btn-primary" data-ajax="false">New</a></legend>
+		<p>Network attached storage (NAS) sources are configured via the NEW button. MPD database update will start automatically after the configuration completes.</p>
+		<p>List of configured NAS sources (click to edit)</p>
+		<form method="post">
+			$_mounts
+	
+			<legend>USB Sources</legend>
+			<p>USB attached storage devices are listed on the Browse panel. Update the MPD databse to add their contents to the music library.</p>
+			<button class="btn btn-large btn-primary" type="submit" name="updatempd" value="novalue">Update MPD DB</button>
+		</form>
+	</p>	
+</div>

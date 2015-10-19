@@ -1,4 +1,4 @@
-<?php 
+<?php
 /**
  *  This Program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -20,74 +20,57 @@
  *
  * Rewrite by Tim Curtis and Andreas Goetz
  */
- 
+
 require_once dirname(__FILE__) . '/inc/connection.php';
-playerSession('open',$db,'',''); 
 
-// Main processing section	
+
 if (!$mpd) {
-    echo 'Error Connecting to MPD';
-} else {
-	// Fetch MPD status
-	$status = _parseStatusResponse(MpdStatus($mpd));
-	
-	// Check for CMediaFix
-	if (isset($_SESSION['cmediafix']) && $_SESSION['cmediafix'] == 1) {
-		$_SESSION['lastbitdepth'] = $status['audio'];
-	}
-	
-	// Check for Ramplay
-	if (isset($_SESSION['ramplay']) && $_SESSION['ramplay'] == 1) {
-		// Record "lastsongid" in PHP SESSION
-		$_SESSION['lastsongid'] = $status['songid'];
-		$_SESSION['nextsongid'] = $status['nextsongid']; 
-	}
-
-	// Register player state in session
-	$_SESSION['state'] = $status['state'];
-	session_write_close(); // Unlock SESSION file
-
-	// Check and compare GUI state with Backend state
-	// MPD idle timeout loop, monitorMpdState() waits until something changes in MPD then returns status
-	if ($_GET['state'] == $status['state']) {
-		$status = monitorMpdState($mpd);
-	} 
-
-	$curTrack = getTrackInfo($mpd,$status['song']);
-
-	if (isset($curTrack[0]['Title'])) {
-		$status['currentartist'] = $curTrack[0]['Artist'];
-		$status['currentsong'] = $curTrack[0]['Title'];
-		$status['currentalbum'] = $curTrack[0]['Album'];
-		$status['fileext'] = parseFileStr($curTrack[0]['file'],'.');
-	} else {
-		$path = parseFileStr($curTrack[0]['file'],'/');
-		$status['fileext'] = parseFileStr($curTrack[0]['file'],'.');
-		$status['currentartist'] = "";
-		$status['currentsong'] = $song;
-		$status['currentalbum'] = "path: ".$path;
-	}
-		
-	// CMediaFix
-	if (isset($_SESSION['cmediafix']) && $_SESSION['cmediafix'] == 1 && $status['state'] == 'play' ) {
-		$status['lastbitdepth'] = $_SESSION['lastbitdepth'];
-		if ($_SESSION['lastbitdepth'] != $status['audio']) {
-			sendMpdCommand($mpd,'cmediafix');
-		}
-	}
-	
-	// Ramplay
-	if (isset($_SESSION['ramplay']) && $_SESSION['ramplay'] == 1) {
-		// copio il pezzo in /dev/shm
-		$path = rp_copyFile($status['nextsongid'],$mpd);
-		// lancio update mdp locazione ramplay
-		rp_updateFolder($mpd);
-		// lancio addandplay canzone
-		rp_addPlay($path,$mpd,$status['playlistlength']);
-	}
-
-	// JSON response for GUI
-	echo json_encode($status);
-		
-	closeMpdSocket($mpd);
+	die('Error: connection to MPD failed');
 }
+
+Session::open();
+
+// Fetch MPD status
+$status = _parseStatusResponse(mpdStatus($mpd));
+
+// Register player state in session
+$_SESSION['state'] = $status['state'];
+
+Session::close();
+
+// Check and compare GUI state with Backend state
+// MPD idle timeout loop, mpdMonitorState() waits until something changes in MPD then returns status
+if ($_GET['state'] == $status['state']) {
+	$status = mpdMonitorState($mpd);
+}
+
+// make sure song ist defined
+$song = isset($status['song']) ? $status['song'] : '';
+
+$status['x_status'] = $status;
+$status['x_currentsong'] = _parseMpdCurrentSong(execMpdCommand($mpd, 'currentsong'));
+$status['x_playlistinfo'] = _parseFileListResponse(execMpdCommand($mpd, "playlistinfo " . $song));
+
+// get track info for currently playing track
+$queue = mpdQueueTrackInfo($mpd, $song);
+
+if (isset($queue[0])) {
+	$track = $queue[0];
+
+	// TODO check moving this to mpdEnrichItem
+	$status['fileext'] = pathinfo($track['file'], PATHINFO_EXTENSION);
+
+	// TODO use standard names instead of current xyz
+	$status['currentartist'] = isset($track['Artist']) ? $track['Artist'] : '';
+	$status['currentsong'] = isset($track['Title']) ? $track['Title'] : '';
+	$status['currentalbum'] = isset($track['Album']) ? $track['Album'] : '';
+
+	// experimental
+	mpdEnrichItemInfo($track);
+	$status = array_merge($status, $track);
+}
+
+closeMpdSocket($mpd);
+
+header('Content-type: application/json');
+echo json_encode($status, JSON_PRETTY_PRINT);
