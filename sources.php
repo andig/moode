@@ -94,7 +94,7 @@ if (isset($_POST['mount']) && !empty($_POST['mount'])) {
 Session::close();
 
 
-// wait for worker output if $_SESSION['w_active'] = 1
+// wait for worker
 waitWorker();
 
 // update MPD db after worker finishes

@@ -50,6 +50,9 @@ if (isset($_POST['syscmd'])) {
 		case 'reloadtcmodsconf':
 			$workerSuccess = workerPushTask("reloadtcmodsconf");
 			break;
+
+		default:
+			uiSetNotification('Error', 'Invalid command: ' . $_POST['syscmd']);
 	}
 
 	// TODO check if uiNotification rather than echo()

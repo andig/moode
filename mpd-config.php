@@ -80,7 +80,7 @@ if (false === $workerSuccess) {
 Session::close();
 
 
-// Wait for worker output if $_SESSION['w_active'] = 1
+// Wait for worker
 waitWorker();
 
 

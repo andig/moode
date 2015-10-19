@@ -143,7 +143,7 @@ if (isset($_POST) && !empty($_POST)) {
 	Session::close();
 }
 
-// wait for worker output if $_SESSION['w_active'] = 1
+// wait for worker
 waitWorker();
 
 $net = ConfigDB::read('cfg_lan');
